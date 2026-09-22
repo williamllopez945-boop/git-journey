@@ -1,0 +1,13 @@
+# Secrets and credentials
+*.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+*credentials*
+*secret*
+*secrets*
+*.token
+robinhood_credentials*
+robinhood_token*
