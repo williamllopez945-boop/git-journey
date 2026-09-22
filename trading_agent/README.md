@@ -11,6 +11,7 @@ in `.mcp.json` at the repo root.
 |---|---|
 | `config.py` | Watchlist, strategy parameters, risk limits, `DRY_RUN` switch |
 | `strategy.py` | SMA crossover signal logic (pure computation, no network) |
+| `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
@@ -32,15 +33,19 @@ These are enforced by `RiskManager`, whose state persists in
 `trading_agent/state.json` (gitignored — it holds live account/trade data
 and must never be committed).
 
-## Known gap: no crypto price history
+## Crypto price history: built by polling, not fetched
 
 Verified against a live, authenticated `RobinHood` MCP connector: it has
 no crypto-pair historicals tool (only equity/index/option historicals).
-`sma_crossover_signal` correctly returns `"hold"` with no price series, so
-the agent won't trade blind — but the strategy can't actually generate a
-buy/sell signal for BTC/ETH/SOL/DOGE until a crypto price-history source
-is added. Live spot quotes (`get_crypto_quotes`) work fine and were used
-to validate the risk-manager/position-sizing math below.
+Since there's no historicals API to call, `trading_agent/price_history.py`
+builds the series itself: each scheduled cycle records the current mark
+price (from `get_crypto_quotes`) as one bar via `PriceHistoryStore`,
+persisted to `trading_agent/price_history.json` (gitignored — it's
+runtime-accumulated market data, not source). `sma_crossover_signal`
+correctly returns `"hold"` until at least `long_window + 1` cycles have
+recorded a bar — expect holds for the first ~30 cycles after a fresh
+start (30 hours, at an hourly schedule) before the strategy has enough
+history to generate a real buy/sell signal.
 
 ## What this agent does NOT do for you
 

@@ -31,17 +31,23 @@ over the watchlist.
    any orders this cycle.
 
 5. **For each asset in `WATCHLIST`:**
-   a. Fetch recent closing-price history via the MCP tools (enough bars to
-      cover at least `STRATEGY["long_window"] + 1` periods).
-      **Known gap:** as of the last check, the `RobinHood` MCP connector
-      exposes `get_equity_historicals`, `get_index_historicals`, and
-      `get_option_historicals`, but no crypto-pair historicals tool. Until
-      a crypto price-history source is wired in, there is no data to
-      compute a signal from — treat every asset as `hold` (see step b)
-      rather than substituting spot quotes or another asset's history.
-   b. Compute the signal with
+   a. Fetch the current mark price via `get_crypto_quotes`, then record it
+      as this cycle's bar:
+      `PriceHistoryStore().record(asset, mark_price, cycle_timestamp)`
+      from `trading_agent/price_history.py`. `cycle_timestamp` must be the
+      same value for every asset in this cycle (e.g. the cycle's start
+      time) — that's what lets a re-run of the same cycle dedupe instead
+      of double-recording a bar. This is a polling-built history, not a
+      historicals API: the connected MCP server exposes no crypto
+      historicals tool (only equity/index/option), so one bar accumulates
+      per cycle. SMA windows in `config.py` are in units of cycles (e.g.
+      with an hourly schedule, `short_window=10` means 10 hours).
+   b. Read the accumulated series with `get_closes(asset)` and compute the
+      signal with
       `sma_crossover_signal(prices, STRATEGY["short_window"], STRATEGY["long_window"])`
-      from `trading_agent/strategy.py`.
+      from `trading_agent/strategy.py`. This returns `"hold"` until at
+      least `long_window + 1` cycles have run and recorded a bar — that's
+      expected while history is still accumulating, not an error.
    c. If the signal is `"hold"`, skip this asset.
    d. If `"buy"`: compute the order quantity with
       `RiskManager.position_size(portfolio_value, price, current_position_value)`.
