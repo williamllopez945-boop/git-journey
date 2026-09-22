@@ -43,4 +43,4 @@ RISK_LIMITS = {
 # ["auto_execute_max_usd"]) is owner-authorized and ready, but flipping
 # this to False is a separate, deliberate action the account owner takes
 # themselves - see the module docstring.
-DRY_RUN = True
+DRY_RUN = False
