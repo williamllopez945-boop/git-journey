@@ -1,9 +1,15 @@
 # Autonomous crypto trading agent
 
-A rule-based agent that trades BTC, ETH, SOL, and DOGE on Robinhood with no
-per-trade human approval, using an SMA-crossover strategy and conservative
-risk limits. Built on top of the `robinhood-trading` MCP server registered
-in `.mcp.json` at the repo root.
+A rule-based agent that trades a configurable crypto watchlist on Robinhood
+with no per-trade human approval, using an SMA-crossover strategy and
+conservative risk limits. Built on top of the `robinhood-trading` MCP
+server registered in `.mcp.json` at the repo root.
+
+**Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
+WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
+crossover strength from the 2026-09-22 screener — see
+`watchlist_2026-09-22.md`). The added nine are highly volatile meme coins;
+the same 5%-per-asset cap and combined daily trade cap apply to all 13.
 
 ## What's here
 
@@ -27,7 +33,7 @@ No shorting, no margin.
 - Max 5% of portfolio value per asset
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
-- Max 3 trades per day, combined across all four assets
+- Max 3 trades per day, combined across the whole watchlist
 
 These are enforced by `RiskManager`, whose state persists in
 `trading_agent/state.json` (gitignored — it holds live account/trade data

@@ -1,5 +1,11 @@
 # Crypto watchlist snapshot — 2026-09-22T10:xx UTC
 
+**Update:** later the same day, `config.py`'s `WATCHLIST` was expanded to
+include this snapshot's top 10 (PEPE, WIF, BONK, PENGU, FLOKI, XCN, MEW,
+POPCAT, SHIB) alongside the original BTC/ETH/SOL/DOGE. The "not changed"
+note below describes this document's state at the time it was written,
+not the current config.
+
 Point-in-time analysis, not live state — re-run scan `8f2ca450-1f7f-4e69-b015-daafe494c14e`
 (via the RobinHood MCP `run_scan` tool) for current numbers.
 

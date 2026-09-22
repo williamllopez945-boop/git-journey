@@ -4,7 +4,10 @@ Edit these values to change the watchlist, strategy parameters, or risk
 limits. DRY_RUN must be explicitly flipped to False to allow real orders.
 """
 
-WATCHLIST = ["BTC", "ETH", "SOL", "DOGE"]
+WATCHLIST = [
+    "BTC", "ETH", "SOL", "DOGE",  # core assets
+    "PEPE", "WIF", "BONK", "PENGU", "FLOKI", "XCN", "MEW", "POPCAT", "SHIB",  # top 10 screener (2026-09-22), DOGE deduped
+]
 
 STRATEGY = {
     # Simple moving average crossover: short SMA crossing above/below the
