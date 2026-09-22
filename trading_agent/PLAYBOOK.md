@@ -111,6 +111,45 @@ waiting for `price_history.py` to accumulate enough local bars.
    - `hold`: no action, no message needed (stay quiet unless the account
      owner asked for a status update).
 
+## Per-position exit rules (stop-loss / take-profit)
+
+Run this for every watchlist asset with an open position (`quantity_transferable > 0`
+from `get_crypto_positions`), every cycle, independent of and in addition to
+the SMA-based sell signal above.
+
+1. Get the position's average cost basis (sum `direct_cost_basis` / sum
+   `direct_quantity` across `cost_bases` from `get_crypto_positions` — see
+   that tool's own guidance on when the average only covers a subset of
+   units) and the current mark price (`get_crypto_quotes`).
+2. Check whether take-profit was already taken for this asset:
+   `PositionStateStore().took_profit(asset)` from
+   `trading_agent/position_state.py`.
+3. Call `exit_criteria.check_exit(current_price, avg_cost_basis, took_profit)`
+   from `trading_agent/exit_criteria.py`. It returns one of:
+   - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
+     **entire** position (`quantity_transferable`).
+   - `("take_profit", 0.80)` — price is 15%+ above cost basis and profit
+     hasn't been taken yet. Sell **80%** of `quantity_transferable`
+     (round down to the pair's `min_order_quantity_increment` from
+     `get_currency_pairs`), then call
+     `PositionStateStore().mark_took_profit(asset)` so this doesn't
+     re-trigger next cycle on the remaining 20%.
+   - `(None, 0.0)` — no protective exit fires this cycle; the SMA
+     death-cross check above still applies independently.
+4. **These exits bypass `can_trade()`, the daily trade cap, the circuit
+   breaker, and `auto_execute_max_usd`** — protective exits are never
+   blocked by the gates that limit new risk-taking. The only gate that
+   still applies is `DRY_RUN`: while `True`, log what would have been
+   sold and take no action; while `False`, place the sell
+   (`place_crypto_order`, side=sell) immediately, call
+   `RiskManager.record_trade(...)`, and notify the account owner
+   immediately with the reason (stop_loss/take_profit), quantity, price,
+   and resulting P/L.
+5. When a position's `quantity_transferable` reaches 0 (fully closed, by
+   any combination of SMA exits and these protective exits), call
+   `PositionStateStore().reset(asset)` so a future fresh entry in that
+   asset starts without a stale take-profit flag.
+
 ## Hard rules
 
 - Never place an order without going through steps 3–4 immediately before
@@ -131,5 +170,11 @@ waiting for `price_history.py` to accumulate enough local bars.
   means no approval gate before the order, not silence after it.
 - Never increase `RISK_LIMITS` or `max_trades_per_day` from within a
   trading cycle. Those are owner-edited config, not runtime state.
+- Protective exits (stop-loss, take-profit) are the one exception to the
+  approval/size-cap rules above: once `DRY_RUN` is `False`, they execute
+  immediately regardless of order size, `can_trade()`, or the circuit
+  breaker, per the "Per-position exit rules" section — reducing existing
+  risk is never held back the way taking on new risk is. `DRY_RUN` itself
+  still gates them same as everything else.
 - This agent is long-only: it buys and exits, it never shorts or uses
   margin/leverage.

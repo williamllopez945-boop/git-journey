@@ -5,17 +5,17 @@ using an SMA-crossover strategy and conservative risk limits. Built on top
 of the `robinhood-trading` MCP server registered in `.mcp.json` at the
 repo root.
 
-> **Live trading status (2026-09-22): BUILT, NOT ENABLED.** `DRY_RUN = True`.
-> A bounded auto-execution policy is implemented and tested — once
-> `DRY_RUN` is `False`, fresh-crossover orders at or under $5 notional
-> (`RISK_LIMITS["auto_execute_max_usd"]`) would execute automatically
-> across the whole watchlist with no per-trade approval; anything larger
-> would still require it. This was owner-authorized after a two-round
-> confirmation, but the commit that flipped `DRY_RUN` to `False` was
-> blocked by Claude Code's own auto-mode safety classifier as too
-> high-stakes for automatic execution. Flipping it is a deliberate action
-> the account owner takes themselves — edit this file's `DRY_RUN` line and
-> commit/push it directly.
+> **Live trading status (2026-09-22): LIVE.** `DRY_RUN = False`, flipped
+> directly by the account owner (Claude Code's own auto-mode safety
+> classifier blocked doing this via an agent commit twice; the owner did
+> it themselves via a direct push to `main`). Fresh-crossover orders at or
+> under $5 notional (`RISK_LIMITS["auto_execute_max_usd"]`) execute
+> automatically across the whole watchlist with no per-trade approval;
+> anything larger still requires it. Per-position stop-loss (10%) and
+> partial take-profit (15%, sells 80%) also execute automatically once
+> `DRY_RUN` is `False` — see "Exit criteria" below. First real trade
+> placed 2026-09-22: $5.02 PEPE buy, a discretionary override (not a
+> strategy-confirmed signal).
 
 **Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
@@ -43,15 +43,32 @@ real-history signal that the other 14 watchlist assets get.
 | `strategy.py` | SMA crossover signal logic (pure computation, no network) |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
+| `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
+| `position_state.py` | Tracks whether take-profit was already taken per asset, so it fires once per position — persisted to `position_state.json` |
 | `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
 ## Strategy
 
-SMA crossover, long-only: short SMA (10 periods) crossing above the long
-SMA (30 periods) is a buy signal; crossing below is a sell/exit signal.
-No shorting, no margin.
+**Entry:** SMA crossover, long-only. Short SMA (10 periods) crossing above
+the long SMA (30 periods) is a buy signal. No shorting, no margin.
+
+**Exit — three independent triggers, whichever fires first (or both):**
+1. **SMA death cross** — short SMA crosses below the long SMA. Exits the
+   full position (`strategy.py`).
+2. **Stop-loss (10%)** — current price is 10% or more below the position's
+   average cost basis. Exits the full position, regardless of the SMA
+   state (`exit_criteria.py`).
+3. **Take-profit (15%, partial)** — current price is 15% or more above
+   average cost basis. Sells 80% of the position, once per position
+   lifecycle; the remaining 20% keeps riding, subject to the same
+   stop-loss and death-cross checks afterward (`exit_criteria.py` +
+   `position_state.py`).
+
+Stop-loss and take-profit are protective/profit-locking checks, not new
+risk-taking — see "Auto-execution policy" below for why they're exempt
+from the size cap and trade limits that apply to entries.
 
 ## Risk limits (conservative, as configured)
 
@@ -101,51 +118,59 @@ Each cycle's `classify()` call returns one of:
 - `hold` — nothing notable, or this is the first observation for that
   asset (no prior state to compare against).
 
-## Auto-execution policy (built, inactive while DRY_RUN=True)
+## Auto-execution policy (live, DRY_RUN=False)
 
 - **The `robinhood-trading` MCP server** (in `.mcp.json`) is still
   unauthenticated — it needs an OAuth/login step tied to the account
-  owner's identity that no agent can do on their behalf. Actual trading,
-  once enabled, would happen through a separate, already-authenticated
-  `RobinHood` connector available in agent sessions on this account.
-- **Auto-execution is bounded**, not blanket "no approval ever": only
-  fresh crossover signals (`fresh_buy_cross` / `fresh_sell_cross`) at or
-  under `RISK_LIMITS["auto_execute_max_usd"]` (currently $5) would execute
-  without approval. Everything else — larger fresh-cross orders,
-  `excellent_watch` alerts — still requires the account owner's explicit,
-  per-trade approval. All of this is gated behind `DRY_RUN`, which is
-  currently `True`, so none of it executes yet.
-- **Every auto-executed trade would be reported immediately after
-  placement** (asset, side, quantity, price, order id) once active —
-  auto-execute removes the approval gate before the order, not visibility
-  after it.
+  owner's identity that no agent can do on their behalf. Actual trading
+  currently happens through a separate, already-authenticated `RobinHood`
+  connector available in agent sessions on this account.
+- **New-entry auto-execution is bounded**, not blanket "no approval
+  ever": only fresh crossover signals (`fresh_buy_cross` /
+  `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_usd"]`
+  (currently $5) execute without approval. Everything else — larger
+  fresh-cross orders, `excellent_watch` alerts — still requires the
+  account owner's explicit, per-trade approval.
+- **Protective exits are not bounded the same way.** Stop-loss (10%) and
+  take-profit (15%, sells 80%) — see "Strategy" above — execute
+  automatically regardless of position size, and bypass `can_trade()`,
+  the daily trade cap, and the circuit breaker. Only `DRY_RUN` gates
+  them. This is deliberate: those gates limit new risk-taking, and
+  applying them to an exit would mean being unable to cut a loss or lock
+  in a gain exactly when it matters.
+- **Every auto-executed trade is reported immediately after placement**
+  (asset, side, quantity, price, order id, and for exits the reason and
+  resulting P/L) — auto-execute removes the approval gate before the
+  order, not visibility after it.
 - The 5%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
-  (`RiskManager`) still apply on top of the $5 auto-execute threshold —
-  defense in depth, not a replacement for it.
+  (`RiskManager`) still apply to new entries on top of the $5
+  auto-execute threshold — defense in depth, not a replacement for it.
 
-## Enabling live trading (the owner's own direct action)
+## Adjusting or disabling live trading (the owner's own direct action)
 
-1. Read this file and `PLAYBOOK.md`'s "Auto-execution policy" section in
-   full — know exactly what you're turning on before you turn it on.
-2. Edit `config.py` yourself and set `DRY_RUN = False`. This is
-   deliberately not something an agent does on your behalf by default:
-   Claude Code's own auto-mode safety classifier blocked the commit that
-   would have flipped it here, as too high-stakes for automatic execution.
-3. Commit and push that change yourself (or explicitly grant the
-   permission the classifier asked for and have it retried).
-4. Optionally connect and authenticate the `robinhood-trading` MCP server
-   in an agent environment you control, if you want trading to route
-   through it instead of the currently-connected `RobinHood` connector.
-5. To adjust the auto-execute threshold or scope later, edit
-   `RISK_LIMITS["auto_execute_max_usd"]` directly — `0` disables
-   auto-execution while leaving recommendations active; `DRY_RUN = True`
-   stops all trading entirely.
+`DRY_RUN` was flipped to `False` by the account owner directly — Claude
+Code's own auto-mode safety classifier blocked doing this via an agent
+commit (twice), so the owner pushed the change to `main` themselves and
+had it pulled into this branch. The same applies to any further change:
+
+- To adjust the auto-execute threshold or scope, edit
+  `RISK_LIMITS["auto_execute_max_usd"]` directly — `0` disables new-entry
+  auto-execution while leaving recommendations active (protective exits
+  are unaffected by this value).
+- To adjust the stop-loss/take-profit levels or the take-profit sell
+  fraction, edit the constants at the top of `exit_criteria.py`.
+- To stop all trading entirely (including protective exits), set
+  `DRY_RUN = True`.
+- Optionally connect and authenticate the `robinhood-trading` MCP server
+  in an agent environment you control, if you want trading to route
+  through it instead of the currently-connected `RobinHood` connector.
 
 ## Risk disclosure
 
-Once `DRY_RUN = False`, this trades real money. Orders at/under the
-auto-execute threshold place with no human approval per trade; larger
-orders still require it. Crypto markets are volatile; the risk limits
+This trades real money. Orders at/under the auto-execute threshold place
+with no human approval per trade; larger orders still require it.
+Stop-loss and take-profit exits place with no approval and no size cap.
+Crypto markets are volatile; the risk limits
 here reduce but do not eliminate the chance of losses, and a bug in the
 strategy or a stale/incorrect price feed can still lose money within
 those limits (up to the daily loss cap, or up to the auto-execute
