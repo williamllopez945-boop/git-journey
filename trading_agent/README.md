@@ -8,8 +8,20 @@ server registered in `.mcp.json` at the repo root.
 **Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
 crossover strength from the 2026-09-22 screener — see
-`watchlist_2026-09-22.md`). The added nine are highly volatile meme coins;
-the same 5%-per-asset cap and combined daily trade cap apply to all 13.
+`watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). The same
+5%-per-asset cap and combined daily trade cap apply to all 15. Also synced
+to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
+`d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
+purely organizational, `config.py` remains the source of truth the agent
+reads from.
+
+**Known gap: PYTH has no scanner coverage.** The SMA(10,30) screener
+(`scanner_signals.py`, scan_id `8f2ca450-...`) covers 49 crypto pairs, and
+PYTH is not one of them even though it's a normally tradable pair (real
+quotes work fine via `get_crypto_quotes`). Until that's resolved, PYTH's
+signal only comes from the slower `price_history.py` polling path (~31
+hourly cycles to warm up) — it does not get the scanner's immediate
+real-history signal that the other 14 watchlist assets get.
 
 ## What's here
 

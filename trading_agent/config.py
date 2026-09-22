@@ -7,6 +7,7 @@ limits. DRY_RUN must be explicitly flipped to False to allow real orders.
 WATCHLIST = [
     "BTC", "ETH", "SOL", "DOGE",  # core assets
     "PEPE", "WIF", "BONK", "PENGU", "FLOKI", "XCN", "MEW", "POPCAT", "SHIB",  # top 10 screener (2026-09-22), DOGE deduped
+    "PYTH", "XLM",  # added 2026-09-22 - PYTH is NOT covered by the SMA screener (see README)
 ]
 
 STRATEGY = {
