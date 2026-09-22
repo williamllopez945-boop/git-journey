@@ -69,6 +69,35 @@ over the watchlist.
    taken (or why it was skipped), and the resulting state
    (`trades_today`, `halted`).
 
+## Scanner-based cycle (real signals, no 31-cycle warm-up)
+
+Run this alongside steps 1-6 each cycle. It uses real historical data from
+the start (the RobinHood scanner's server-side `closeAvg`), instead of
+waiting for `price_history.py` to accumulate enough local bars.
+
+1. Run the saved scan (`run_scan`, scan_id `8f2ca450-1f7f-4e69-b015-daafe494c14e`
+   — "Crypto SMA(10,30) 1h Crossover — Strategy Screener"), which returns
+   `SMA 10 (1h)`, `SMA 30 (1h)`, and `% Change` for every crypto pair
+   Robinhood offers.
+2. Filter the results to `WATCHLIST` from `config.py`.
+3. For each watchlist asset, call
+   `scanner_signals.classify(asset, sma10, sma30, pct_change)` from
+   `trading_agent/scanner_signals.py`.
+4. Act on the classification:
+   - `fresh_buy_cross` / `fresh_sell_cross`: this is a genuine strategy
+     signal. Present it as a trade recommendation to the account owner —
+     asset, direction, current price, suggested size from
+     `RiskManager.position_size(...)` — and stop. Do not call
+     `place_crypto_order` until they explicitly approve that specific
+     trade. Use `preview_crypto_order` to show them exact cost/fee first.
+   - `excellent_watch`: not a strategy-confirmed signal. Alert the account
+     owner with the asset, its crossover_pct/% change, and why it didn't
+     meet the fresh-cross bar. Frame it as "worth discussing," not a
+     recommendation — no preview, no suggested size, just the numbers and
+     an open question.
+   - `hold`: no action, no message needed (stay quiet unless the account
+     owner asked for a status update).
+
 ## Hard rules
 
 - Never place an order without going through steps 3–4 immediately before
@@ -76,6 +105,12 @@ over the watchlist.
 - Never bypass `DRY_RUN`. It only becomes `False` when the account owner
   edits `trading_agent/config.py` themselves after verifying the MCP
   connection is live and correct.
+- Never place a real order automatically, even when `DRY_RUN` is `False`.
+  Every `fresh_buy_cross` / `fresh_sell_cross` signal is a recommendation
+  that requires the account owner's explicit, per-trade approval before
+  `place_crypto_order` is called — this overrides the earlier "if DRY_RUN
+  is False, place the order" wording in step 5g above, per the account
+  owner's explicit instruction to always recommend and wait for approval.
 - Never increase `RISK_LIMITS` or `max_trades_per_day` from within a
   trading cycle. Those are owner-edited config, not runtime state.
 - This agent is long-only: it buys and exits, it never shorts or uses

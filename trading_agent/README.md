@@ -18,6 +18,7 @@ the same 5%-per-asset cap and combined daily trade cap apply to all 13.
 | `config.py` | Watchlist, strategy parameters, risk limits, `DRY_RUN` switch |
 | `strategy.py` | SMA crossover signal logic (pure computation, no network) |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
+| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
 | `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
@@ -52,6 +53,26 @@ correctly returns `"hold"` until at least `long_window + 1` cycles have
 recorded a bar — expect holds for the first ~30 cycles after a fresh
 start (30 hours, at an hourly schedule) before the strategy has enough
 history to generate a real buy/sell signal.
+
+## Scanner-based signal detection (faster than the polling warm-up)
+
+`price_history.py`'s polling approach needs ~31 hourly cycles before it has
+enough locally-recorded bars to compute a signal. `scanner_signals.py`
+gets a real signal immediately by reading the RobinHood scanner's
+`closeAvg` columns (server-side SMA over actual historical candles — see
+the scanner discovery in `watchlist_2026-09-22.md`) each cycle, and
+comparing this cycle's bullish/bearish state per asset to the last
+persisted one to detect an actual crossover *event*, not just a state.
+
+Each cycle's `classify()` call returns one of:
+- `fresh_buy_cross` / `fresh_sell_cross` — SMA10 crossed SMA30 since the
+  last cycle. This is a genuine strategy signal: surfaced as a trade
+  recommendation for approval, never auto-placed.
+- `excellent_watch` — no fresh cross, but `|crossover_pct|` or
+  `|% change|` clears a "worth a look" threshold (5% either way). Flagged
+  for discussion, explicitly not a strategy-confirmed recommendation.
+- `hold` — nothing notable, or this is the first observation for that
+  asset (no prior state to compare against).
 
 ## What this agent does NOT do for you
 

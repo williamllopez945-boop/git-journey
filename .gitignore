@@ -15,6 +15,7 @@ robinhood_token*
 # Trading agent runtime state/logs (live account + trade data, never commit)
 trading_agent/state.json
 trading_agent/price_history.json
+trading_agent/scanner_state.json
 trading_agent/*.log
 trading_agent/logs/
 
