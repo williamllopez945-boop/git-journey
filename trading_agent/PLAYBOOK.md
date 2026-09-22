@@ -33,6 +33,12 @@ over the watchlist.
 5. **For each asset in `WATCHLIST`:**
    a. Fetch recent closing-price history via the MCP tools (enough bars to
       cover at least `STRATEGY["long_window"] + 1` periods).
+      **Known gap:** as of the last check, the `RobinHood` MCP connector
+      exposes `get_equity_historicals`, `get_index_historicals`, and
+      `get_option_historicals`, but no crypto-pair historicals tool. Until
+      a crypto price-history source is wired in, there is no data to
+      compute a signal from — treat every asset as `hold` (see step b)
+      rather than substituting spot quotes or another asset's history.
    b. Compute the signal with
       `sma_crossover_signal(prices, STRATEGY["short_window"], STRATEGY["long_window"])`
       from `trading_agent/strategy.py`.

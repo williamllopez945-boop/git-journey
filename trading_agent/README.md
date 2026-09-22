@@ -32,6 +32,16 @@ These are enforced by `RiskManager`, whose state persists in
 `trading_agent/state.json` (gitignored — it holds live account/trade data
 and must never be committed).
 
+## Known gap: no crypto price history
+
+Verified against a live, authenticated `RobinHood` MCP connector: it has
+no crypto-pair historicals tool (only equity/index/option historicals).
+`sma_crossover_signal` correctly returns `"hold"` with no price series, so
+the agent won't trade blind — but the strategy can't actually generate a
+buy/sell signal for BTC/ETH/SOL/DOGE until a crypto price-history source
+is added. Live spot quotes (`get_crypto_quotes`) work fine and were used
+to validate the risk-manager/position-sizing math below.
+
 ## What this agent does NOT do for you
 
 - **It does not connect to your Robinhood account.** The
