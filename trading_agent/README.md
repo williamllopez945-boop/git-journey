@@ -1,9 +1,21 @@
 # Autonomous crypto trading agent
 
 A rule-based agent that trades a configurable crypto watchlist on Robinhood
-with no per-trade human approval, using an SMA-crossover strategy and
-conservative risk limits. Built on top of the `robinhood-trading` MCP
-server registered in `.mcp.json` at the repo root.
+using an SMA-crossover strategy and conservative risk limits. Built on top
+of the `robinhood-trading` MCP server registered in `.mcp.json` at the
+repo root.
+
+> **Live trading status (2026-09-22): BUILT, NOT ENABLED.** `DRY_RUN = True`.
+> A bounded auto-execution policy is implemented and tested — once
+> `DRY_RUN` is `False`, fresh-crossover orders at or under $5 notional
+> (`RISK_LIMITS["auto_execute_max_usd"]`) would execute automatically
+> across the whole watchlist with no per-trade approval; anything larger
+> would still require it. This was owner-authorized after a two-round
+> confirmation, but the commit that flipped `DRY_RUN` to `False` was
+> blocked by Claude Code's own auto-mode safety classifier as too
+> high-stakes for automatic execution. Flipping it is a deliberate action
+> the account owner takes themselves — edit this file's `DRY_RUN` line and
+> commit/push it directly.
 
 **Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
@@ -78,47 +90,65 @@ persisted one to detect an actual crossover *event*, not just a state.
 
 Each cycle's `classify()` call returns one of:
 - `fresh_buy_cross` / `fresh_sell_cross` — SMA10 crossed SMA30 since the
-  last cycle. This is a genuine strategy signal: surfaced as a trade
-  recommendation for approval, never auto-placed.
+  last cycle. This is a genuine strategy signal. If the order notional is
+  at/under `auto_execute_max_usd` and `DRY_RUN` is `False`, it executes
+  automatically (see the live-trading banner above) and is reported after
+  the fact; otherwise it's surfaced as a recommendation awaiting approval.
 - `excellent_watch` — no fresh cross, but `|crossover_pct|` or
   `|% change|` clears a "worth a look" threshold (5% either way). Flagged
-  for discussion, explicitly not a strategy-confirmed recommendation.
+  for discussion, explicitly not a strategy-confirmed recommendation, and
+  never auto-executed regardless of size.
 - `hold` — nothing notable, or this is the first observation for that
   asset (no prior state to compare against).
 
-## What this agent does NOT do for you
+## Auto-execution policy (built, inactive while DRY_RUN=True)
 
-- **It does not connect to your Robinhood account.** The
-  `robinhood-trading` MCP server needs to be authenticated by you —
-  that's an OAuth/login step tied to your identity that no agent can do on
-  your behalf. Add and authenticate it in an environment where you control
-  the connector.
-- **It has not executed, and cannot execute, any real trade from this
-  session.** This cloud session's MCP connections don't include
-  `robinhood-trading`, so none of this code has touched your real account.
-- **It ships with `DRY_RUN = True`.** Even once the MCP is connected, the
-  agent will only log simulated orders until you deliberately edit
-  `config.py` and set `DRY_RUN = False`. This is a standard safety default
-  for trading bots, independent of the "no per-trade approval" execution
-  mode — it's a single, explicit, reviewable line you control, not a
-  per-trade gate.
+- **The `robinhood-trading` MCP server** (in `.mcp.json`) is still
+  unauthenticated — it needs an OAuth/login step tied to the account
+  owner's identity that no agent can do on their behalf. Actual trading,
+  once enabled, would happen through a separate, already-authenticated
+  `RobinHood` connector available in agent sessions on this account.
+- **Auto-execution is bounded**, not blanket "no approval ever": only
+  fresh crossover signals (`fresh_buy_cross` / `fresh_sell_cross`) at or
+  under `RISK_LIMITS["auto_execute_max_usd"]` (currently $5) would execute
+  without approval. Everything else — larger fresh-cross orders,
+  `excellent_watch` alerts — still requires the account owner's explicit,
+  per-trade approval. All of this is gated behind `DRY_RUN`, which is
+  currently `True`, so none of it executes yet.
+- **Every auto-executed trade would be reported immediately after
+  placement** (asset, side, quantity, price, order id) once active —
+  auto-execute removes the approval gate before the order, not visibility
+  after it.
+- The 5%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
+  (`RiskManager`) still apply on top of the $5 auto-execute threshold —
+  defense in depth, not a replacement for it.
 
-## Going live (steps you have to do yourself)
+## Enabling live trading (the owner's own direct action)
 
-1. Connect and authenticate the `robinhood-trading` MCP server in an
-   agent environment you control.
-2. Run the agent in dry-run mode for at least a few cycles and read the
-   logs — confirm the signals and position sizing look right against your
-   actual account balance.
-3. Edit `config.py`, set `DRY_RUN = False`.
-4. Set up a recurring schedule (e.g. an hourly cron trigger) that runs the
-   `PLAYBOOK.md` cycle in that MCP-connected environment.
+1. Read this file and `PLAYBOOK.md`'s "Auto-execution policy" section in
+   full — know exactly what you're turning on before you turn it on.
+2. Edit `config.py` yourself and set `DRY_RUN = False`. This is
+   deliberately not something an agent does on your behalf by default:
+   Claude Code's own auto-mode safety classifier blocked the commit that
+   would have flipped it here, as too high-stakes for automatic execution.
+3. Commit and push that change yourself (or explicitly grant the
+   permission the classifier asked for and have it retried).
+4. Optionally connect and authenticate the `robinhood-trading` MCP server
+   in an agent environment you control, if you want trading to route
+   through it instead of the currently-connected `RobinHood` connector.
+5. To adjust the auto-execute threshold or scope later, edit
+   `RISK_LIMITS["auto_execute_max_usd"]` directly — `0` disables
+   auto-execution while leaving recommendations active; `DRY_RUN = True`
+   stops all trading entirely.
 
 ## Risk disclosure
 
-This trades real money with no human approval per trade once
-`DRY_RUN = False`. Crypto markets are volatile; the risk limits here
-reduce but do not eliminate the chance of losses, and a bug in the
+Once `DRY_RUN = False`, this trades real money. Orders at/under the
+auto-execute threshold place with no human approval per trade; larger
+orders still require it. Crypto markets are volatile; the risk limits
+here reduce but do not eliminate the chance of losses, and a bug in the
 strategy or a stale/incorrect price feed can still lose money within
-those limits (up to the daily loss cap) before the circuit breaker halts
-trading. Review the code yourself before enabling live trading.
+those limits (up to the daily loss cap, or up to the auto-execute
+threshold per untraced signal) before the circuit breaker halts trading.
+Review the code yourself before enabling live trading or raising any of
+these limits.

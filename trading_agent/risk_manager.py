@@ -68,6 +68,11 @@ class RiskManager:
         remaining_value = max(max_value - current_position_value, 0.0)
         return remaining_value / price
 
+    def can_auto_execute(self, order_value_usd):
+        """Whether an order of this notional value may execute without
+        per-trade approval, per RISK_LIMITS["auto_execute_max_usd"]."""
+        return order_value_usd <= self.limits.get("auto_execute_max_usd", 0.0)
+
     def record_trade(self, asset, side, quantity, price):
         self.state["trades_today"] += 1
         self.state["trade_log"].append({

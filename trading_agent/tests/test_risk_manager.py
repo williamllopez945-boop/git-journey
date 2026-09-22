@@ -10,6 +10,7 @@ LIMITS = {
     "max_position_pct": 0.05,
     "daily_loss_limit_pct": 0.03,
     "max_trades_per_day": 3,
+    "auto_execute_max_usd": 5.0,
 }
 
 
@@ -45,3 +46,22 @@ def test_circuit_breaker_halts_past_daily_loss_limit():
     assert rm.check_circuit_breaker(current_equity=9_800) is False  # 2% down
     assert rm.check_circuit_breaker(current_equity=9_600) is True  # 4% down
     assert not rm.can_trade()
+
+
+def test_can_auto_execute_at_or_under_threshold():
+    rm = _new_manager()
+    assert rm.can_auto_execute(5.0) is True
+    assert rm.can_auto_execute(2.50) is True
+
+
+def test_can_auto_execute_over_threshold():
+    rm = _new_manager()
+    assert rm.can_auto_execute(5.01) is False
+    assert rm.can_auto_execute(25.0) is False
+
+
+def test_can_auto_execute_defaults_to_false_without_configured_limit():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    rm = RiskManager({"max_position_pct": 0.05, "daily_loss_limit_pct": 0.03, "max_trades_per_day": 3}, state_path=tmp)
+    assert rm.can_auto_execute(0.01) is False
