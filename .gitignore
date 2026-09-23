@@ -23,6 +23,11 @@ trading_agent/logs/
 # trading_agent/daily_logs/*.md is NOT ignored - the daily after-action
 # review is meant to be a durable, versioned record, committed each day.
 
+# Research agent runtime state (live findings log, never commit)
+research_agent/research_log.json
+# research_agent/research_notes/*.md is NOT ignored - same reasoning as
+# trading_agent/daily_logs/*.md above, a durable versioned record.
+
 # Python
 __pycache__/
 *.pyc

@@ -250,6 +250,20 @@ scope: extended-hours trading is not implemented.
      doesn't distinguish asset class, so a confirmed stock signal at/under
      `auto_execute_max_usd` auto-executes exactly like a crypto one.
    - `excellent_watch` and `hold` handling: identical to the crypto cycle.
+   - **Research context on recommendations only (added 2026-09-23, see
+     `research_agent/README.md`):** when a stock signal is presented as a
+     recommendation (oversized, awaiting the owner's approval — never on
+     the bounded-auto-execution path, which stays mechanical and
+     untouched by this), call
+     `research_agent.research_log.ResearchLogStore().entries_for_asset(asset, since=<7 days ago, ISO date>)`
+     and include any hits (news, SEC filings, upcoming earnings) alongside
+     the recommendation so the owner has research context at the moment
+     they're deciding whether to approve. Advisory only — an empty result
+     means no research has been logged yet for that symbol, not that
+     nothing is happening; never block or resize a recommendation based on
+     what this lookup returns. Crypto has no research coverage in v1 (see
+     `research_agent/README.md`'s "Known gap: crypto"), so this lookup
+     only applies to `STOCK_WATCHLIST` symbols, never `WATCHLIST`.
 
 ## Per-position exit rules (stop-loss / take-profit)
 
