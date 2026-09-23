@@ -59,12 +59,19 @@ class RiskManager:
             return False
         return self.state["trades_today"] < self.limits["max_trades_per_day"]
 
-    def position_size(self, portfolio_value, price, current_position_value=0.0):
+    def position_size(self, portfolio_value, price, current_position_value=0.0, max_position_pct=None):
         """Quantity of the asset that can still be bought without exceeding
-        max_position_pct of the portfolio for that asset."""
+        max_position_pct of the portfolio for that asset.
+
+        max_position_pct: overrides RISK_LIMITS["max_position_pct"] when
+        given - pass volatility_sizing.scaled_max_position_pct(...) here to
+        size a volatile asset down below the flat cap. None (default) uses
+        the configured flat cap, unchanged from before this parameter
+        existed."""
         if price <= 0:
             return 0.0
-        max_value = portfolio_value * self.limits["max_position_pct"]
+        pct = max_position_pct if max_position_pct is not None else self.limits["max_position_pct"]
+        max_value = portfolio_value * pct
         remaining_value = max(max_value - current_position_value, 0.0)
         return remaining_value / price
 

@@ -65,3 +65,14 @@ def test_can_auto_execute_defaults_to_false_without_configured_limit():
     tmp.unlink()
     rm = RiskManager({"max_position_pct": 0.05, "daily_loss_limit_pct": 0.03, "max_trades_per_day": 3}, state_path=tmp)
     assert rm.can_auto_execute(0.01) is False
+
+
+def test_position_size_override_replaces_configured_cap():
+    rm = _new_manager()
+    # configured cap is 5% ($500 of $10,000); override to 1% ($100)
+    assert rm.position_size(10_000, price=100, max_position_pct=0.01) == 1.0
+
+
+def test_position_size_without_override_uses_configured_cap():
+    rm = _new_manager()
+    assert rm.position_size(10_000, price=100) == rm.position_size(10_000, price=100, max_position_pct=None)

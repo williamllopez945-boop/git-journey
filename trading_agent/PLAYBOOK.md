@@ -59,9 +59,22 @@ over the watchlist.
       4h by default), skip this asset entirely this cycle, even though a
       real confirmed buy signal fired. This is the whipsaw cooldown
       (empirically tuned — see backtest_2026-09-23.md), not optional.
-      Otherwise compute the order quantity with
-      `RiskManager.position_size(portfolio_value, price, current_position_value)`.
+      Otherwise, compute a volatility-scaled cap before sizing the order:
+      call `volatility_sizing.realized_volatility(get_closes(asset))` and
+      the same for `get_closes("BTC")` as the benchmark (from
+      `trading_agent/price_history.py`), then
+      `volatility_sizing.scaled_max_position_pct(asset_vol, btc_vol, RISK_LIMITS["max_position_pct"])`.
+      Both volatility calls need at least 3 accumulated bars for that
+      asset — if either doesn't have enough yet (still warming up per
+      step 5b), fall back to the flat `RISK_LIMITS["max_position_pct"]`
+      instead (pass no override). Compute the order quantity with
+      `RiskManager.position_size(portfolio_value, price, current_position_value, max_position_pct=<the scaled cap or None>)`.
       Skip if the resulting quantity is 0 (already at the per-asset cap).
+      **Scope note:** the scanner-based cycle below has no raw price
+      series to compute volatility from (only point-in-time SMA values),
+      so volatility-scaled sizing only applies on this polling path, not
+      the scanner path. A scanner-detected `fresh_buy_cross` still sizes
+      at the flat cap.
    e. If `"sell"`: sell the full existing position in that asset (a
       crossover-down signal means exit, not short — this agent is
       long-only).

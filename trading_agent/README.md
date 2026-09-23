@@ -47,7 +47,8 @@ real-history signal that the other 14 watchlist assets get.
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
-| `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
+| `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap — persisted to `state.json` |
+| `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -105,6 +106,25 @@ from the size cap and trade limits that apply to entries.
 These are enforced by `RiskManager`, whose state persists in
 `trading_agent/state.json` (gitignored — it holds live account/trade data
 and must never be committed).
+
+## Position sizing: flat cap, or volatility-scaled
+
+The 5% cap above is a ceiling, not always the actual size used.
+`volatility_sizing.py` can scale it down (never up) for assets more
+volatile than BTC (the benchmark) — e.g. an asset twice as volatile as
+BTC gets sized at 2.5% instead of 5%. Validated against real market data
+(`volatility_sizing_2026-09-23.md`): on real hourly bars, ETH measured
+~27% more volatile than BTC and scaled to ~79% of the flat cap — a
+sensible, real differentiation.
+
+**Scope, stated plainly:** this only sizes an individual position by its
+own volatility. It does not account for correlation across several
+simultaneously-held positions (e.g. multiple meme coins moving together)
+— that needs a true multi-asset portfolio backtester, a materially larger
+project than the single-asset `backtest.py` this repo has. Also only
+available on the polling path (`price_history.py` accumulates the raw
+closes volatility needs); the faster scanner path only has point-in-time
+SMA values, not a series, so it always sizes at the flat cap.
 
 ## Crypto price history: built by polling, not fetched
 
