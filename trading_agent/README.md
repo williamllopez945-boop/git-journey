@@ -54,16 +54,27 @@ exclusion list and ranking in `watchlist_2026-09-23_meme_removal.md`.
 
 ## Stock watchlist (2026-09-23)
 
-`config.py`'s `STOCK_WATCHLIST`: TNGX, GLBE, VVV, ARQT, TRLV, ESI, CE, BHF,
-MDLN, OLLI — top 10 by SMA(10,30) 1h crossover strength among liquid stocks
-(market cap > $2B, price > $10, 30d avg volume > 1M shares), same screener
-methodology as the crypto watchlist, run 2026-09-23 per owner request ("Add
-stocks to the watchlist too" → "Run a momentum screener, like the crypto
-watchlist got"). Full ranking and why the liquidity filters were needed
-(the unfiltered STOCK universe is dominated by illiquid micro-caps whose
-SMA crossovers are noise, not momentum) in `watchlist_stocks_2026-09-23.md`.
-Scanned via a new saved scan, `Stock SMA(10,30) 1h Crossover — Strategy
-Screener`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`.
+`config.py`'s `STOCK_WATCHLIST`: GLBE, VVV, TRLV, ESI, CE, BHF, MDLN, OLLI —
+originally the top 10 by SMA(10,30) 1h crossover strength among liquid
+stocks (market cap > $2B, price > $10, 30d avg volume > 1M shares), same
+screener methodology as the crypto watchlist, run 2026-09-23 per owner
+request ("Add stocks to the watchlist too" → "Run a momentum screener,
+like the crypto watchlist got"). Full ranking and why the liquidity
+filters were needed (the unfiltered STOCK universe is dominated by
+illiquid micro-caps whose SMA crossovers are noise, not momentum) in
+`watchlist_stocks_2026-09-23.md`. Scanned via a new saved scan, `Stock
+SMA(10,30) 1h Crossover — Strategy Screener`, scan_id
+`6e009dcf-d184-45a7-915f-ccfc50b4e6be`.
+
+**TNGX and ARQT dropped (2026-09-23, later same day):** a real-data
+backtest (`backtest_2026-09-23.md`) found a genuine -15.2% overnight gap
+in MDLN on 2026-08-05 — past the 10% stop-loss in a single move, which an
+hourly check can't react to until after the fact. TNGX and ARQT are both
+clinical-stage biotechs carrying real binary trial/FDA catalyst risk,
+categorically worse than MDLN's ordinary-volatility gap. Owner's call:
+"Drop the two. We only pick winners here." No sell orders needed — zero
+open positions in either at the time. Left at 8 names rather than
+backfilling to a fresh top 10.
 
 **Shared risk budget (owner's explicit choice, not separate per asset
 class):** `RISK_LIMITS` — `max_position_pct`, `max_aggregate_position_pct`,

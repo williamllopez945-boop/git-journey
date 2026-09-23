@@ -130,8 +130,18 @@ WATCHLIST = [
 # watchlist_stocks_2026-09-23.md for the full methodology and ranking table.
 # Shares RISK_LIMITS with WATCHLIST (shared budget, owner's explicit choice
 # - see module docstring), not a separate risk pool.
+#
+# 2026-09-23 (later same day): TNGX and ARQT dropped ("Drop the two. We only
+# pick winners here") after backtest_2026-09-23.md's real-data backtest
+# found a genuine -15.2% overnight gap (MDLN, 2026-08-05) past the 10%
+# stop-loss in a single move - an hourly check can't react until after the
+# fact. TNGX and ARQT are both clinical-stage biotechs with real binary
+# trial/FDA catalyst risk, categorically worse than MDLN's ordinary-
+# volatility gap. No sell orders needed - zero open positions in either at
+# the time. Left at 8 names rather than backfilling to 10 - not asked to
+# replace them, and the remaining 8 aren't single-catalyst names.
 STOCK_WATCHLIST = [
-    "TNGX", "GLBE", "VVV", "ARQT", "TRLV", "ESI", "CE", "BHF", "MDLN", "OLLI",
+    "GLBE", "VVV", "TRLV", "ESI", "CE", "BHF", "MDLN", "OLLI",
 ]
 
 STRATEGY = {
