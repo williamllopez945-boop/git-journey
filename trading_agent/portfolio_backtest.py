@@ -20,7 +20,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         max_position_pct=0.05, max_concurrent_positions=None,
                         min_strength_pct=0, cooldown_bars=None,
                         stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
-                        take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION):
+                        take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
+                        max_aggregate_pct=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -36,6 +37,14 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     have one open, the same way the cooldown blocks entries in
     backtest.py - existing open positions are still fully managed
     (exits, take-profit) regardless of the cap.
+
+    max_aggregate_pct: caps total mark-to-market value of ALL open
+    positions combined at this fraction of portfolio value - mirrors
+    RiskManager.position_size's aggregate clamp. Distinct from
+    max_position_pct x max_concurrent_positions, which don't reliably
+    compose into a portfolio-wide ceiling (e.g. 15% x 5 = 75%). None
+    (default) disables the clamp, unchanged from before this parameter
+    existed.
 
     min_strength_pct/cooldown_bars/stop_loss_pct/take_profit_pct/
     take_profit_sell_fraction: same meaning as backtest.py's single-asset
@@ -122,10 +131,12 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                     and open_count >= max_concurrent_positions
                 )
                 if not in_cooldown and not cap_blocked:
-                    portfolio_value = cash + sum(
-                        state[a2]["qty"] * series[a2][i] for a2 in series
-                    )
+                    total_open_value = sum(state[a2]["qty"] * series[a2][i] for a2 in series)
+                    portfolio_value = cash + total_open_value
                     alloc = min(portfolio_value * max_position_pct, cash)
+                    if max_aggregate_pct is not None:
+                        remaining_aggregate = max(portfolio_value * max_aggregate_pct - total_open_value, 0.0)
+                        alloc = min(alloc, remaining_aggregate)
                     if alloc > 0:
                         qty = alloc / price
                         st["qty"] = qty

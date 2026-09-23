@@ -72,6 +72,34 @@ def test_empty_trades_summary_is_inert():
     assert summary["total_return_pct"] == 0.0
 
 
+def test_aggregate_cap_limits_total_deployed_across_positions():
+    # Three assets, each individually allowed up to 30% of the portfolio
+    # (so more than one CAN open), but a 50% aggregate cap should keep the
+    # combined deployed value from ever exceeding half the portfolio.
+    series = {"A": list(_RAMP_AND_HOLD), "B": list(_RAMP_AND_HOLD), "C": list(_RAMP_AND_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.3, max_concurrent_positions=None, max_aggregate_pct=0.5,
+    )
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert len(buys) >= 2  # more than one position actually opened
+    total_deployed = sum(t["qty"] * t["price"] for t in buys)
+    assert total_deployed <= 1000.0 * 0.5 + 1e-6
+
+
+def test_aggregate_cap_none_behaves_like_before_the_parameter_existed():
+    series = {"A": list(_RAMP_AND_HOLD), "B": list(_RAMP_AND_HOLD)}
+    trades_a, eq_a, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+    )
+    trades_b, eq_b, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None, max_aggregate_pct=None,
+    )
+    assert eq_a == eq_b
+
+
 def test_misaligned_series_lengths_raise():
     series = {"A": [1.0, 2.0, 3.0], "B": [1.0, 2.0]}
     try:

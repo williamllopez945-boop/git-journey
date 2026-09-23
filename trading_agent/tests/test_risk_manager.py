@@ -99,3 +99,39 @@ def test_can_open_new_position_none_value_means_uncapped():
     limits = dict(LIMITS, max_concurrent_positions=None)
     rm = RiskManager(limits, state_path=tmp)
     assert rm.can_open_new_position(open_position_count=1000) is True
+
+
+def test_position_size_ignores_aggregate_cap_when_not_configured():
+    rm = _new_manager()  # LIMITS has no max_aggregate_position_pct key
+    # per-asset cap alone: 5% of 10,000 = 500 -> 5 units at price 100
+    assert rm.position_size(10_000, price=100, total_open_position_value=9_000) == 5.0
+
+
+def test_position_size_clamped_by_aggregate_cap():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
+    rm = RiskManager(limits, state_path=tmp)
+    # portfolio $10,000, aggregate cap 50% = $5,000, already $4,800 deployed
+    # -> only $200 of aggregate room left, even though the per-asset cap
+    # (50% = $5,000) would otherwise allow far more.
+    assert rm.position_size(10_000, price=100, total_open_position_value=4_800) == 2.0
+
+
+def test_position_size_zero_when_aggregate_cap_already_reached():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
+    rm = RiskManager(limits, state_path=tmp)
+    assert rm.position_size(10_000, price=100, total_open_position_value=5_000) == 0.0
+    assert rm.position_size(10_000, price=100, total_open_position_value=6_000) == 0.0
+
+
+def test_position_size_aggregate_override_replaces_configured_value():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
+    rm = RiskManager(limits, state_path=tmp)
+    # override down to 10% aggregate ($1,000), already $900 deployed -> $100 room
+    assert rm.position_size(10_000, price=100, total_open_position_value=900,
+                             max_aggregate_pct=0.10) == 1.0

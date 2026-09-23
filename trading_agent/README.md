@@ -9,13 +9,17 @@ repo root.
 > directly by the account owner (Claude Code's own auto-mode safety
 > classifier blocked doing this via an agent commit twice; the owner did
 > it themselves via a direct push to `main`). `RISK_LIMITS["auto_execute_max_usd"]`
-> is $100 (raised from $5 on 2026-09-23) and `max_position_pct` is 15%
-> (raised from 5% to 50% the same day, then brought back down to 15%
-> after re-backtesting the concurrent-positions cap at 50% sizing - see
-> "Risk limits" and "Concurrent-positions cap" below). Since $100 is well
-> above what a 15%-sized position at this portfolio's size ever reaches,
-> **the $100 threshold no longer meaningfully gates anything** — a
-> properly-sized, strategy-confirmed entry now auto-executes with no
+> is $100 (raised from $5 on 2026-09-23), `max_position_pct` is 20% (5% →
+> 50% → 15% → 20% the same day, across three re-backtested passes — see
+> "Risk limits" and "Concurrent-positions cap" below), and
+> `max_aggregate_position_pct` is a new **hard cap at 50% of portfolio
+> value across every open position combined** — the owner's explicit
+> "never use over 50% of capital" constraint, enforced independently of
+> the other two limits (which don't reliably compose into one on their
+> own: 20% × 5 concurrent = 100%, well over 50% if unchecked). Since $100
+> is well above what a 20%-sized position at this portfolio's size ever
+> reaches, **the $100 threshold no longer meaningfully gates anything** —
+> a properly-sized, strategy-confirmed entry now auto-executes with no
 > per-trade approval essentially always, not just "at or under" some
 > binding threshold. Per-position stop-loss (10%) and partial take-profit
 > (15%, sells 70%) also execute automatically once `DRY_RUN` is `False`
@@ -29,7 +33,8 @@ repo root.
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
 crossover strength from the 2026-09-22 screener — see
 `watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). The same
-15%-per-asset cap and combined daily trade cap apply to all 15. Also synced
+20%-per-asset cap, 50% aggregate cap, and combined daily trade cap apply
+to all 15. Also synced
 to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
 `d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
 purely organizational, `config.py` remains the source of truth the agent
@@ -75,7 +80,7 @@ is scanner-only — `get_crypto_quotes` has no volume field.
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
-| `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
+| `risk_manager.py` | Position sizing (flat or volatility-scaled, plus a hard aggregate cap across all open positions), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
 | `portfolio_backtest.py` | Multi-asset backtest sharing one cash pool across several price series at once — validates the concurrent-positions cap, which `backtest.py`'s single-asset simulator can't test — see `backtest_2026-09-23.md` |
 | `rsi_filter.py` | RSI entry confirmation filter — built and backtested but **not** wired into live entries (see `backtest_2026-09-23.md`'s "RSI entry confirmation filter" section: it hurt worst-case robustness in every setting that meaningfully engaged) |
@@ -144,13 +149,21 @@ from the size cap and trade limits that apply to entries.
 
 ## Risk limits (as configured)
 
-- Max 15% of portfolio value per asset. Raised from 5% to 50% on
-  2026-09-23 (owner-directed, a deliberate 10x increase in per-asset
-  concentration risk), then brought back to 15% the same day after
-  re-backtesting the concurrent-positions cap at 50% sizing found it 6x'd
-  worst-case drawdown and made `max_concurrent_positions` vestigial (cash
-  ran out after 2 positions regardless of the cap) - see
-  "Concurrent-positions cap" below and `backtest_2026-09-23.md`
+- Max 20% of portfolio value per asset. 5% → 50% → 15% → 20% on
+  2026-09-23, across three re-backtested passes the same day - see
+  "Concurrent-positions cap" below and `backtest_2026-09-23.md`. This is
+  no longer the primary backstop against overconcentration; the
+  aggregate cap below is.
+- **Max 50% of portfolio value across ALL open positions combined**
+  (`max_aggregate_position_pct`, new 2026-09-23) - a hard, independently
+  enforced ceiling, added because the per-asset cap and the
+  concurrent-positions cap don't reliably compose into one on their own
+  (20% × 5 concurrent = 100%, well over 50% if unchecked). Uses current
+  mark-to-market value, so already-open positions appreciating can't
+  quietly push total exposure past 50% either. Only ever limits or
+  zeroes a *fresh entry's* size - never forces an exit on positions
+  already open, even if they've since appreciated past the ceiling on
+  their own.
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
 - Max 3 trades per day, combined across the whole watchlist
@@ -163,10 +176,10 @@ and must never be committed).
 
 ## Position sizing: flat cap, or volatility-scaled
 
-The 15% cap above is a ceiling, not always the actual size used.
+The 20% cap above is a ceiling, not always the actual size used.
 `volatility_sizing.py` can scale it down (never up) for assets more
 volatile than BTC (the benchmark) — e.g. an asset twice as volatile as
-BTC gets sized at 7.5% instead of 15%. Validated against real market data
+BTC gets sized at 10% instead of 20%. Validated against real market data
 (`volatility_sizing_2026-09-23.md`, back when the flat cap was still 5%):
 on real hourly bars, ETH measured ~27% more volatile than BTC and scaled
 to ~79% of the flat cap — a sensible, real differentiation; the
@@ -227,6 +240,18 @@ scales roughly linearly with `max_position_pct` once diversification is
 preserved (verified by sweeping 5-25% - see `backtest_2026-09-23.md`'s
 "Concurrent-positions cap re-check after the sizing change" section).
 
+**Re-optimized again 2026-09-23 (same day, a third pass)** once
+`max_aggregate_position_pct` (above) existed as a real, hard 50% ceiling
+on total exposure: with that backstop in place independent of
+`max_position_pct`, swept the per-asset cap for return rather than
+drawdown and found 20% gave the best or near-best return in *both* real
+test groups while still preserving full diversification - see
+`backtest_2026-09-23.md`'s "Optimizing within the 50% aggregate cap"
+section. `max_position_pct` set to 20%; the underlying entry/exit signal
+logic (SMA windows, entry filter, cooldown, exit criteria) was
+deliberately *not* re-tuned chasing higher backtested returns in this
+pass - see that section for why.
+
 ## Crypto price history: built by polling, not fetched
 
 Verified against a live, authenticated `RobinHood` MCP connector: it has
@@ -278,13 +303,14 @@ Each cycle's `classify()` call returns one of:
   approval; `excellent_watch` alerts still always require it, regardless
   of size. **The threshold no longer meaningfully gates anything:** it
   was raised to $100 to match `max_position_pct`'s 50% cap that same day,
-  but `max_position_pct` was subsequently brought back down to 15% (see
-  "Risk limits" above) while `auto_execute_max_usd` was left at $100 -
-  since a 15%-sized position at this portfolio's value never reaches
-  anywhere close to $100, essentially every properly-sized confirmed
-  entry now auto-executes unconditionally, not "at or under" a real
-  binding threshold. Revisit `auto_execute_max_usd` if the approval gate
-  is meant to matter again.
+  but `max_position_pct` was subsequently brought down to 20% across two
+  more passes (see "Risk limits" above) while `auto_execute_max_usd` was
+  left at $100 - since a 20%-sized position at this portfolio's value
+  never reaches anywhere close to $100, essentially every properly-sized
+  confirmed entry now auto-executes unconditionally, not "at or under" a
+  real binding threshold. Revisit `auto_execute_max_usd` if the approval
+  gate is meant to matter again - it was left alone deliberately, not
+  by oversight (see `config.py`'s module docstring).
 - **Protective exits are not bounded the same way.** Stop-loss (10%) and
   take-profit (15%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
@@ -296,13 +322,14 @@ Each cycle's `classify()` call returns one of:
   (asset, side, quantity, price, order id, and for exits the reason and
   resulting P/L) — auto-execute removes the approval gate before the
   order, not visibility after it.
-- The 15%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
-  (`RiskManager`) still apply to new entries on top of the $100
-  auto-execute threshold — defense in depth, not a replacement for it.
-  Since the $100 threshold no longer binds at this position size (see
-  above), it's the 15% position cap, the 3-trades/day cap, the 3%
-  circuit breaker, and the concurrent-positions cap doing the practical
-  risk-limiting on new entries now, not the approval gate.
+- The 20%-per-asset cap, 50% aggregate cap, 3% daily circuit breaker, and
+  3-trades/day cap (`RiskManager`) still apply to new entries on top of
+  the $100 auto-execute threshold — defense in depth, not a replacement
+  for it. Since the $100 threshold no longer binds at this position size
+  (see above), it's the 50% aggregate cap in particular - a hard,
+  independently enforced ceiling - doing the real risk-limiting on new
+  entries now, alongside the 3-trades/day cap, the 3% circuit breaker,
+  and the concurrent-positions cap, not the approval gate.
 
 ## Adjusting or disabling live trading (the owner's own direct action)
 

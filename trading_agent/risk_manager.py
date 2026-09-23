@@ -59,20 +59,46 @@ class RiskManager:
             return False
         return self.state["trades_today"] < self.limits["max_trades_per_day"]
 
-    def position_size(self, portfolio_value, price, current_position_value=0.0, max_position_pct=None):
+    def position_size(self, portfolio_value, price, current_position_value=0.0, max_position_pct=None,
+                       total_open_position_value=0.0, max_aggregate_pct=None):
         """Quantity of the asset that can still be bought without exceeding
-        max_position_pct of the portfolio for that asset.
+        max_position_pct of the portfolio for that asset, AND without
+        pushing total capital deployed across every simultaneously held
+        position over max_aggregate_pct of the portfolio.
 
         max_position_pct: overrides RISK_LIMITS["max_position_pct"] when
         given - pass volatility_sizing.scaled_max_position_pct(...) here to
         size a volatile asset down below the flat cap. None (default) uses
         the configured flat cap, unchanged from before this parameter
-        existed."""
+        existed.
+
+        total_open_position_value: current mark-to-market value of ALL
+        open positions across the whole watchlist (including this asset's
+        own existing holding, if any) - the aggregate exposure check needs
+        the whole picture, not just this one asset. Defaults to 0.0
+        (no other positions), unchanged from before this parameter
+        existed.
+
+        max_aggregate_pct: overrides RISK_LIMITS["max_aggregate_position_pct"]
+        when given. The per-asset cap and the concurrent-positions cap
+        don't reliably compose into a portfolio-wide ceiling (e.g. 15%
+        per asset x 5 concurrent = 75%, well over a 50% target) - this is
+        an independent, final clamp on top of the per-asset sizing, using
+        current mark-to-market value (not cost basis), so it also protects
+        against already-open positions appreciating past the intended
+        ceiling. None (default, and no config value set) disables the
+        clamp entirely, unchanged from before this parameter existed."""
         if price <= 0:
             return 0.0
         pct = max_position_pct if max_position_pct is not None else self.limits["max_position_pct"]
         max_value = portfolio_value * pct
         remaining_value = max(max_value - current_position_value, 0.0)
+
+        agg_pct = max_aggregate_pct if max_aggregate_pct is not None else self.limits.get("max_aggregate_position_pct")
+        if agg_pct is not None:
+            remaining_aggregate = max(portfolio_value * agg_pct - total_open_position_value, 0.0)
+            remaining_value = min(remaining_value, remaining_aggregate)
+
         return remaining_value / price
 
     def can_open_new_position(self, open_position_count):

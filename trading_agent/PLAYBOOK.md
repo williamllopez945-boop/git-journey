@@ -22,6 +22,14 @@ over the watchlist.
      `quantity_transferable > 0` from `get_crypto_positions` - recompute
      this once per cycle from the fetched positions, then keep it updated
      in-memory as positions open/close during the cycle (see step 5d).
+   - `total_open_position_value`: sum of current mark-to-market value
+     (quantity × mark price from `get_crypto_quotes`) across every
+     `WATCHLIST` asset with an open position - recompute once per cycle,
+     then keep it updated in-memory as positions open/close/partially
+     exit during the cycle (add a fresh entry's notional when it
+     executes; subtract a sell's proceeds-equivalent value when a
+     position closes or partially exits). Feeds
+     `RiskManager.position_size`'s aggregate cap (step 5d).
 
 3. **Initialize risk state for the day.** Construct a `RiskManager` from
    `trading_agent/risk_manager.py` with `RISK_LIMITS`. Call
@@ -87,8 +95,10 @@ over the watchlist.
       asset — if either doesn't have enough yet (still warming up per
       step 5b), fall back to the flat `RISK_LIMITS["max_position_pct"]`
       instead (pass no override). Compute the order quantity with
-      `RiskManager.position_size(portfolio_value, price, current_position_value, max_position_pct=<the scaled cap or None>)`.
-      Skip if the resulting quantity is 0 (already at the per-asset cap).
+      `RiskManager.position_size(portfolio_value, price, current_position_value, max_position_pct=<the scaled cap or None>, total_open_position_value=total_open_position_value)`.
+      Skip if the resulting quantity is 0 (already at the per-asset cap,
+      or the `max_aggregate_position_pct` cap is already fully used by
+      other open positions — see the hard rule on this below).
       **Scope note:** the scanner-based cycle below has no raw price
       series to compute volatility from (only point-in-time SMA values),
       so volatility-scaled sizing only applies on this polling path, not
@@ -147,9 +157,13 @@ waiting for `price_history.py` to accumulate enough local bars.
      — if `False`, skip this asset entirely this cycle too (the
      concurrent-positions cap, see step 5d above; same rule applies here).
      Otherwise compute the order notional with
-     `RiskManager.position_size(...)` (quantity × price) and continue
-     below; if the order executes, increment `open_position_count` before
-     moving to the next asset in this cycle.
+     `RiskManager.position_size(..., total_open_position_value=total_open_position_value)`
+     (quantity × price) and continue below; skip this asset if the
+     resulting quantity is 0 (the `max_aggregate_position_pct` cap is
+     already fully used — see the hard rule below). If the order
+     executes, increment `open_position_count` and add its notional to
+     `total_open_position_value` before moving to the next asset in this
+     cycle.
    - `fresh_sell_cross`: no cooldown check (cooldown only blocks new
      entries, never exits). Compute the order notional with
      `RiskManager.position_size(...)` (quantity × price).
@@ -242,6 +256,14 @@ the SMA-based sell signal above.
 - Never bypass `DRY_RUN`. It only becomes `False` when the account owner
   edits `trading_agent/config.py` themselves after verifying the MCP
   connection is live and correct.
+- Never size a fresh entry without passing `total_open_position_value`
+  (step 2) into `RiskManager.position_size(...)`. `RISK_LIMITS["max_aggregate_position_pct"]`
+  (50%) is a hard cap on the combined mark-to-market value of every open
+  position at once — it does not follow automatically from
+  `max_position_pct` and `max_concurrent_positions` alone (20% x 5 = 100%,
+  well over 50% if unchecked). It only ever limits or zeroes a fresh
+  entry's size, never an exit, and applies identically on both the
+  polling and scanner paths.
 - Auto-execution is bounded and narrow, not a general license: only a
   `fresh_buy_cross` / `fresh_sell_cross` signal, only when `DRY_RUN` is
   `False`, only when `RiskManager.can_auto_execute(order_notional_usd)` is
