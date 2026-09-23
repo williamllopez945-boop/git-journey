@@ -82,6 +82,42 @@ def test_hold_when_stable_and_below_thresholds():
     assert classification == "hold"
 
 
+def test_fresh_buy_cross_blocked_by_low_relative_volume():
+    path = _tmp_path()
+    classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)  # bearish baseline
+    classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)  # flip, pending
+    classification, _ = classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25,
+                                  relative_volume=0.2, min_volume_ratio=0.4)
+    assert classification == "hold"  # confirmed cross, but volume too thin
+
+
+def test_fresh_buy_cross_allowed_at_or_above_relative_volume():
+    path = _tmp_path()
+    classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)
+    classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)
+    classification, _ = classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25,
+                                  relative_volume=0.4, min_volume_ratio=0.4)
+    assert classification == "fresh_buy_cross"
+
+
+def test_fresh_sell_cross_never_volume_gated():
+    path = _tmp_path()
+    classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)  # bullish baseline
+    classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)  # flip down, pending
+    classification, _ = classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25,
+                                  relative_volume=0.01, min_volume_ratio=0.4)
+    assert classification == "fresh_sell_cross"  # thin volume never blocks an exit-side cross
+
+
+def test_relative_volume_none_disables_the_gate():
+    path = _tmp_path()
+    classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)
+    classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)
+    classification, _ = classify("BTC", sma10=105, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25,
+                                  relative_volume=None)
+    assert classification == "fresh_buy_cross"
+
+
 def test_assets_tracked_independently():
     path = _tmp_path()
     classify("BTC", sma10=95, sma30=100, pct_change=0.0, path=path, min_strength_pct=0.25)

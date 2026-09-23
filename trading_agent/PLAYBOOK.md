@@ -120,19 +120,25 @@ waiting for `price_history.py` to accumulate enough local bars.
 
 1. Run the saved scan (`run_scan`, scan_id `8f2ca450-1f7f-4e69-b015-daafe494c14e`
    — "Crypto SMA(10,30) 1h Crossover — Strategy Screener"), which returns
-   `SMA 10 (1h)`, `SMA 30 (1h)`, and `% Change` for every crypto pair
-   Robinhood offers.
+   `SMA 10 (1h)`, `SMA 30 (1h)`, `Relative volume`, and `% Change` for
+   every crypto pair Robinhood offers. `Relative volume` is real crypto
+   data (`volume(1h,1) / volumeAvg(14,1h)`, the most recent hour's volume
+   over its own 14-hour average) - see backtest_2026-09-23.md's "Volume
+   entry confirmation filter" section for how the threshold was chosen.
 2. Filter the results to `WATCHLIST` from `config.py`.
 3. For each watchlist asset, call
-   `scanner_signals.classify(asset, sma10, sma30, pct_change)` from
-   `trading_agent/scanner_signals.py`. As of the entry-confirmation filter
+   `scanner_signals.classify(asset, sma10, sma30, pct_change, relative_volume=relative_volume)`
+   from `trading_agent/scanner_signals.py`. As of the entry-confirmation filter
    (backtest_2026-09-23.md), a crossover no longer fires the same cycle it's
    detected - it's held "pending" for one cycle, then only classified
    `fresh_buy_cross`/`fresh_sell_cross` if it still holds and clears
    `entry_filter.DEFAULT_MIN_STRENGTH_PCT` (0% by default as of the
    broader re-tuning in backtest_2026-09-23.md - persistence alone, no
-   additional strength requirement). An immediate reversal classifies
-   `"hold"`.
+   additional strength requirement). A confirmed buy cross is additionally
+   downgraded to `"hold"` if `Relative volume` is below
+   `volume_filter.DEFAULT_VOLUME_MIN_RATIO` (0.4 by default) - an
+   unconvincing, low-volume breakout; this never applies to a sell cross.
+   An immediate reversal classifies `"hold"`.
 4. Act on the classification:
    - `fresh_buy_cross`: check `PositionStateStore().in_cooldown(asset)`
      first — if `True`, skip this asset entirely this cycle (the whipsaw
@@ -255,3 +261,14 @@ the SMA-based sell signal above.
   signal is still skipped entirely while `RISK_LIMITS["max_concurrent_positions"]`
   is already reached, not downgraded to a recommendation. It never blocks
   exits, and never blocks a signal for an asset already held.
+- Never omit `relative_volume` from `scanner_signals.classify()` on the
+  scanner-based cycle when the scan result has it (it does, as of the
+  "Relative volume" column added 2026-09-23) — a confirmed buy cross on
+  thin volume should be downgraded to `"hold"` inside `classify()` itself,
+  not treated as a fresh entry. **Scope: scanner path only.** The polling
+  path (`price_history.py`) has no volume field available — `get_crypto_quotes`
+  doesn't return one and there's still no crypto historicals tool — so a
+  polling-detected `"buy"` signal is never volume-gated; this is the
+  mirror image of volatility-scaled sizing (step 5d), which is polling-only
+  for the same underlying reason (the scanner has no raw price series to
+  compute volatility from). It never blocks `fresh_sell_cross`.

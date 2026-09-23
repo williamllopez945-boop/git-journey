@@ -15,7 +15,9 @@ repo root.
 > partial take-profit (15%, sells 70%) also execute automatically once
 > `DRY_RUN` is `False` — see "Exit criteria" below. First real trade
 > placed 2026-09-22: $5.02 PEPE buy, a discretionary override (not a
-> strategy-confirmed signal).
+> strategy-confirmed signal). A confirmed buy cross on the scanner path
+> is also gated on real crypto volume (2026-09-23) — see "Volume
+> confirmation" below.
 
 **Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
@@ -33,7 +35,9 @@ PYTH is not one of them even though it's a normally tradable pair (real
 quotes work fine via `get_crypto_quotes`). Until that's resolved, PYTH's
 signal only comes from the slower `price_history.py` polling path (~31
 hourly cycles to warm up) — it does not get the scanner's immediate
-real-history signal that the other 14 watchlist assets get.
+real-history signal that the other 14 watchlist assets get, and (since
+2026-09-23) it also never gets the volume confirmation gate below, which
+is scanner-only — `get_crypto_quotes` has no volume field.
 
 ## What's here
 
@@ -43,7 +47,8 @@ real-history signal that the other 14 watchlist assets get.
 | `strategy.py` | Raw SMA crossover signal logic (pure computation, no network) |
 | `entry_filter.py` | Wraps `strategy.py` with an entry confirmation filter (1-bar persistence + minimum crossover strength) - cuts whipsaw losses, see `backtest_2026-09-23.md` |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
-| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
+| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed); gates a confirmed buy cross on real crypto `Relative volume` from the same scan — persisted to `scanner_state.json` |
+| `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
@@ -67,6 +72,22 @@ death-crossed position can't immediately re-enter — `position_state.py`
 blocks new entries into that asset for 4 hours after a full exit. Only
 blocks new entries — exits (sells, stop-loss, take-profit) are never
 delayed by it.
+
+**Volume confirmation (scanner path only):** a confirmed buy cross is
+additionally blocked when the asset's `Relative volume`
+(`volume(1h,1) / volumeAvg(14,1h)`, added to the production scan
+2026-09-23) is below `volume_filter.DEFAULT_VOLUME_MIN_RATIO` (0.4) - an
+unconvincing, low-volume breakout. Real crypto data from the scanner, not
+an equity proxy. Backtested against equity/ETF proxy volume (real crypto
+volume has no historicals source, same limitation as price):
+`backtest_2026-09-23.md`'s "Volume entry confirmation filter" section
+found this conservative threshold never hurt in any of 9 clean real
+series and modestly helped on 2 of them (IBIT, ETHA) - thinner evidence
+than the other tunings on this page, since only those two series showed
+real engagement, but smooth and non-negative across every neighboring
+threshold and period tested. Never blocks a sell cross, and unavailable
+on the polling path (`price_history.py`/`get_crypto_quotes` have no
+volume field) - PYTH-only entries never get this gate.
 
 **Tuning history, briefly (see `backtest_2026-09-23.md` for the full
 story):** an initial sweep against only IBIT/ETHA's one 6-month trending

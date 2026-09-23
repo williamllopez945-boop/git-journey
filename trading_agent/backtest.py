@@ -19,12 +19,14 @@ from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import confirmed_signal
 from .rsi_filter import passes_rsi_filter, DEFAULT_RSI_PERIOD, DEFAULT_RSI_OVERBOUGHT_PCT
+from .volume_filter import passes_volume_filter, DEFAULT_VOLUME_PERIOD, DEFAULT_VOLUME_MIN_RATIO
 
 
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
              stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
              take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
-             rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT):
+             rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
+             volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -46,6 +48,13 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     entry additionally requires rsi_filter.passes_rsi_filter (RSI below
     the overbought threshold) - blocks entries into an already-extended
     move. None (default) disables the RSI filter entirely.
+
+    volumes/volume_period/volume_min_ratio: when volumes is given (a list
+    of per-bar volumes, same length and order as closes), a fresh buy
+    entry additionally requires volume_filter.passes_volume_filter
+    (current bar's volume at least volume_min_ratio times its own recent
+    average) - blocks entries on unconvincing, low-volume drift. None
+    (default) disables the volume filter entirely.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -109,7 +118,11 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 rsi_period is not None
                 and not passes_rsi_filter(window, rsi_period, rsi_overbought_pct)
             )
-            if not in_cooldown and not rsi_blocked:
+            volume_blocked = (
+                volumes is not None
+                and not passes_volume_filter(volumes[: i + 1], volume_period, volume_min_ratio)
+            )
+            if not in_cooldown and not rsi_blocked and not volume_blocked:
                 qty = cash / price
                 position_qty = qty
                 avg_cost_basis = price
