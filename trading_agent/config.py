@@ -94,11 +94,34 @@ concurrent cap; a stock trade and two crypto trades in one day already hits
 the daily trade cap. See PLAYBOOK.md's stock scanner-based cycle section for
 how open_position_count/total_open_position_value are computed across both
 lists together each cycle.
+
+2026-09-23 (same day, fifth pass): owner asked to get out of meme coins and
+into assets "that has a future" - clarified (AskUserQuestion) as blue-chip/
+established crypto rather than literal stablecoins (a stablecoin barely
+moves, so an SMA-crossover strategy has nothing to trade). No sell orders
+were needed - the account held zero open crypto positions at the time, so
+this was a pure watchlist swap, not an exit.
+
+Removed: DOGE (dropped from the "core" carve-out - it's the origin meme
+coin by reputation even though it was previously treated as core, not a
+screener pick) and the entire meme-coin screener cluster from 2026-09-22
+(PEPE, WIF, BONK, PENGU, FLOKI, MEW, POPCAT, SHIB).
+
+Replaced with the same top-10-by-SMA(10,30)-crossover-strength methodology
+used throughout this session, re-run against the 49-pair universe with an
+explicit exclusion list applied first (meme/joke/political coins and the
+one true stablecoin: DOGE, SHIB, PEPE, WIF, BONK, FLOKI, MEW, POPCAT, PNUT,
+MOODENG, TRUMP, PENGU, WLFI, USDC) - not hand-picked, same evidence-based
+approach as the crypto and stock watchlists. BTC/ETH/SOL kept as the
+required "core" carve-out regardless of rank (same pattern as before, DOGE
+just dropped out of that core set). Result: LIT, BCH, XCN, HBAR, DOT, CRV,
+ZORA, LINK, AVAX, ASTER. PYTH and XLM (already non-meme, added 2026-09-22
+for other reasons - see below) were untouched by this pass.
 """
 
 WATCHLIST = [
-    "BTC", "ETH", "SOL", "DOGE",  # core assets
-    "PEPE", "WIF", "BONK", "PENGU", "FLOKI", "XCN", "MEW", "POPCAT", "SHIB",  # top 10 screener (2026-09-22), DOGE deduped
+    "BTC", "ETH", "SOL",  # core assets - DOGE dropped 2026-09-23 (meme-coin removal pass, see module docstring)
+    "LIT", "BCH", "XCN", "HBAR", "DOT", "CRV", "ZORA", "LINK", "AVAX", "ASTER",  # top 10 blue-chip screener (2026-09-23, replaces the meme-coin cluster), see module docstring
     "PYTH", "XLM",  # added 2026-09-22 - PYTH is NOT covered by the SMA screener (see README)
 ]
 

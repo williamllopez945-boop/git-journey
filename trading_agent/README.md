@@ -31,14 +31,26 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
-**Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
-DOGE (core) plus PEPE, WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top
-10 by SMA(10,30) crossover strength from the 2026-09-22 screener — see
-`watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). Also
-synced to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
-`d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
-purely organizational, `config.py` remains the source of truth the agent
-reads from.
+**Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL
+(core) plus LIT, BCH, XCN, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER (top 10
+by SMA(10,30) crossover strength among blue-chip/established crypto,
+2026-09-23 — see `watchlist_2026-09-23_meme_removal.md`), plus PYTH and
+XLM (added 2026-09-22). Also synced to a real Robinhood watchlist ("Trading
+Agent Watchlist", list_id `d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for
+visibility in the app — purely organizational, `config.py` remains the
+source of truth the agent reads from.
+
+**Meme-coin removal (2026-09-23):** the owner asked to "get out of meme
+coins and into [assets] that has a future," clarified as blue-chip crypto
+rather than literal stablecoins (a stablecoin barely moves, so a
+momentum strategy has nothing to trade). DOGE and the entire 2026-09-22
+meme-coin screener cluster (PEPE, WIF, BONK, PENGU, FLOKI, MEW, POPCAT,
+SHIB) were removed and replaced with a fresh top-10 screener run against
+the 49-pair universe with meme/joke/political coins and USDC excluded
+first — same evidence-based, screener-driven methodology as every other
+watchlist change this session, not hand-picked. No sell orders were
+needed — the account held zero open crypto positions at the time. Full
+exclusion list and ranking in `watchlist_2026-09-23_meme_removal.md`.
 
 ## Stock watchlist (2026-09-23)
 
