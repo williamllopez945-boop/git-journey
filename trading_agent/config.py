@@ -78,12 +78,37 @@ Net live config after all three passes: max_position_pct=20%,
 max_concurrent_positions=5, max_aggregate_position_pct=50% (hard cap,
 new), auto_execute_max_usd=$100 (unchanged, still not meaningfully
 binding at this position size - not revisited again since not asked).
+
+2026-09-23 (same day, fourth pass): extended the agent from crypto-only to
+also trade equities, per owner request ("Add stocks to the watchlist too"),
+with two explicit owner choices: (1) stocks = a momentum screener run the
+same way the crypto watchlist was (not hand-picked tickers) - see
+STOCK_WATCHLIST below and watchlist_stocks_2026-09-23.md for the screener
+methodology and full ranking; (2) shared risk budget - RISK_LIMITS is one
+set of numbers spanning WATCHLIST and STOCK_WATCHLIST together, not
+separate pools per asset class. This means max_aggregate_position_pct's 50%
+hard cap, max_concurrent_positions' 5-position cap, and max_trades_per_day's
+3-trade cap are all counted across crypto AND stock positions combined -
+e.g. 3 open crypto positions plus 2 open stock positions already hits the
+concurrent cap; a stock trade and two crypto trades in one day already hits
+the daily trade cap. See PLAYBOOK.md's stock scanner-based cycle section for
+how open_position_count/total_open_position_value are computed across both
+lists together each cycle.
 """
 
 WATCHLIST = [
     "BTC", "ETH", "SOL", "DOGE",  # core assets
     "PEPE", "WIF", "BONK", "PENGU", "FLOKI", "XCN", "MEW", "POPCAT", "SHIB",  # top 10 screener (2026-09-22), DOGE deduped
     "PYTH", "XLM",  # added 2026-09-22 - PYTH is NOT covered by the SMA screener (see README)
+]
+
+# Top 10 by SMA(10,30) 1h crossover strength among liquid stocks (market cap
+# > $2B, price > $10, 30d avg volume > 1M shares), screened 2026-09-23 - see
+# watchlist_stocks_2026-09-23.md for the full methodology and ranking table.
+# Shares RISK_LIMITS with WATCHLIST (shared budget, owner's explicit choice
+# - see module docstring), not a separate risk pool.
+STOCK_WATCHLIST = [
+    "TNGX", "GLBE", "VVV", "ARQT", "TRLV", "ESI", "CE", "BHF", "MDLN", "OLLI",
 ]
 
 STRATEGY = {

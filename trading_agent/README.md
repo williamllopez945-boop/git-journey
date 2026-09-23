@@ -1,9 +1,11 @@
-# Autonomous crypto trading agent
+# Autonomous crypto + stock trading agent
 
-A rule-based agent that trades a configurable crypto watchlist on Robinhood
-using an SMA-crossover strategy and conservative risk limits. Built on top
-of the `robinhood-trading` MCP server registered in `.mcp.json` at the
-repo root.
+A rule-based agent that trades a configurable crypto watchlist AND a
+configurable stock watchlist on Robinhood using the same SMA-crossover
+strategy and one shared set of risk limits. Built on top of the
+`robinhood-trading` MCP server registered in `.mcp.json` at the repo root.
+Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
+"Stock watchlist" below).
 
 > **Live trading status (2026-09-22): LIVE.** `DRY_RUN = False`, flipped
 > directly by the account owner (Claude Code's own auto-mode safety
@@ -29,16 +31,50 @@ repo root.
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
-**Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
-WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
-crossover strength from the 2026-09-22 screener — see
-`watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). The same
-20%-per-asset cap, 50% aggregate cap, and combined daily trade cap apply
-to all 15. Also synced
-to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
+**Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
+DOGE (core) plus PEPE, WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top
+10 by SMA(10,30) crossover strength from the 2026-09-22 screener — see
+`watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). Also
+synced to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
 `d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
 purely organizational, `config.py` remains the source of truth the agent
 reads from.
+
+## Stock watchlist (2026-09-23)
+
+`config.py`'s `STOCK_WATCHLIST`: TNGX, GLBE, VVV, ARQT, TRLV, ESI, CE, BHF,
+MDLN, OLLI — top 10 by SMA(10,30) 1h crossover strength among liquid stocks
+(market cap > $2B, price > $10, 30d avg volume > 1M shares), same screener
+methodology as the crypto watchlist, run 2026-09-23 per owner request ("Add
+stocks to the watchlist too" → "Run a momentum screener, like the crypto
+watchlist got"). Full ranking and why the liquidity filters were needed
+(the unfiltered STOCK universe is dominated by illiquid micro-caps whose
+SMA crossovers are noise, not momentum) in `watchlist_stocks_2026-09-23.md`.
+Scanned via a new saved scan, `Stock SMA(10,30) 1h Crossover — Strategy
+Screener`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`.
+
+**Shared risk budget (owner's explicit choice, not separate per asset
+class):** `RISK_LIMITS` — `max_position_pct`, `max_aggregate_position_pct`,
+`max_concurrent_positions`, `max_trades_per_day` — is one set of numbers
+spanning `WATCHLIST` and `STOCK_WATCHLIST` together. A stock trade and a
+crypto trade draw from the same daily-trade-cap counter; an open stock
+position counts toward the same concurrent-positions cap and the same 50%
+aggregate-value ceiling a crypto position would. See `PLAYBOOK.md`'s
+"Scanner-based cycle — stocks" section for exactly how the shared counters
+are computed each cycle.
+
+**Market hours (stocks only, v1 scope):** unlike crypto (24/7), the stock
+scanner cycle only evaluates and acts during regular market hours
+(9:30-16:00 ET, Mon-Fri) — outside that window a stock signal simply isn't
+acted on until the next in-hours cycle. Orders use marketable limit orders
+(not plain market orders) for explicit price protection. Extended-hours
+trading is not implemented in v1.
+
+**No cost-basis fallback needed for stocks (so far):** `get_equity_positions`
+returns `average_cost` directly per position; the crypto-side
+`cost_bases`-returns-zero gap (see "Known gap: cost basis" below) has not
+been observed on the equity side, so `cost_basis_fallback.py` is not wired
+into the stock exit-rules path.
 
 **Known gap: cost basis can come back zero on a real position.**
 `get_crypto_positions`' `cost_bases` field reported `direct_quantity: 0` /
@@ -78,11 +114,11 @@ is scanner-only — `get_crypto_quotes` has no volume field.
 
 | File | Purpose |
 |---|---|
-| `config.py` | Watchlist, strategy parameters, risk limits, `DRY_RUN` switch |
+| `config.py` | Crypto watchlist (`WATCHLIST`) and stock watchlist (`STOCK_WATCHLIST`, added 2026-09-23), strategy parameters, one shared `RISK_LIMITS`, `DRY_RUN` switch |
 | `strategy.py` | Raw SMA crossover signal logic (pure computation, no network) |
 | `entry_filter.py` | Wraps `strategy.py` with an entry confirmation filter (1-bar persistence + minimum crossover strength) - cuts whipsaw losses, see `backtest_2026-09-23.md` |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
-| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed); gates a confirmed buy cross on real crypto `Relative volume` from the same scan — persisted to `scanner_state.json` |
+| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed); gates a confirmed buy cross on real `Relative volume` from the same scan — persisted to `scanner_state.json`. Asset-agnostic (keyed by symbol string) — used for both the crypto scan (scan_id `8f2ca450-...`) and the stock scan (scan_id `6e009dcf-...`, added 2026-09-23) |
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |

@@ -15,21 +15,32 @@ over the watchlist.
    `DRY_RUN` from `trading_agent/config.py`.
 
 2. **Fetch account state.** Call the `robinhood-trading` MCP tools to get:
-   - total portfolio equity (cash + holdings value)
+   - total portfolio equity (cash + holdings value) - `get_portfolio`,
+     account_number `581911765` (the "Agentic" account).
    - current positions and their market value, for each asset in
-     `WATCHLIST`
-   - `open_position_count`: the number of `WATCHLIST` assets with
-     `quantity_transferable > 0` from `get_crypto_positions` - recompute
-     this once per cycle from the fetched positions, then keep it updated
-     in-memory as positions open/close during the cycle (see step 5d).
-   - `total_open_position_value`: sum of current mark-to-market value
-     (quantity × mark price from `get_crypto_quotes`) across every
-     `WATCHLIST` asset with an open position - recompute once per cycle,
-     then keep it updated in-memory as positions open/close/partially
-     exit during the cycle (add a fresh entry's notional when it
-     executes; subtract a sell's proceeds-equivalent value when a
-     position closes or partially exits). Feeds
-     `RiskManager.position_size`'s aggregate cap (step 5d).
+     `WATCHLIST` (`get_crypto_positions`, `rhs_account_number` `581911765`)
+     AND each asset in `STOCK_WATCHLIST` (`get_equity_positions`,
+     `account_number` `581911765` - same numeric account, different
+     parameter name per tool).
+   - `open_position_count`: **shared across both lists** (owner's explicit
+     shared-budget choice, see config.py) - the number of `WATCHLIST`
+     assets with `quantity_transferable > 0` from `get_crypto_positions`
+     PLUS the number of `STOCK_WATCHLIST` assets with `quantity > 0` from
+     `get_equity_positions`, as one combined count. Recompute once per
+     cycle from the fetched positions, then keep it updated in-memory as
+     positions open/close during the cycle (see step 5d and the stock
+     scanner cycle below) - a crypto entry and a stock entry in the same
+     cycle both increment the same counter.
+   - `total_open_position_value`: **shared across both lists**, same
+     reasoning - sum of current mark-to-market value (quantity × mark
+     price, `get_crypto_quotes` for crypto positions and
+     `get_equity_quotes` for stock positions) across every open position
+     in `WATCHLIST` and `STOCK_WATCHLIST` combined. Recompute once per
+     cycle, then keep it updated in-memory as positions open/close/
+     partially exit during the cycle on either asset class. Feeds
+     `RiskManager.position_size`'s aggregate cap (step 5d), which is one
+     50% ceiling over crypto and stock exposure together, not two 50%
+     ceilings.
 
 3. **Initialize risk state for the day.** Construct a `RiskManager` from
    `trading_agent/risk_manager.py` with `RISK_LIMITS`. Call
@@ -190,11 +201,73 @@ waiting for `price_history.py` to accumulate enough local bars.
    - `hold`: no action, no message needed (stay quiet unless the account
      owner asked for a status update).
 
+## Scanner-based cycle — stocks
+
+Run this alongside the crypto scanner cycle above, every cycle **during
+regular market hours only (9:30-16:00 ET, Mon-Fri)**. Unlike crypto,
+equities don't trade 24/7 and market/stop orders only fill during regular
+hours (see "Hard rules" below) - skip this whole section outside that
+window rather than evaluating signals that can't reliably execute. v1
+scope: extended-hours trading is not implemented.
+
+1. Run the saved scan (`run_scan`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`
+   — "Stock SMA(10,30) 1h Crossover — Strategy Screener"), which returns
+   `SMA 10 (1h)`, `SMA 30 (1h)`, `Relative volume`, `Crossover %`, and
+   `% Change` for liquid stocks (market cap > $2B, price > $10, 30d avg
+   volume > 1M shares - see watchlist_stocks_2026-09-23.md for why the
+   unfiltered STOCK universe isn't usable directly).
+2. Filter the results to `STOCK_WATCHLIST` from `config.py`.
+3. For each watchlist stock, call
+   `scanner_signals.classify(asset, sma10, sma30, pct_change, relative_volume=relative_volume)`
+   — the exact same function used for crypto (it's asset-agnostic, keyed
+   only by the symbol string); it persists state in the same
+   `scanner_state.json`, so crypto and stock symbols coexist there without
+   collision as long as tickers don't overlap (they don't). Same
+   persistence-then-strength-then-volume gating as the crypto cycle.
+4. Act on the classification, mirroring the crypto scanner cycle exactly,
+   with these substitutions:
+   - Tool substitutions: `get_equity_quotes` instead of `get_crypto_quotes`;
+     `review_equity_order` instead of `preview_crypto_order`;
+     `place_equity_order` instead of `place_crypto_order` (pass
+     `account_number` `581911765`, not `rhs_account_number`); no crypto
+     `symbol`-as-pair resolution - just the plain ticker.
+   - Order type: use a **marketable limit order** (`type=limit`,
+     `limit_price` at or slightly above the current ask for a buy / at or
+     slightly below the current bid for a sell, `market_hours=regular_hours`),
+     not `type=market` - the account owner has not been asked about
+     accepting plain market-order slippage on equities the way the crypto
+     path already does, and a marketable limit gets the same effective
+     fill during regular hours with explicit price protection. Use
+     `quantity` (shares), not `dollar_amount`.
+   - `open_position_count` / `total_open_position_value`: the **same
+     shared counters** from step 2 above, not separate ones - a stock
+     entry and a crypto entry draw from the same concurrent-positions cap
+     and the same aggregate-value cap.
+   - Cooldown and concurrent-cap checks (`PositionStateStore`,
+     `RiskManager.can_open_new_position`) work identically - both are
+     keyed by asset symbol / a shared counter, neither assumes crypto.
+   - Auto-execution policy is identical: `RiskManager.can_auto_execute`
+     doesn't distinguish asset class, so a confirmed stock signal at/under
+     `auto_execute_max_usd` auto-executes exactly like a crypto one.
+   - `excellent_watch` and `hold` handling: identical to the crypto cycle.
+
 ## Per-position exit rules (stop-loss / take-profit)
 
 Run this for every watchlist asset with an open position (`quantity_transferable > 0`
-from `get_crypto_positions`), every cycle, independent of and in addition to
-the SMA-based sell signal above.
+from `get_crypto_positions`, or `quantity > 0` from `get_equity_positions`
+for `STOCK_WATCHLIST` symbols), every cycle (equities: during regular
+market hours only, same as the stock scanner cycle above), independent of
+and in addition to the SMA-based sell signal above.
+
+**Stock positions**: `get_equity_positions` returns `average_cost` directly
+per position - no cost-basis gap has been observed on the equity side (see
+step 1 below, which is crypto-specific), so use it as-is; skip the
+`cost_basis_fallback` step entirely for stocks. Sell via
+`place_equity_order` (`side=sell`, marketable limit as above, same
+`account_number`). Everything else in this section (stop-loss/take-profit
+thresholds, `PositionStateStore` cooldown/took-profit tracking, bypassing
+`can_trade()`/circuit breaker/size caps) applies identically to stock
+positions.
 
 1. Get the position's average cost basis (sum `direct_cost_basis` / sum
    `direct_quantity` across `cost_bases` from `get_crypto_positions` — see
@@ -264,6 +337,21 @@ the SMA-based sell signal above.
   well over 50% if unchecked). It only ever limits or zeroes a fresh
   entry's size, never an exit, and applies identically on both the
   polling and scanner paths.
+- **Shared budget, crypto + stocks (owner's explicit choice, 2026-09-23):**
+  `RISK_LIMITS` is one set of numbers spanning `WATCHLIST` and
+  `STOCK_WATCHLIST` together — `max_aggregate_position_pct`,
+  `max_concurrent_positions`, and `max_trades_per_day` are never
+  recomputed or checked separately per asset class. `open_position_count`
+  and `total_open_position_value` (step 2) must include both lists'
+  positions before either scanner cycle sizes anything; a stock trade and
+  a crypto trade in the same day draw from the same daily-trade-cap
+  counter, and an open stock position counts toward the same
+  concurrent-positions cap a crypto position would.
+- **Stocks only trade during regular market hours (9:30-16:00 ET, Mon-Fri)
+  in v1** — skip the entire stock scanner cycle and per-position exit
+  checks for `STOCK_WATCHLIST` symbols outside that window; a signal isn't
+  re-evaluated or queued, it's simply not acted on until the next cycle
+  that falls inside market hours. Crypto is unaffected (24/7, unchanged).
 - Auto-execution is bounded and narrow, not a general license: only a
   `fresh_buy_cross` / `fresh_sell_cross` signal, only when `DRY_RUN` is
   `False`, only when `RiskManager.can_auto_execute(order_notional_usd)` is
