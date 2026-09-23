@@ -14,6 +14,19 @@ classifier blocked the commit that would have done so, since it enables
 live automated trading. Flipping it to False requires the account owner's
 own direct action (edit this file and commit/push it yourself, or grant
 the permission the classifier is asking for and have it retried).
+
+2026-09-23: owner raised max_position_pct from 5% to 50%, then raised
+auto_execute_max_usd from $5 to $100 to match it (a one-time dollar
+snapshot of 50% of the ~$200 portfolio value at the time - these two
+values don't stay in sync automatically as portfolio value changes, and
+they're not required to be equal; the owner may want to revisit
+auto_execute_max_usd as the account grows or shrinks). Net effect: the
+$5 threshold was originally a narrow, bounded exception to "everything
+needs approval" - at $100, matching the position-sizing cap, essentially
+every properly-sized confirmed entry now auto-executes, and approval
+becomes the exception (oversized or non-confirmed signals like
+excellent_watch) rather than the default. This significantly widens the
+system's real-money autonomy versus the original bounded design.
 """
 
 WATCHLIST = [
@@ -35,9 +48,11 @@ RISK_LIMITS = {
                                      # in per-asset concentration risk, not incremental tuning)
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
     "max_trades_per_day": 3,        # combined across all watchlist assets
-    "auto_execute_max_usd": 5.0,    # fresh-crossover orders at/under this notional execute
+    "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
                                      # automatically (all watchlist assets); larger orders
-                                     # still require explicit per-trade approval
+                                     # still require explicit per-trade approval. Raised from
+                                     # $5 on 2026-09-23 to match max_position_pct's 50% cap at
+                                     # the ~$200 portfolio value that day - see module docstring
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
                                      # position at once (~1/3 of the 15-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep

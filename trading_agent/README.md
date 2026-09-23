@@ -9,14 +9,18 @@ repo root.
 > directly by the account owner (Claude Code's own auto-mode safety
 > classifier blocked doing this via an agent commit twice; the owner did
 > it themselves via a direct push to `main`). Fresh-crossover orders at or
-> under $5 notional (`RISK_LIMITS["auto_execute_max_usd"]`) execute
+> under $100 notional (`RISK_LIMITS["auto_execute_max_usd"]`, raised from
+> $5 on 2026-09-23 to match `max_position_pct`'s 50% cap) execute
 > automatically across the whole watchlist with no per-trade approval;
-> anything larger still requires it. Per-position stop-loss (10%) and
-> partial take-profit (15%, sells 70%) also execute automatically once
-> `DRY_RUN` is `False` — see "Exit criteria" below. First real trade
-> placed 2026-09-22: $5.02 PEPE buy, a discretionary override (not a
-> strategy-confirmed signal). A confirmed buy cross on the scanner path
-> is also gated on real crypto volume (2026-09-23) — see "Volume
+> anything larger still requires it — at this threshold, that's now the
+> exception rather than the norm for a properly-sized confirmed entry, a
+> real widening from the original narrow, bounded design (see "Risk
+> limits" below). Per-position stop-loss (10%) and partial take-profit
+> (15%, sells 70%) also execute automatically once `DRY_RUN` is `False`
+> — see "Exit criteria" below. First real trade placed 2026-09-22: $5.02
+> PEPE buy, a discretionary override (not a strategy-confirmed signal). A
+> confirmed buy cross on the scanner path is also gated on real crypto
+> volume (2026-09-23) — see "Volume
 > confirmation" below.
 
 **Current watchlist** (`config.py`): BTC, ETH, SOL, DOGE (core) plus PEPE,
@@ -247,12 +251,17 @@ Each cycle's `classify()` call returns one of:
   owner's identity that no agent can do on their behalf. Actual trading
   currently happens through a separate, already-authenticated `RobinHood`
   connector available in agent sessions on this account.
-- **New-entry auto-execution is bounded**, not blanket "no approval
-  ever": only fresh crossover signals (`fresh_buy_cross` /
+- **New-entry auto-execution is gated by signal type, not blanket "no
+  approval ever":** only fresh crossover signals (`fresh_buy_cross` /
   `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_usd"]`
-  (currently $5) execute without approval. Everything else — larger
-  fresh-cross orders, `excellent_watch` alerts — still requires the
-  account owner's explicit, per-trade approval.
+  (currently $100 - raised from $5 on 2026-09-23 to match
+  `max_position_pct`'s 50% cap) execute without approval; `excellent_watch`
+  alerts still always require it, regardless of size. **Note the shift in
+  practical effect:** at $5 this was a narrow exception (most real trade
+  sizes needed approval); at $100, matching the position-sizing cap,
+  essentially every properly-sized confirmed entry now clears the
+  threshold, so approval has become the exception rather than the default
+  for ordinary trades.
 - **Protective exits are not bounded the same way.** Stop-loss (10%) and
   take-profit (15%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
@@ -265,11 +274,12 @@ Each cycle's `classify()` call returns one of:
   resulting P/L) — auto-execute removes the approval gate before the
   order, not visibility after it.
 - The 50%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
-  (`RiskManager`) still apply to new entries on top of the $5
+  (`RiskManager`) still apply to new entries on top of the $100
   auto-execute threshold — defense in depth, not a replacement for it.
-  With the cap this wide, it's the $5 auto-execute threshold and the
+  With the position cap and the auto-execute threshold now roughly
+  matched, it's the 3-trades/day cap, the 3% circuit breaker, and the
   concurrent-positions cap doing most of the practical risk-limiting on
-  new entries now, not the per-asset percentage.
+  new entries, not the per-asset percentage or the approval gate.
 
 ## Adjusting or disabling live trading (the owner's own direct action)
 
