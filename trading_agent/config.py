@@ -30,7 +30,9 @@ STRATEGY = {
 }
 
 RISK_LIMITS = {
-    "max_position_pct": 0.05,       # max 5% of portfolio value held per asset
+    "max_position_pct": 0.50,       # max 50% of portfolio value held per asset (owner-raised
+                                     # from 5% on 2026-09-23 - a real, deliberate 10x increase
+                                     # in per-asset concentration risk, not incremental tuning)
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
     "max_trades_per_day": 3,        # combined across all watchlist assets
     "auto_execute_max_usd": 5.0,    # fresh-crossover orders at/under this notional execute

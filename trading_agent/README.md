@@ -23,7 +23,7 @@ repo root.
 WIF, BONK, PENGU, FLOKI, XCN, MEW, POPCAT, SHIB (top 10 by SMA(10,30)
 crossover strength from the 2026-09-22 screener — see
 `watchlist_2026-09-22.md`), plus PYTH and XLM (added 2026-09-22). The same
-5%-per-asset cap and combined daily trade cap apply to all 15. Also synced
+50%-per-asset cap and combined daily trade cap apply to all 15. Also synced
 to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
 `d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
 purely organizational, `config.py` remains the source of truth the agent
@@ -136,9 +136,12 @@ Stop-loss and take-profit are protective/profit-locking checks, not new
 risk-taking — see "Auto-execution policy" below for why they're exempt
 from the size cap and trade limits that apply to entries.
 
-## Risk limits (conservative, as configured)
+## Risk limits (as configured)
 
-- Max 5% of portfolio value per asset
+- Max 50% of portfolio value per asset (raised from 5% on 2026-09-23,
+  owner-directed - a real, deliberate 10x increase in per-asset
+  concentration risk, not incremental tuning; see "Position sizing" below
+  for the practical effect on trade size)
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
 - Max 3 trades per day, combined across the whole watchlist
@@ -151,13 +154,15 @@ and must never be committed).
 
 ## Position sizing: flat cap, or volatility-scaled
 
-The 5% cap above is a ceiling, not always the actual size used.
+The 50% cap above is a ceiling, not always the actual size used.
 `volatility_sizing.py` can scale it down (never up) for assets more
 volatile than BTC (the benchmark) — e.g. an asset twice as volatile as
-BTC gets sized at 2.5% instead of 5%. Validated against real market data
-(`volatility_sizing_2026-09-23.md`): on real hourly bars, ETH measured
-~27% more volatile than BTC and scaled to ~79% of the flat cap — a
-sensible, real differentiation.
+BTC gets sized at 25% instead of 50%. Validated against real market data
+(`volatility_sizing_2026-09-23.md`, back when the flat cap was still 5%):
+on real hourly bars, ETH measured ~27% more volatile than BTC and scaled
+to ~79% of the flat cap — a sensible, real differentiation; the
+*proportional* scaling behavior is unaffected by the flat cap's own
+value, only the resulting dollar/percentage figures move with it.
 
 **Scope, stated plainly:** this only sizes an individual position by its
 own volatility. It does not account for correlation across several
@@ -259,9 +264,12 @@ Each cycle's `classify()` call returns one of:
   (asset, side, quantity, price, order id, and for exits the reason and
   resulting P/L) — auto-execute removes the approval gate before the
   order, not visibility after it.
-- The 5%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
+- The 50%-per-asset cap, 3% daily circuit breaker, and 3-trades/day cap
   (`RiskManager`) still apply to new entries on top of the $5
   auto-execute threshold — defense in depth, not a replacement for it.
+  With the cap this wide, it's the $5 auto-execute threshold and the
+  concurrent-positions cap doing most of the practical risk-limiting on
+  new entries now, not the per-asset percentage.
 
 ## Adjusting or disabling live trading (the owner's own direct action)
 
