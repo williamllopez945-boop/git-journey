@@ -140,8 +140,33 @@ WATCHLIST = [
 # volatility gap. No sell orders needed - zero open positions in either at
 # the time. Left at 8 names rather than backfilling to 10 - not asked to
 # replace them, and the remaining 8 aren't single-catalyst names.
+#
+# 2026-09-23 (later still): owner asked to replace the mid-cap names with
+# larger ones ("Let's look at replacing the small cap stocks with larger
+# ones. With more confidence, I will add more capital"). Re-ran the same
+# screener with the market-cap floor raised from $2B to $10B (price > $10
+# and 30d avg volume > 1M unchanged) - full replacement via the same
+# top-10-by-crossover-strength methodology, not hand-picked winners (see
+# watchlist_stocks_2026-09-23_large_cap.md for the ranking and the
+# combined-portfolio backtest that validated it before this switch: +9.43%
+# return / 4.94% max drawdown over the same ~90-day window the mid-cap
+# list scored -7.64%/11.18% on). Real, well-known large/mega-caps: CRWD
+# ($269B), PANW ($322B), TWLO ($45B), ILMN ($39B), IR ($30B), PTC ($15B),
+# CHKP ($14B), MAIR ($13B), AR ($11B), HUBS ($11B).
+#
+# Honest caveat the backtest surfaced, not hidden: market cap does NOT
+# eliminate gap risk the way dropping TNGX/ARQT addressed *binary
+# clinical-trial* risk specifically - HUBS gapped -20.01% overnight on
+# 2026-08-06 (an earnings reaction), a bigger single-move gap than MDLN's
+# -15.2% that motivated the biotech removal. Earnings-driven gaps are a
+# universal, ordinary risk across virtually every stock (including this
+# list), bounded by max_position_pct (20%) and the 50% aggregate cap, not
+# eliminated by market cap - the combined backtest above already includes
+# that exact gap event and still came out ahead. No name was excluded on
+# a hindsight basis (that would be cherry-picking after the fact) - all
+# 10 are ordinary operating companies, not single-catalyst bets.
 STOCK_WATCHLIST = [
-    "GLBE", "VVV", "TRLV", "ESI", "CE", "BHF", "MDLN", "OLLI",
+    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CHKP", "MAIR", "AR", "HUBS",
 ]
 
 STRATEGY = {

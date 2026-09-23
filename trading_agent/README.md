@@ -54,27 +54,46 @@ exclusion list and ranking in `watchlist_2026-09-23_meme_removal.md`.
 
 ## Stock watchlist (2026-09-23)
 
-`config.py`'s `STOCK_WATCHLIST`: GLBE, VVV, TRLV, ESI, CE, BHF, MDLN, OLLI —
-originally the top 10 by SMA(10,30) 1h crossover strength among liquid
-stocks (market cap > $2B, price > $10, 30d avg volume > 1M shares), same
-screener methodology as the crypto watchlist, run 2026-09-23 per owner
-request ("Add stocks to the watchlist too" → "Run a momentum screener,
-like the crypto watchlist got"). Full ranking and why the liquidity
-filters were needed (the unfiltered STOCK universe is dominated by
-illiquid micro-caps whose SMA crossovers are noise, not momentum) in
-`watchlist_stocks_2026-09-23.md`. Scanned via a new saved scan, `Stock
-SMA(10,30) 1h Crossover — Strategy Screener`, scan_id
-`6e009dcf-d184-45a7-915f-ccfc50b4e6be`.
+`config.py`'s `STOCK_WATCHLIST`: **CRWD, PANW, TWLO, ILMN, IR, PTC, CHKP,
+MAIR, AR, HUBS** — top 10 by SMA(10,30) 1h crossover strength among
+**large-cap** stocks (market cap > $10B, price > $10, 30d avg volume >
+1M shares), same screener methodology used for every watchlist this
+session. Scanned via the same saved scan, `Stock SMA(10,30) 1h Crossover
+— Strategy Screener`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`
+(market-cap filter updated in place, so future re-screens inherit the
+$10B floor automatically).
 
-**TNGX and ARQT dropped (2026-09-23, later same day):** a real-data
-backtest (`backtest_2026-09-23.md`) found a genuine -15.2% overnight gap
-in MDLN on 2026-08-05 — past the 10% stop-loss in a single move, which an
-hourly check can't react to until after the fact. TNGX and ARQT are both
-clinical-stage biotechs carrying real binary trial/FDA catalyst risk,
-categorically worse than MDLN's ordinary-volatility gap. Owner's call:
-"Drop the two. We only pick winners here." No sell orders needed — zero
-open positions in either at the time. Left at 8 names rather than
-backfilling to a fresh top 10.
+**History of this list, most recent first:**
+- **2026-09-23 (large-cap upgrade):** owner asked to replace the mid-cap
+  names with larger ones ("Let's look at replacing the small cap stocks
+  with larger ones. With more confidence, I will add more capital").
+  Raised the screener's market-cap floor from $2B to $10B and re-ran it
+  — full replacement, not hand-picked. Validated with a real-data
+  backtest first: the new list's combined portfolio (with crypto
+  proxies, shared budget) scored **+9.43% return / 4.94% max drawdown**
+  over the same ~90-day window the mid-cap list scored **-7.64% /
+  11.18%** on. Full ranking, backtest, and an important honest caveat —
+  HUBS gapped **-20.01% overnight** on 2026-08-06 (bigger than the
+  MDLN gap that motivated dropping the biotechs, though an ordinary
+  earnings reaction, not a special single-catalyst risk like TNGX/ARQT's
+  — see the doc for why it wasn't excluded on that basis) — in
+  `watchlist_stocks_2026-09-23_large_cap.md`.
+- **TNGX and ARQT dropped:** a real-data backtest (`backtest_2026-09-23.md`)
+  found a genuine -15.2% overnight gap in MDLN on 2026-08-05 — past the
+  10% stop-loss in a single move, which an hourly check can't react to
+  until after the fact. TNGX and ARQT were both clinical-stage biotechs
+  carrying real binary trial/FDA catalyst risk, categorically worse than
+  MDLN's ordinary-volatility gap. Owner's call: "Drop the two. We only
+  pick winners here." No sell orders needed.
+- **Original list (2026-09-22 methodology, $2B floor):** GLBE, VVV,
+  TRLV, ESI, CE, BHF, MDLN, OLLI, plus TNGX/ARQT before they were
+  dropped — see `watchlist_stocks_2026-09-23.md` for that original
+  ranking and why the liquidity filters were needed (the unfiltered
+  STOCK universe is dominated by illiquid micro-caps whose SMA
+  crossovers are noise, not momentum).
+
+No sell orders were needed for the large-cap switch either — zero open
+equity positions at the time.
 
 **Shared risk budget (owner's explicit choice, not separate per asset
 class):** `RISK_LIMITS` — `max_position_pct`, `max_aggregate_position_pct`,
