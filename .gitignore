@@ -17,8 +17,11 @@ trading_agent/state.json
 trading_agent/price_history.json
 trading_agent/scanner_state.json
 trading_agent/position_state.json
+trading_agent/cycle_log.json
 trading_agent/*.log
 trading_agent/logs/
+# trading_agent/daily_logs/*.md is NOT ignored - the daily after-action
+# review is meant to be a durable, versioned record, committed each day.
 
 # Python
 __pycache__/

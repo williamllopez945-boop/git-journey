@@ -316,3 +316,26 @@ the SMA-based sell signal above.
   position is a known data gap, not proof the position has none. Only
   skip the stop-loss/take-profit checks for that cycle if the fallback
   *also* returns `None`.
+
+## Cycle logging (for the daily after-action review)
+
+`RiskManager.record_trade(...)` only captures what actually executed —
+it can't show what the strategy *saw* but didn't act on. Call
+`CycleLogStore().record(asset, classification, crossover_pct, action, **extra)`
+from `trading_agent/cycle_log.py` for every non-hold event this cycle,
+on both the polling and scanner paths, so the end-of-day review
+(`daily_review.py`) has the full picture:
+
+| Event | `action` | Notes |
+|---|---|---|
+| Auto-executed new entry | `"executed"` | include `price`, `quantity`, `notional`, `order_id` |
+| New entry above `auto_execute_max_usd`, awaiting approval | `"recommended"` | include the suggested `price`/`quantity`/`notional` |
+| `fresh_buy_cross` skipped — in cooldown | `"blocked_cooldown"` | |
+| `fresh_buy_cross` skipped — `max_concurrent_positions` reached | `"blocked_concurrent_cap"` | |
+| `fresh_buy_cross` sized to 0 — `max_aggregate_position_pct` reached | `"blocked_aggregate_cap"` | |
+| Confirmed cross downgraded to `"hold"` inside `classify()` by the volume gate | `"blocked_volume"` | log this even though `classify()` itself returned `"hold"`, not `fresh_buy_cross` — the whole point is capturing what got filtered out |
+| `excellent_watch` | `"excellent_watch"` | |
+| Stop-loss or take-profit fired | `"protective_exit"` | include `reason` (`"stop_loss"`/`"take_profit"`), `price`, `avg_cost_basis`, resulting P/L |
+
+A plain `"hold"` with nothing else notable is not logged — this is an
+event log of what needed a decision, not a full cycle trace.

@@ -84,6 +84,8 @@ is scanner-only — `get_crypto_quotes` has no volume field.
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
 | `portfolio_backtest.py` | Multi-asset backtest sharing one cash pool across several price series at once — validates the concurrent-positions cap, which `backtest.py`'s single-asset simulator can't test — see `backtest_2026-09-23.md` |
 | `rsi_filter.py` | RSI entry confirmation filter — built and backtested but **not** wired into live entries (see `backtest_2026-09-23.md`'s "RSI entry confirmation filter" section: it hurt worst-case robustness in every setting that meaningfully engaged) |
+| `cycle_log.py` | Append-only log of every non-hold signal/gate event each cycle (executed, recommended, blocked-by-X, excellent_watch, protective exit) — feeds `daily_review.py`, persisted to `cycle_log.json` |
+| `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log — see "Daily after-action review" below |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -330,6 +332,33 @@ Each cycle's `classify()` call returns one of:
   independently enforced ceiling - doing the real risk-limiting on new
   entries now, alongside the 3-trades/day cap, the 3% circuit breaker,
   and the concurrent-positions cap, not the approval gate.
+
+## Automated cycles (2026-09-23)
+
+Two persistent Routines (`Claude_Code_Remote` triggers, not the earlier
+session-scoped `CronCreate` jobs — those die silently when a session
+recycles, confirmed ~6 times earlier this session) now run this agent
+hands-off:
+
+- **Hourly trading cycle** — runs `PLAYBOOK.md` in full, including
+  bounded auto-execution (fresh, strategy-confirmed signals at/under
+  `auto_execute_max_usd` execute with no approval step; protective exits
+  always execute; everything else alerts or waits for approval). Also
+  calls `CycleLogStore().record(...)` (see `cycle_log.py`) for every
+  non-hold event, so the daily review below has real data to work from.
+- **Daily after-action review** — once per UTC day, reads the day's
+  `cycle_log.json` entries and `RiskManager`'s trade log through
+  `daily_review.summarize_day`/`format_markdown_report`, writes the
+  result to `trading_agent/daily_logs/YYYY-MM-DD.md`, commits and pushes
+  it, and sends a push notification with the headline. The mechanical
+  counts (trades, P/L, blocked-signal counts by gate) come from real
+  recorded data; the qualitative "anything to improve" read is added on
+  top by whichever session runs the review, the same way every backtest
+  write-up in `backtest_2026-09-23.md` pairs real numbers with judgment.
+
+`daily_logs/*.md` is intentionally **not** gitignored — unlike
+`state.json`/`cycle_log.json`/etc. (live runtime data, never committed),
+the daily review is meant to be a durable, versioned record.
 
 ## Adjusting or disabling live trading (the owner's own direct action)
 
