@@ -420,7 +420,21 @@ hands-off:
   not improve signal quality, so it wasn't worth trading the Routine's
   reliability for a session-scoped `CronCreate` supplement (the same
   mechanism that died silently ~6 times earlier this session).
-- **Daily after-action review** — once per UTC day, reads the day's
+- **Daily after-action review** — fires at **20:05 UTC** (changed
+  2026-09-23, owner request: "right at the end of the trading time,"
+  owner is in Texas/Central time) — 4:05pm ET / 3:05pm CT, just after
+  the stock market's 4:00pm ET close. This cron is a fixed UTC time, not
+  DST-aware — it'll need bumping by an hour when the US clocks change
+  (~Nov 1 and ~Mar 8) to keep landing at market close local time.
+  **Known trade-off:** the review's date filtering is UTC-midnight-based
+  and crypto trades 24/7, so firing mid-UTC-day (rather than the
+  original 23:50 UTC, close to the day boundary) means crypto activity
+  in the ~4 hours after 20:05 UTC is logged under that same UTC date but
+  never reviewed — tomorrow's run only looks at tomorrow's date. A real,
+  permanent gap for late-day crypto, not just a delayed report; the
+  routine's prompt flags this explicitly so a recurring late-day trade
+  or exit gets surfaced as an observation rather than silently missed.
+  Reads the day's
   `cycle_log.json` entries and `RiskManager`'s trade log through
   `daily_review.summarize_day`/`format_markdown_report`, writes the
   result to `trading_agent/daily_logs/YYYY-MM-DD.md`, commits and pushes
