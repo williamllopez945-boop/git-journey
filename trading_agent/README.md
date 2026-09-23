@@ -152,7 +152,7 @@ is scanner-only — `get_crypto_quotes` has no volume field.
 | `portfolio_backtest.py` | Multi-asset backtest sharing one cash pool across several price series at once — validates the concurrent-positions cap, which `backtest.py`'s single-asset simulator can't test — see `backtest_2026-09-23.md` |
 | `rsi_filter.py` | RSI entry confirmation filter — built and backtested but **not** wired into live entries (see `backtest_2026-09-23.md`'s "RSI entry confirmation filter" section: it hurt worst-case robustness in every setting that meaningfully engaged) |
 | `cycle_log.py` | Append-only log of every non-hold signal/gate event each cycle (executed, recommended, blocked-by-X, excellent_watch, protective exit) — feeds `daily_review.py`, persisted to `cycle_log.json` |
-| `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log — see "Daily after-action review" below |
+| `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log, including a chronological executive summary of every buy/sell/hold decision and why — see "Daily after-action review" below |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -429,6 +429,19 @@ hands-off:
   recorded data; the qualitative "anything to improve" read is added on
   top by whichever session runs the review, the same way every backtest
   write-up in `backtest_2026-09-23.md` pairs real numbers with judgment.
+  **Executive summary (2026-09-23, owner request):** the report now
+  opens with a chronological, plain-language account of every decision
+  the strategy made that day and why - built by
+  `daily_review.format_executive_summary` entirely from `cycle_log.json`
+  (what was considered: the classification/crossover_pct the scanner
+  actually saw, set against the decision: executed/recommended/blocked-
+  by-a-specific-gate/excellent_watch/protective_exit), not written or
+  interpreted freehand. Passing `watchlist=config.WATCHLIST +
+  config.STOCK_WATCHLIST` into `format_markdown_report` also names every
+  asset that had zero events that day, since a plain "hold" is
+  deliberately never logged per-cycle (see `cycle_log.py`) - without the
+  watchlist argument, a quiet asset simply isn't mentioned rather than
+  being explicitly called out as held.
 
 `daily_logs/*.md` is intentionally **not** gitignored — unlike
 `state.json`/`cycle_log.json`/etc. (live runtime data, never committed),
