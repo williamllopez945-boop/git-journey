@@ -56,7 +56,7 @@ over the watchlist.
    d. If `"buy"`: check `PositionStateStore().in_cooldown(asset)` from
       `trading_agent/position_state.py` first — if `True` (this asset
       fully closed a position within the last `DEFAULT_COOLDOWN_HOURS`,
-      12h by default), skip this asset entirely this cycle, even though a
+      4h by default), skip this asset entirely this cycle, even though a
       real confirmed buy signal fired. This is the whipsaw cooldown
       (empirically tuned — see backtest_2026-09-23.md), not optional.
       Otherwise compute the order quantity with
@@ -97,8 +97,10 @@ waiting for `price_history.py` to accumulate enough local bars.
    (backtest_2026-09-23.md), a crossover no longer fires the same cycle it's
    detected - it's held "pending" for one cycle, then only classified
    `fresh_buy_cross`/`fresh_sell_cross` if it still holds and clears
-   `entry_filter.DEFAULT_MIN_STRENGTH_PCT` (0.25%). An immediate reversal,
-   or a persisting-but-weak cross, both classify `"hold"`.
+   `entry_filter.DEFAULT_MIN_STRENGTH_PCT` (0% by default as of the
+   broader re-tuning in backtest_2026-09-23.md - persistence alone, no
+   additional strength requirement). An immediate reversal classifies
+   `"hold"`.
 4. Act on the classification:
    - `fresh_buy_cross`: check `PositionStateStore().in_cooldown(asset)`
      first — if `True`, skip this asset entirely this cycle (the whipsaw
@@ -170,7 +172,7 @@ the SMA-based sell signal above.
    `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
    future fresh entry starts without a stale one) AND
    `PositionStateStore().record_exit(asset)` (starts the whipsaw
-   cooldown — `DEFAULT_COOLDOWN_HOURS`, 12h by default — blocking a new
+   cooldown — `DEFAULT_COOLDOWN_HOURS`, 4h by default — blocking a new
    entry into this asset until it expires, even if a fresh buy signal
    fires in the meantime). Both calls are needed; they track independent
    state and `reset` does not clear the cooldown.

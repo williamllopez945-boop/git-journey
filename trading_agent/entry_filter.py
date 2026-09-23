@@ -13,18 +13,23 @@ noisy ones. Checking one bar later, after the gap has had a chance to
 develop, is what actually distinguishes a persisting move from a
 whipsaw - this trades one bar of entry lag for that filtering.
 
-DEFAULT_MIN_STRENGTH_PCT was tuned empirically against real IBIT/ETHA
-historical data (backtest_2026-09-23.md's follow-up sweep): 0.25% was the
-best-or-near-best setting on both assets (IBIT: +6.40% unfiltered ->
-+31.00% return, max drawdown 15.02% -> 7.46%; ETHA: +25.19% -> +27.01%,
-11.16% -> 10.26%). Thresholds at/above 0.5% over-filter and collapse
-returns; the 1-bar persistence check alone (0%) already captured most of
-the improvement, with strength adding a further edge on top.
+DEFAULT_MIN_STRENGTH_PCT: an initial sweep against only IBIT/ETHA (one
+6-month trending window) suggested 0.25%, but a broader sweep against 11
+independent series - IBIT/ETHA plus GBTC's 2018-2026 history split into 6
+market regimes, plus 3 Solana ETFs (backtest_2026-09-23.md's "broader
+backtest" and final re-tuning sections) - showed that value helped only
+5/11 series and hurt 6/11, including some large losses (worst -24.78%
+delta vs raw). Re-tuned against the full 11-series set: 0% (persistence
+check only, no strength requirement) was part of the best robust
+combination found (paired with position_state.DEFAULT_COOLDOWN_HOURS),
+helping 6/11 series with a much safer worst case (-10.30%). A strength
+requirement was not part of the best robust setting on this wider
+sample - persistence alone captured the generalizable edge.
 """
 
 from .strategy import sma_crossover_signal
 
-DEFAULT_MIN_STRENGTH_PCT = 0.25
+DEFAULT_MIN_STRENGTH_PCT = 0
 
 
 def _sma(prices, window):

@@ -6,9 +6,15 @@
 - cooldown_until: an ISO timestamp before which re-entry into the asset is
   blocked, set whenever a position fully closes (stop-loss or death
   cross). Targets repeated whipsaw losses from re-entering a choppy
-  market immediately after being stopped out - tuned empirically (12h) by
-  sweeping backtest.py's cooldown_bars against real IBIT/ETHA data, see
-  backtest_2026-09-23.md.
+  market immediately after being stopped out.
+
+DEFAULT_COOLDOWN_HOURS: an initial sweep against only IBIT/ETHA suggested
+12h, but re-tuning against a broader 11-series set (IBIT/ETHA plus GBTC's
+2018-2026 history across 6 market regimes plus 3 Solana ETFs -
+backtest_2026-09-23.md's "broader backtest" and final re-tuning sections)
+found 4h paired with entry_filter.DEFAULT_MIN_STRENGTH_PCT=0 to be part
+of the most robust combination: helped 6/11 series (vs 5/11 for the
+12h/0.25% pairing) with a much safer worst case (-10.30% vs -24.78%).
 
 Persisted so both survive across cycles and process restarts.
 """
@@ -19,7 +25,7 @@ from pathlib import Path
 
 STATE_PATH = Path(__file__).parent / "position_state.json"
 
-DEFAULT_COOLDOWN_HOURS = 12  # 1 cycle ~= 1 hour, matches backtest.py's cooldown_bars units
+DEFAULT_COOLDOWN_HOURS = 4  # 1 cycle ~= 1 hour, matches backtest.py's cooldown_bars units
 
 
 class PositionStateStore:

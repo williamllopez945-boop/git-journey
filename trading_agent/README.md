@@ -45,7 +45,7 @@ real-history signal that the other 14 watchlist assets get.
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
-| `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (12h, blocks re-entry) — persisted to `position_state.json` |
+| `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
@@ -56,20 +56,28 @@ real-history signal that the other 14 watchlist assets get.
 **Entry:** SMA crossover, long-only, no shorting/margin. Short SMA (10
 periods) crossing above the long SMA (30 periods) is a buy signal — but
 it must be *confirmed*: `entry_filter.py` requires the cross to still
-hold one cycle later, with a gap of at least 0.25% between the SMAs by
-then, before treating it as tradeable. Backtested against real market
-data (`backtest_2026-09-23.md`): this alone turned the strategy from
-underperforming buy-and-hold into outperforming it on both assets tested,
-by filtering out whipsaws — crosses that reversed within a bar or two.
+hold one cycle later before treating it as tradeable (no additional
+strength requirement by default — see below).
 
 **Whipsaw cooldown:** even with the entry filter, a stopped-out or
 death-crossed position can't immediately re-enter — `position_state.py`
-blocks new entries into that asset for 12 hours after a full exit. Also
-empirically tuned by sweeping the backtest (`backtest_2026-09-23.md`):
-this improved ETHA further on top of the entry filter (+27.01% ->
-+37.83% return, 55.6% -> 71.4% win rate) at no cost to IBIT in this
-sample. Only blocks new entries — exits (sells, stop-loss, take-profit)
-are never delayed by it.
+blocks new entries into that asset for 4 hours after a full exit. Only
+blocks new entries — exits (sells, stop-loss, take-profit) are never
+delayed by it.
+
+**Tuning history, briefly (see `backtest_2026-09-23.md` for the full
+story):** an initial sweep against only IBIT/ETHA's one 6-month trending
+window suggested a 0.25% strength requirement and a 12h cooldown, and
+looked like a big win there. Testing that tuning against a much broader
+sample — GBTC's real 2018-2026 history across 6 market regimes, plus 3
+Solana ETFs — showed it helped only 5 of 11 series and hurt the other 6,
+including some large losses. Re-tuned against the full 11-series set: 0%
+strength (persistence alone) + 4h cooldown is the current default,
+helping 6/11 series with a far safer worst case. Treat these as a
+reasonable, moderately-validated starting point, not a proven edge —
+this strategy family (SMA crossover) trails buy-and-hold in strong
+trends and only clearly earns its keep in choppy or falling markets,
+which is inherent to the approach, not something tuning fixes.
 
 **Exit — three independent triggers, whichever fires first (or both):**
 1. **SMA death cross** — short SMA crosses below the long SMA. Exits the
