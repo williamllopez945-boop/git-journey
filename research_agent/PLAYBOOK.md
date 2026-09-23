@@ -65,9 +65,15 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
       sentences what it discloses. **8-K filings get priority
       attention** — that's the "material event" form type most relevant
       to a sudden price move (an 8-K explains *why*, after the fact, the
-      way an earnings-date flag explains *when*, in advance). Call
-      `record(symbol, "sec_filing", <summary>, form_type=form_type,
-      filing_id=filing_id, filed_at=date_filed)` — one entry per filing
+      way an earnings-date flag explains *when*, in advance). If
+      `get_sec_filing` 404s ("Filing content is not available") — seen in
+      practice for routine 8-Ks filed the same day as a 10-Q, likely the
+      accompanying Item 2.02 results filing — don't block on it: log the
+      entry anyway from the filing index metadata alone (form_type +
+      date_filed), with a summary noting content wasn't available, rather
+      than skipping the filing entirely. Call `record(symbol, "sec_filing",
+      <summary>, form_type=form_type, filing_id=filing_id,
+      filed_at=date_filed)` — one entry per filing
       is fine here, unlike news, since new filings are rare per cycle.
 
    c. **Upcoming earnings.** Call `get_earnings_results(symbol)`. Find
