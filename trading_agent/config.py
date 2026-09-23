@@ -19,14 +19,31 @@ the permission the classifier is asking for and have it retried).
 auto_execute_max_usd from $5 to $100 to match it (a one-time dollar
 snapshot of 50% of the ~$200 portfolio value at the time - these two
 values don't stay in sync automatically as portfolio value changes, and
-they're not required to be equal; the owner may want to revisit
-auto_execute_max_usd as the account grows or shrinks). Net effect: the
-$5 threshold was originally a narrow, bounded exception to "everything
-needs approval" - at $100, matching the position-sizing cap, essentially
-every properly-sized confirmed entry now auto-executes, and approval
-becomes the exception (oversized or non-confirmed signals like
-excellent_watch) rather than the default. This significantly widens the
-system's real-money autonomy versus the original bounded design.
+they're not required to be equal). Net effect: the $5 threshold was
+originally a narrow, bounded exception to "everything needs approval" -
+at $100, matching the position-sizing cap, essentially every
+properly-sized confirmed entry now auto-executes, and approval becomes
+the exception (oversized or non-confirmed signals like excellent_watch)
+rather than the default. This significantly widened the system's
+real-money autonomy versus the original bounded design.
+
+2026-09-23 (same day, later): re-running the concurrent-positions cap
+backtest (portfolio_backtest.py, backtest_2026-09-23.md) at the new 50%
+sizing found two things worth acting on: (1) max_concurrent_positions=5
+had become vestigial - at 50% per position, cash runs out after 2
+positions regardless of the cap, so 5 never actually bound anything;
+(2) worst-case drawdown on the more representative test group jumped
+6x (6.30% -> 36.76%) versus the same test at the original 5% sizing.
+Owner chose to address this by lowering max_position_pct back down
+(0.50 -> 0.15) rather than restricting concurrency to 1 asset -
+restores real diversification across up to 5 concurrent positions
+(backtested: ~18% worst-case drawdown at 15%, vs 50%'s 36.76% and the
+original 5%'s 6.30% - see backtest_2026-09-23.md's "Concurrent-positions
+cap re-check after the sizing change" section for the full sweep).
+auto_execute_max_usd was NOT revisited in this pass - it's still $100,
+now well above what a 15%-sized position ever reaches at this portfolio
+value, so it no longer meaningfully gates anything either; worth the
+owner's attention if they want the approval gate to matter again.
 """
 
 WATCHLIST = [
@@ -43,9 +60,12 @@ STRATEGY = {
 }
 
 RISK_LIMITS = {
-    "max_position_pct": 0.50,       # max 50% of portfolio value held per asset (owner-raised
-                                     # from 5% on 2026-09-23 - a real, deliberate 10x increase
-                                     # in per-asset concentration risk, not incremental tuning)
+    "max_position_pct": 0.15,       # max 15% of portfolio value held per asset. Raised from
+                                     # 5% to 50% on 2026-09-23, then lowered back to 15% the
+                                     # same day after re-backtesting the concurrent-positions
+                                     # cap at 50% sizing found it made max_concurrent_positions
+                                     # vestigial and 6x'd worst-case drawdown - see module
+                                     # docstring and backtest_2026-09-23.md
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
     "max_trades_per_day": 3,        # combined across all watchlist assets
     "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
