@@ -50,6 +50,7 @@ real-history signal that the other 14 watchlist assets get.
 | `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
 | `portfolio_backtest.py` | Multi-asset backtest sharing one cash pool across several price series at once — validates the concurrent-positions cap, which `backtest.py`'s single-asset simulator can't test — see `backtest_2026-09-23.md` |
+| `rsi_filter.py` | RSI entry confirmation filter — built and backtested but **not** wired into live entries (see `backtest_2026-09-23.md`'s "RSI entry confirmation filter" section: it hurt worst-case robustness in every setting that meaningfully engaged) |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 

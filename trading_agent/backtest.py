@@ -18,11 +18,13 @@ README for how to translate these results to the live 5%-cap sizing.
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import confirmed_signal
+from .rsi_filter import passes_rsi_filter, DEFAULT_RSI_PERIOD, DEFAULT_RSI_OVERBOUGHT_PCT
 
 
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
              stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
-             take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION):
+             take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
+             rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -39,6 +41,11 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     stop_loss_pct/take_profit_pct/take_profit_sell_fraction: override
     exit_criteria.py's module defaults - lets this sweep those values
     instead of only ever testing the hardcoded defaults.
+
+    rsi_period/rsi_overbought_pct: when rsi_period is set, a fresh buy
+    entry additionally requires rsi_filter.passes_rsi_filter (RSI below
+    the overbought threshold) - blocks entries into an already-extended
+    move. None (default) disables the RSI filter entirely.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -98,7 +105,11 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 and last_exit_index is not None
                 and i - last_exit_index < cooldown_bars
             )
-            if not in_cooldown:
+            rsi_blocked = (
+                rsi_period is not None
+                and not passes_rsi_filter(window, rsi_period, rsi_overbought_pct)
+            )
+            if not in_cooldown and not rsi_blocked:
                 qty = cash / price
                 position_qty = qty
                 avg_cost_basis = price
