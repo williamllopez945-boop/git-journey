@@ -186,6 +186,21 @@ the SMA-based sell signal above.
    `direct_quantity` across `cost_bases` from `get_crypto_positions` — see
    that tool's own guidance on when the average only covers a subset of
    units) and the current mark price (`get_crypto_quotes`).
+   **If `direct_quantity` sums to 0** despite the position being held
+   (`quantity_transferable > 0`) - a real, observed gap where Robinhood's
+   cost-basis ledger doesn't reflect a normally-filled direct purchase
+   (first seen on the PEPE position bought 2026-09-22, still 0 a full day
+   later despite a clean, fully-filled, non-transfer buy) - fall back to
+   `cost_basis_fallback.average_cost_basis_from_trade_log(asset, RiskManager(...).state["trade_log"])`
+   from `trading_agent/cost_basis_fallback.py`. It replays the locally
+   recorded buy/sell history for that asset into the same weighted-average
+   cost basis `get_crypto_positions` itself would compute. Returns `None`
+   if the local log also shows no open quantity - in that rare case
+   (e.g. state.json predates the position, or was reset) skip the
+   protective-exit checks below for this cycle rather than guessing, and
+   note it in the cycle log so it's visible. Always prefer
+   `get_crypto_positions`' own figure when it's non-zero; this is a
+   fallback for when it isn't, not a general substitute.
 2. Check whether take-profit was already taken for this asset:
    `PositionStateStore().took_profit(asset)` from
    `trading_agent/position_state.py`.
@@ -272,3 +287,10 @@ the SMA-based sell signal above.
   mirror image of volatility-scaled sizing (step 5d), which is polling-only
   for the same underlying reason (the scanner has no raw price series to
   compute volatility from). It never blocks `fresh_sell_cross`.
+- Never treat a `get_crypto_positions` cost basis of 0 as "no cost basis,
+  skip the exit checks" without first trying the
+  `cost_basis_fallback.average_cost_basis_from_trade_log` fallback (see
+  "Per-position exit rules" step 1) — a zero cost basis on a real held
+  position is a known data gap, not proof the position has none. Only
+  skip the stop-loss/take-profit checks for that cycle if the fallback
+  *also* returns `None`.

@@ -29,6 +29,22 @@ to a real Robinhood watchlist ("Trading Agent Watchlist", list_id
 purely organizational, `config.py` remains the source of truth the agent
 reads from.
 
+**Known gap: cost basis can come back zero on a real position.**
+`get_crypto_positions`' `cost_bases` field reported `direct_quantity: 0` /
+`direct_cost_basis: 0` for the PEPE position bought 2026-09-22, still 0 a
+full day later — despite the underlying order being a completely normal
+single fill (1,014,198 units at `effective_price` $0.00000494, agentic
+market buy, no transfer/reward/fork involved). This looks like a gap in
+Robinhood's own cost-basis ledger, not anything in this codebase, and not
+covered by `get_crypto_positions`' own "average only covers a subset of
+units" caveat (there's no un-costed transfer here — the entire position
+came from one traceable order). Since `exit_criteria.check_exit()` treats
+a zero-or-less cost basis as inert, an unresolved zero would silently
+disable stop-loss/take-profit protection on that position. `PLAYBOOK.md`'s
+"Per-position exit rules" step 1 now falls back to
+`cost_basis_fallback.average_cost_basis_from_trade_log` (computed from
+`RiskManager`'s own locally recorded trade log) whenever this happens.
+
 **Known gap: PYTH has no scanner coverage.** The SMA(10,30) screener
 (`scanner_signals.py`, scan_id `8f2ca450-...`) covers 49 crypto pairs, and
 PYTH is not one of them even though it's a normally tradable pair (real
@@ -49,6 +65,7 @@ is scanner-only — `get_crypto_quotes` has no volume field.
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed); gates a confirmed buy cross on real crypto `Relative volume` from the same scan — persisted to `scanner_state.json` |
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
+| `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
