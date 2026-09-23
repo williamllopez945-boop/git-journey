@@ -55,6 +55,14 @@ disable stop-loss/take-profit protection on that position. `PLAYBOOK.md`'s
 "Per-position exit rules" step 1 now falls back to
 `cost_basis_fallback.average_cost_basis_from_trade_log` (computed from
 `RiskManager`'s own locally recorded trade log) whenever this happens.
+**A related bug in that fallback itself was found and fixed live
+2026-09-23:** `RiskManager`'s day-rollover logic used to discard the
+*entire* `trade_log` on any UTC date mismatch, not just the day-scoped
+`trades_today`/`starting_equity`/`halted` fields - so a position bought
+one day and exited the next (PEPE's actual death-cross exit that day)
+found its own fallback cost basis unrecoverable, since the buy that
+established it had aged into "yesterday." Fixed: `trade_log` now
+survives the rollover; only the truly daily-scoped fields reset.
 
 **Known gap: PYTH has no scanner coverage.** The SMA(10,30) screener
 (`scanner_signals.py`, scan_id `8f2ca450-...`) covers 49 crypto pairs, and

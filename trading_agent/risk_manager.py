@@ -21,10 +21,25 @@ class RiskManager:
         self.state = self._load_or_init_state()
 
     def _load_or_init_state(self):
+        """A new UTC day resets the day-scoped fields (trades_today,
+        starting_equity, halted) but MUST carry trade_log forward - it's
+        the durable trade history cost_basis_fallback.py and
+        daily_review.py both depend on, not a daily-scoped counter.
+        Discovered live (2026-09-23): a position bought one day and
+        exited the next found its own cost basis unrecoverable because
+        this method used to return a wholesale-fresh state (including an
+        empty trade_log) on any date mismatch."""
         if self.state_path.exists():
             state = json.loads(self.state_path.read_text())
             if state.get("date") == _today():
                 return state
+            return {
+                "date": _today(),
+                "starting_equity": None,
+                "trades_today": 0,
+                "halted": False,
+                "trade_log": state.get("trade_log", []),
+            }
         return {
             "date": _today(),
             "starting_equity": None,

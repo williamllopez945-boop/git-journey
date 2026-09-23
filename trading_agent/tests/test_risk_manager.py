@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -125,6 +126,32 @@ def test_position_size_zero_when_aggregate_cap_already_reached():
     rm = RiskManager(limits, state_path=tmp)
     assert rm.position_size(10_000, price=100, total_open_position_value=5_000) == 0.0
     assert rm.position_size(10_000, price=100, total_open_position_value=6_000) == 0.0
+
+
+def test_day_rollover_resets_daily_counters_but_keeps_trade_log():
+    # Simulate yesterday's state on disk, including a real trade.
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    stale_state = {
+        "date": "2000-01-01",  # guaranteed not today
+        "starting_equity": 10_000.0,
+        "trades_today": 2,
+        "halted": True,
+        "trade_log": [
+            {"timestamp": "2000-01-01T12:00:00+00:00", "asset": "PEPE",
+             "side": "buy", "quantity": 1000, "price": 0.001},
+        ],
+    }
+    tmp.write_text(json.dumps(stale_state))
+
+    rm = RiskManager(LIMITS, state_path=tmp)
+    # Day-scoped fields reset for the new day.
+    assert rm.state["trades_today"] == 0
+    assert rm.state["halted"] is False
+    assert rm.state["starting_equity"] is None
+    # Trade history is NOT day-scoped - it must survive the rollover, or
+    # a position bought yesterday and exited today loses its cost basis
+    # (cost_basis_fallback.py needs this history across day boundaries).
+    assert rm.state["trade_log"] == stale_state["trade_log"]
 
 
 def test_position_size_aggregate_override_replaces_configured_value():
