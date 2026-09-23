@@ -44,9 +44,13 @@ over the watchlist.
       with an hourly schedule, `short_window=10` means 10 hours).
    b. Read the accumulated series with `get_closes(asset)` and compute the
       signal with
-      `sma_crossover_signal(prices, STRATEGY["short_window"], STRATEGY["long_window"])`
-      from `trading_agent/strategy.py`. This returns `"hold"` until at
-      least `long_window + 1` cycles have run and recorded a bar — that's
+      `confirmed_signal(prices, STRATEGY["short_window"], STRATEGY["long_window"])`
+      from `trading_agent/entry_filter.py` (not the raw
+      `strategy.sma_crossover_signal` - `confirmed_signal` wraps it with
+      the empirically-tuned 1-bar persistence + strength filter that cut
+      whipsaw losses in backtest_2026-09-23.md). This returns `"hold"`
+      until at least `long_window + 2` cycles have run (one extra cycle
+      beyond the raw signal's warm-up, for the confirmation bar) - that's
       expected while history is still accumulating, not an error.
    c. If the signal is `"hold"`, skip this asset.
    d. If `"buy"`: compute the order quantity with
@@ -83,7 +87,12 @@ waiting for `price_history.py` to accumulate enough local bars.
 2. Filter the results to `WATCHLIST` from `config.py`.
 3. For each watchlist asset, call
    `scanner_signals.classify(asset, sma10, sma30, pct_change)` from
-   `trading_agent/scanner_signals.py`.
+   `trading_agent/scanner_signals.py`. As of the entry-confirmation filter
+   (backtest_2026-09-23.md), a crossover no longer fires the same cycle it's
+   detected - it's held "pending" for one cycle, then only classified
+   `fresh_buy_cross`/`fresh_sell_cross` if it still holds and clears
+   `entry_filter.DEFAULT_MIN_STRENGTH_PCT` (0.25%). An immediate reversal,
+   or a persisting-but-weak cross, both classify `"hold"`.
 4. Act on the classification:
    - `fresh_buy_cross` / `fresh_sell_cross`: this is a genuine strategy
      signal. Compute the order notional with

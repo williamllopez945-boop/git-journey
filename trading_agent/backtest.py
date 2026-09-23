@@ -17,10 +17,16 @@ README for how to translate these results to the live 5%-cap sizing.
 
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit
+from .entry_filter import confirmed_signal
 
 
-def backtest(closes, short_window, long_window, starting_cash=100.0):
+def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None):
     """Run the strategy over a closing-price series (oldest first).
+
+    min_strength_pct: when set, entries require entry_filter.confirmed_signal
+    (crossover strength must clear this threshold) instead of the raw
+    strategy.sma_crossover_signal - filters weak/marginal crosses likely to
+    whipsaw. None (default) uses the unfiltered signal.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -56,7 +62,10 @@ def backtest(closes, short_window, long_window, starting_cash=100.0):
                 trades.append({"index": i, "action": "sell", "reason": "take_profit",
                                 "qty": sell_qty, "price": price, "cash_after": cash})
 
-        signal = sma_crossover_signal(window, short_window, long_window)
+        if min_strength_pct is None:
+            signal = sma_crossover_signal(window, short_window, long_window)
+        else:
+            signal = confirmed_signal(window, short_window, long_window, min_strength_pct)
 
         if position_qty > 0 and signal == "sell":
             proceeds = position_qty * price

@@ -40,7 +40,8 @@ real-history signal that the other 14 watchlist assets get.
 | File | Purpose |
 |---|---|
 | `config.py` | Watchlist, strategy parameters, risk limits, `DRY_RUN` switch |
-| `strategy.py` | SMA crossover signal logic (pure computation, no network) |
+| `strategy.py` | Raw SMA crossover signal logic (pure computation, no network) |
+| `entry_filter.py` | Wraps `strategy.py` with an entry confirmation filter (1-bar persistence + minimum crossover strength) - cuts whipsaw losses, see `backtest_2026-09-23.md` |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
@@ -52,8 +53,14 @@ real-history signal that the other 14 watchlist assets get.
 
 ## Strategy
 
-**Entry:** SMA crossover, long-only. Short SMA (10 periods) crossing above
-the long SMA (30 periods) is a buy signal. No shorting, no margin.
+**Entry:** SMA crossover, long-only, no shorting/margin. Short SMA (10
+periods) crossing above the long SMA (30 periods) is a buy signal — but
+it must be *confirmed*: `entry_filter.py` requires the cross to still
+hold one cycle later, with a gap of at least 0.25% between the SMAs by
+then, before treating it as tradeable. Backtested against real market
+data (`backtest_2026-09-23.md`): this alone turned the strategy from
+underperforming buy-and-hold into outperforming it on both assets tested,
+by filtering out whipsaws — crosses that reversed within a bar or two.
 
 **Exit — three independent triggers, whichever fires first (or both):**
 1. **SMA death cross** — short SMA crosses below the long SMA. Exits the
