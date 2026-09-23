@@ -75,6 +75,25 @@ class RiskManager:
         remaining_value = max(max_value - current_position_value, 0.0)
         return remaining_value / price
 
+    def can_open_new_position(self, open_position_count):
+        """Whether a fresh entry may open a NEW position - an asset the
+        watchlist doesn't already hold - given how many assets currently
+        have one open. Never blocks adding to (there's no scale-in in this
+        strategy) or exiting an existing position, only a fresh entry into
+        a previously-flat asset, same scope as the whipsaw cooldown gate.
+
+        Gated by RISK_LIMITS["max_concurrent_positions"] (see
+        portfolio_backtest.py / backtest_2026-09-23.md's concurrent-
+        positions sweep): correlated watchlist assets (the meme-coin
+        cluster especially) tend to fire near-duplicate signals, so
+        holding many at once concentrates correlated risk and multiplies
+        whipsaw losses rather than diversifying. None/absent (default)
+        means uncapped, unchanged from before this gate existed."""
+        max_concurrent = self.limits.get("max_concurrent_positions")
+        if max_concurrent is None:
+            return True
+        return open_position_count < max_concurrent
+
     def can_auto_execute(self, order_value_usd):
         """Whether an order of this notional value may execute without
         per-trade approval, per RISK_LIMITS["auto_execute_max_usd"]."""

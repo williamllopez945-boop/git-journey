@@ -36,6 +36,9 @@ RISK_LIMITS = {
     "auto_execute_max_usd": 5.0,    # fresh-crossover orders at/under this notional execute
                                      # automatically (all watchlist assets); larger orders
                                      # still require explicit per-trade approval
+    "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
+                                     # position at once (~1/3 of the 15-asset watchlist) -
+                                     # see backtest_2026-09-23.md's concurrent-positions sweep
 }
 
 # Master safety switch: no real orders are placed while True, auto-executed

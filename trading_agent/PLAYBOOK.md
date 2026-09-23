@@ -18,6 +18,10 @@ over the watchlist.
    - total portfolio equity (cash + holdings value)
    - current positions and their market value, for each asset in
      `WATCHLIST`
+   - `open_position_count`: the number of `WATCHLIST` assets with
+     `quantity_transferable > 0` from `get_crypto_positions` - recompute
+     this once per cycle from the fetched positions, then keep it updated
+     in-memory as positions open/close during the cycle (see step 5d).
 
 3. **Initialize risk state for the day.** Construct a `RiskManager` from
    `trading_agent/risk_manager.py` with `RISK_LIMITS`. Call
@@ -59,7 +63,22 @@ over the watchlist.
       4h by default), skip this asset entirely this cycle, even though a
       real confirmed buy signal fired. This is the whipsaw cooldown
       (empirically tuned — see backtest_2026-09-23.md), not optional.
-      Otherwise, compute a volatility-scaled cap before sizing the order:
+      Next, check `RiskManager.can_open_new_position(open_position_count)`
+      — if `False` (`RISK_LIMITS["max_concurrent_positions"]`, 5 by
+      default, already reached), skip this asset entirely this cycle too,
+      the same way the cooldown does — a real confirmed buy signal is
+      still not acted on. This only applies to assets not already held;
+      never skip a sell or a protective exit because of it, and never
+      count an asset already being sold this cycle toward the cap. See
+      backtest_2026-09-23.md's concurrent-positions sweep for why: this
+      watchlist has correlated clusters (the meme-coin group especially)
+      that tend to fire near-duplicate signals, so holding many at once
+      concentrates correlated risk and multiplies whipsaw losses rather
+      than diversifying. If the order executes below (step g),
+      **increment `open_position_count`** so later assets in this same
+      cycle see the updated count; if a sell/exit fully closes a position
+      earlier in this cycle, decrement it the same way. Otherwise,
+      compute a volatility-scaled cap before sizing the order:
       call `volatility_sizing.realized_volatility(get_closes(asset))` and
       the same for `get_closes("BTC")` as the benchmark (from
       `trading_agent/price_history.py`), then
@@ -118,8 +137,13 @@ waiting for `price_history.py` to accumulate enough local bars.
    - `fresh_buy_cross`: check `PositionStateStore().in_cooldown(asset)`
      first — if `True`, skip this asset entirely this cycle (the whipsaw
      cooldown, see step 5d above; same rule, same reasoning, applies here
-     too). Otherwise compute the order notional with
-     `RiskManager.position_size(...)` (quantity × price) and continue below.
+     too). Next check `RiskManager.can_open_new_position(open_position_count)`
+     — if `False`, skip this asset entirely this cycle too (the
+     concurrent-positions cap, see step 5d above; same rule applies here).
+     Otherwise compute the order notional with
+     `RiskManager.position_size(...)` (quantity × price) and continue
+     below; if the order executes, increment `open_position_count` before
+     moving to the next asset in this cycle.
    - `fresh_sell_cross`: no cooldown check (cooldown only blocks new
      entries, never exits). Compute the order notional with
      `RiskManager.position_size(...)` (quantity × price).
@@ -224,3 +248,10 @@ the SMA-based sell signal above.
   a confirmed signal during cooldown is still skipped entirely, not
   merely downgraded to a recommendation. The cooldown never blocks exits
   (sells, stop-loss, take-profit) — only new entries.
+- Never skip the concurrent-positions check on a new-entry signal, same
+  rule as the cooldown above. `RiskManager.can_open_new_position(open_position_count)`
+  must be checked (after the cooldown, before sizing) whenever the signal
+  is a fresh entry into an asset with no existing position — a confirmed
+  signal is still skipped entirely while `RISK_LIMITS["max_concurrent_positions"]`
+  is already reached, not downgraded to a recommendation. It never blocks
+  exits, and never blocks a signal for an asset already held.

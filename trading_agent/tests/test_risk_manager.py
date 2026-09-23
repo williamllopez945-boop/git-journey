@@ -76,3 +76,26 @@ def test_position_size_override_replaces_configured_cap():
 def test_position_size_without_override_uses_configured_cap():
     rm = _new_manager()
     assert rm.position_size(10_000, price=100) == rm.position_size(10_000, price=100, max_position_pct=None)
+
+
+def test_can_open_new_position_uncapped_when_not_configured():
+    rm = _new_manager()  # LIMITS has no max_concurrent_positions key
+    assert rm.can_open_new_position(open_position_count=1000) is True
+
+
+def test_can_open_new_position_respects_configured_cap():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    limits = dict(LIMITS, max_concurrent_positions=5)
+    rm = RiskManager(limits, state_path=tmp)
+    assert rm.can_open_new_position(open_position_count=4) is True
+    assert rm.can_open_new_position(open_position_count=5) is False
+    assert rm.can_open_new_position(open_position_count=6) is False
+
+
+def test_can_open_new_position_none_value_means_uncapped():
+    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    tmp.unlink()
+    limits = dict(LIMITS, max_concurrent_positions=None)
+    rm = RiskManager(limits, state_path=tmp)
+    assert rm.can_open_new_position(open_position_count=1000) is True

@@ -47,8 +47,9 @@ real-history signal that the other 14 watchlist assets get.
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
-| `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap — persisted to `state.json` |
+| `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
+| `portfolio_backtest.py` | Multi-asset backtest sharing one cash pool across several price series at once — validates the concurrent-positions cap, which `backtest.py`'s single-asset simulator can't test — see `backtest_2026-09-23.md` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -102,6 +103,8 @@ from the size cap and trade limits that apply to entries.
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
 - Max 3 trades per day, combined across the whole watchlist
+- Max 5 concurrent open positions across the whole watchlist (of 15
+  assets) — see "Concurrent-positions cap" below
 
 These are enforced by `RiskManager`, whose state persists in
 `trading_agent/state.json` (gitignored — it holds live account/trade data
@@ -120,11 +123,41 @@ sensible, real differentiation.
 **Scope, stated plainly:** this only sizes an individual position by its
 own volatility. It does not account for correlation across several
 simultaneously-held positions (e.g. multiple meme coins moving together)
-— that needs a true multi-asset portfolio backtester, a materially larger
-project than the single-asset `backtest.py` this repo has. Also only
-available on the polling path (`price_history.py` accumulates the raw
-closes volatility needs); the faster scanner path only has point-in-time
-SMA values, not a series, so it always sizes at the flat cap.
+— the concurrent-positions cap below is a partial mitigation for that
+(fewer correlated positions open at once), not a full multi-asset
+portfolio backtester. Also only available on the polling path
+(`price_history.py` accumulates the raw closes volatility needs); the
+faster scanner path only has point-in-time SMA values, not a series, so
+it always sizes at the flat cap.
+
+## Concurrent-positions cap
+
+`RISK_LIMITS["max_concurrent_positions"]` (5, out of the 15-asset
+watchlist) caps how many assets may have an open position at the same
+time — a fresh buy signal into a previously-flat asset is skipped, same
+as the whipsaw cooldown, while 5 are already open; it never blocks a
+sell/exit or a signal for an asset already held. Enforced by
+`RiskManager.can_open_new_position(open_position_count)`.
+
+Validated with `portfolio_backtest.py` — a multi-asset simulator that
+runs the same production entry/exit rules across several price series at
+once, sharing one cash pool, since the single-asset `backtest.py` has no
+notion of "how many are open simultaneously." Swept against two real,
+bar-aligned correlated groups (backtest_2026-09-23.md's
+"Concurrent-positions cap" section): IBIT/ETHA (hourly) and
+GBTC+VSOL+BSOL+GSOL (daily, 4-way aligned). Lower caps consistently
+reduced max drawdown in both groups, and in the more-correlated 4-asset
+group even improved total return — correlated assets tend to fire
+near-duplicate signals, so holding many at once concentrates risk and
+multiplies whipsaw losses rather than diversifying.
+
+**Scope, stated plainly:** the sweep only ever tested 2 or 4 correlated
+series (no larger real, bar-aligned correlated group exists to test
+against), so it validates the *mechanism* (capping helps), not a proven
+optimal number for a 15-asset watchlist with several distinct clusters
+(core BTC/ETH/SOL/DOGE, the meme-coin group, PYTH/XLM). 5 is a
+moderate, owner-chosen extension of that direction, not a backtested
+optimum the way the exit-criteria and SMA-window defaults are.
 
 ## Crypto price history: built by polling, not fetched
 
