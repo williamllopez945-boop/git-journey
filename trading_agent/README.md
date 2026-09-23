@@ -45,7 +45,7 @@ real-history signal that the other 14 watchlist assets get.
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
-| `position_state.py` | Tracks whether take-profit was already taken per asset, so it fires once per position — persisted to `position_state.json` |
+| `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (12h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing, daily loss circuit breaker, daily trade cap — persisted to `state.json` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
@@ -61,6 +61,15 @@ then, before treating it as tradeable. Backtested against real market
 data (`backtest_2026-09-23.md`): this alone turned the strategy from
 underperforming buy-and-hold into outperforming it on both assets tested,
 by filtering out whipsaws — crosses that reversed within a bar or two.
+
+**Whipsaw cooldown:** even with the entry filter, a stopped-out or
+death-crossed position can't immediately re-enter — `position_state.py`
+blocks new entries into that asset for 12 hours after a full exit. Also
+empirically tuned by sweeping the backtest (`backtest_2026-09-23.md`):
+this improved ETHA further on top of the entry filter (+27.01% ->
++37.83% return, 55.6% -> 71.4% win rate) at no cost to IBIT in this
+sample. Only blocks new entries — exits (sells, stop-loss, take-profit)
+are never delayed by it.
 
 **Exit — three independent triggers, whichever fires first (or both):**
 1. **SMA death cross** — short SMA crosses below the long SMA. Exits the

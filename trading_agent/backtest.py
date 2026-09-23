@@ -20,13 +20,19 @@ from .exit_criteria import check_exit
 from .entry_filter import confirmed_signal
 
 
-def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None):
+def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
     (crossover strength must clear this threshold) instead of the raw
     strategy.sma_crossover_signal - filters weak/marginal crosses likely to
     whipsaw. None (default) uses the unfiltered signal.
+
+    cooldown_bars: when set, blocks re-entry into a fresh buy signal for
+    this many bars after a position fully closes (stop-loss or death
+    cross) - targets repeated whipsaw losses from re-entering a choppy
+    market immediately after being stopped out. None (default) disables
+    the cooldown.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -39,6 +45,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     took_profit = False
     trades = []
     equity_curve = []
+    last_exit_index = None
 
     for i, price in enumerate(closes):
         window = closes[: i + 1]
@@ -53,6 +60,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 position_qty = 0.0
                 avg_cost_basis = 0.0
                 took_profit = False
+                last_exit_index = i
             elif reason == "take_profit":
                 sell_qty = position_qty * fraction
                 proceeds = sell_qty * price
@@ -75,13 +83,20 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
             position_qty = 0.0
             avg_cost_basis = 0.0
             took_profit = False
+            last_exit_index = i
         elif position_qty == 0 and cash > 0 and signal == "buy":
-            qty = cash / price
-            position_qty = qty
-            avg_cost_basis = price
-            trades.append({"index": i, "action": "buy", "reason": "fresh_buy_cross",
-                            "qty": qty, "price": price, "cash_after": 0.0})
-            cash = 0.0
+            in_cooldown = (
+                cooldown_bars is not None
+                and last_exit_index is not None
+                and i - last_exit_index < cooldown_bars
+            )
+            if not in_cooldown:
+                qty = cash / price
+                position_qty = qty
+                avg_cost_basis = price
+                trades.append({"index": i, "action": "buy", "reason": "fresh_buy_cross",
+                                "qty": qty, "price": price, "cash_after": 0.0})
+                cash = 0.0
 
         equity_curve.append(cash + position_qty * price)
 

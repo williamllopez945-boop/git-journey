@@ -53,7 +53,13 @@ over the watchlist.
       beyond the raw signal's warm-up, for the confirmation bar) - that's
       expected while history is still accumulating, not an error.
    c. If the signal is `"hold"`, skip this asset.
-   d. If `"buy"`: compute the order quantity with
+   d. If `"buy"`: check `PositionStateStore().in_cooldown(asset)` from
+      `trading_agent/position_state.py` first — if `True` (this asset
+      fully closed a position within the last `DEFAULT_COOLDOWN_HOURS`,
+      12h by default), skip this asset entirely this cycle, even though a
+      real confirmed buy signal fired. This is the whipsaw cooldown
+      (empirically tuned — see backtest_2026-09-23.md), not optional.
+      Otherwise compute the order quantity with
       `RiskManager.position_size(portfolio_value, price, current_position_value)`.
       Skip if the resulting quantity is 0 (already at the per-asset cap).
    e. If `"sell"`: sell the full existing position in that asset (a
@@ -94,8 +100,13 @@ waiting for `price_history.py` to accumulate enough local bars.
    `entry_filter.DEFAULT_MIN_STRENGTH_PCT` (0.25%). An immediate reversal,
    or a persisting-but-weak cross, both classify `"hold"`.
 4. Act on the classification:
-   - `fresh_buy_cross` / `fresh_sell_cross`: this is a genuine strategy
-     signal. Compute the order notional with
+   - `fresh_buy_cross`: check `PositionStateStore().in_cooldown(asset)`
+     first — if `True`, skip this asset entirely this cycle (the whipsaw
+     cooldown, see step 5d above; same rule, same reasoning, applies here
+     too). Otherwise compute the order notional with
+     `RiskManager.position_size(...)` (quantity × price) and continue below.
+   - `fresh_sell_cross`: no cooldown check (cooldown only blocks new
+     entries, never exits). Compute the order notional with
      `RiskManager.position_size(...)` (quantity × price).
      **Auto-execution policy (owner-authorized 2026-09-22, see
      `config.py`):** if `DRY_RUN` is `False` and
@@ -155,9 +166,14 @@ the SMA-based sell signal above.
    immediately with the reason (stop_loss/take_profit), quantity, price,
    and resulting P/L.
 5. When a position's `quantity_transferable` reaches 0 (fully closed, by
-   any combination of SMA exits and these protective exits), call
-   `PositionStateStore().reset(asset)` so a future fresh entry in that
-   asset starts without a stale take-profit flag.
+   any combination of SMA exits and these protective exits), call both
+   `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
+   future fresh entry starts without a stale one) AND
+   `PositionStateStore().record_exit(asset)` (starts the whipsaw
+   cooldown — `DEFAULT_COOLDOWN_HOURS`, 12h by default — blocking a new
+   entry into this asset until it expires, even if a fresh buy signal
+   fires in the meantime). Both calls are needed; they track independent
+   state and `reset` does not clear the cooldown.
 
 ## Hard rules
 
@@ -187,3 +203,9 @@ the SMA-based sell signal above.
   still gates them same as everything else.
 - This agent is long-only: it buys and exits, it never shorts or uses
   margin/leverage.
+- Never skip the cooldown check on a new-entry signal (`fresh_buy_cross`,
+  either detection path). `PositionStateStore().in_cooldown(asset)` must
+  be checked before computing order size or presenting a recommendation —
+  a confirmed signal during cooldown is still skipped entirely, not
+  merely downgraded to a recommendation. The cooldown never blocks exits
+  (sells, stop-loss, take-profit) — only new entries.
