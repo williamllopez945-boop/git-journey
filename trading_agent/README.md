@@ -346,6 +346,13 @@ hands-off:
   always execute; everything else alerts or waits for approval). Also
   calls `CycleLogStore().record(...)` (see `cycle_log.py`) for every
   non-hold event, so the daily review below has real data to work from.
+  **Stays hourly, not every 30 minutes** (considered 2026-09-23):
+  persistent Routines enforce a hard 1-hour minimum interval, and the
+  strategy's SMA(10,30) is itself computed on 1-hour candles regardless
+  of check frequency - a 30-minute cadence would only cut alert latency,
+  not improve signal quality, so it wasn't worth trading the Routine's
+  reliability for a session-scoped `CronCreate` supplement (the same
+  mechanism that died silently ~6 times earlier this session).
 - **Daily after-action review** — once per UTC day, reads the day's
   `cycle_log.json` entries and `RiskManager`'s trade log through
   `daily_review.summarize_day`/`format_markdown_report`, writes the
