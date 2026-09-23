@@ -163,12 +163,12 @@ the SMA-based sell signal above.
    from `trading_agent/exit_criteria.py`. It returns one of:
    - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
-   - `("take_profit", 0.80)` — price is 15%+ above cost basis and profit
-     hasn't been taken yet. Sell **80%** of `quantity_transferable`
+   - `("take_profit", 0.70)` — price is 15%+ above cost basis and profit
+     hasn't been taken yet. Sell **70%** of `quantity_transferable`
      (round down to the pair's `min_order_quantity_increment` from
      `get_currency_pairs`), then call
      `PositionStateStore().mark_took_profit(asset)` so this doesn't
-     re-trigger next cycle on the remaining 20%.
+     re-trigger next cycle on the remaining 30%.
    - `(None, 0.0)` — no protective exit fires this cycle; the SMA
      death-cross check above still applies independently.
 4. **These exits bypass `can_trade()`, the daily trade cap, the circuit

@@ -16,11 +16,13 @@ README for how to translate these results to the live 5%-cap sizing.
 """
 
 from .strategy import sma_crossover_signal
-from .exit_criteria import check_exit
+from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import confirmed_signal
 
 
-def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None):
+def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
+             stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
+             take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -33,6 +35,10 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     cross) - targets repeated whipsaw losses from re-entering a choppy
     market immediately after being stopped out. None (default) disables
     the cooldown.
+
+    stop_loss_pct/take_profit_pct/take_profit_sell_fraction: override
+    exit_criteria.py's module defaults - lets this sweep those values
+    instead of only ever testing the hardcoded defaults.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -51,7 +57,9 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
         window = closes[: i + 1]
 
         if position_qty > 0:
-            reason, fraction = check_exit(price, avg_cost_basis, took_profit)
+            reason, fraction = check_exit(price, avg_cost_basis, took_profit,
+                                           stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
+                                           take_profit_sell_fraction=take_profit_sell_fraction)
             if reason == "stop_loss":
                 proceeds = position_qty * price
                 cash += proceeds

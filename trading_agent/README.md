@@ -12,7 +12,7 @@ repo root.
 > under $5 notional (`RISK_LIMITS["auto_execute_max_usd"]`) execute
 > automatically across the whole watchlist with no per-trade approval;
 > anything larger still requires it. Per-position stop-loss (10%) and
-> partial take-profit (15%, sells 80%) also execute automatically once
+> partial take-profit (15%, sells 70%) also execute automatically once
 > `DRY_RUN` is `False` — see "Exit criteria" below. First real trade
 > placed 2026-09-22: $5.02 PEPE buy, a discretionary override (not a
 > strategy-confirmed signal).
@@ -44,7 +44,7 @@ real-history signal that the other 14 watchlist assets get.
 | `entry_filter.py` | Wraps `strategy.py` with an entry confirmation filter (1-bar persistence + minimum crossover strength) - cuts whipsaw losses, see `backtest_2026-09-23.md` |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
 | `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed) — persisted to `scanner_state.json` |
-| `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 80%) checks, independent of the SMA signal |
+| `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing (flat or volatility-scaled), daily loss circuit breaker, daily trade cap — persisted to `state.json` |
@@ -87,8 +87,8 @@ which is inherent to the approach, not something tuning fixes.
    average cost basis. Exits the full position, regardless of the SMA
    state (`exit_criteria.py`).
 3. **Take-profit (15%, partial)** — current price is 15% or more above
-   average cost basis. Sells 80% of the position, once per position
-   lifecycle; the remaining 20% keeps riding, subject to the same
+   average cost basis. Sells 70% of the position, once per position
+   lifecycle; the remaining 30% keeps riding, subject to the same
    stop-loss and death-cross checks afterward (`exit_criteria.py` +
    `position_state.py`).
 
@@ -177,7 +177,7 @@ Each cycle's `classify()` call returns one of:
   fresh-cross orders, `excellent_watch` alerts — still requires the
   account owner's explicit, per-trade approval.
 - **Protective exits are not bounded the same way.** Stop-loss (10%) and
-  take-profit (15%, sells 80%) — see "Strategy" above — execute
+  take-profit (15%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
   the daily trade cap, and the circuit breaker. Only `DRY_RUN` gates
   them. This is deliberate: those gates limit new risk-taking, and
