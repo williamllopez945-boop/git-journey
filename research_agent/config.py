@@ -22,7 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from trading_agent.config import STOCK_WATCHLIST as WATCHLIST  # noqa: E402
 
 LOOKBACK_DAYS = 7        # how far back to check for new SEC filings since the last run
-NEWS_LIMIT = 10          # articles per symbol per run
+NEWS_LIMIT = 5           # articles per symbol per run - kept small since news is
+                         # logged as one consolidated summary per symbol per cycle,
+                         # not one entry per article (see PLAYBOOK.md's dedup step)
 FORM_TYPES = ["8-K", "10-Q", "10-K"]  # 8-K first - the "material event" filing type
                                        # most relevant to sudden price moves
 EARNINGS_LOOKAHEAD_DAYS = 14  # flag an upcoming earnings date within this many days -

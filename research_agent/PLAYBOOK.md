@@ -21,30 +21,54 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
       returns `articles: [{id, title, publisher, preview_text, content,
       published_at, source_type}]`, newest first. Before logging
       anything, call `ResearchLogStore().entries_for_asset(symbol)` and
-      collect the `article_id` values already logged for this symbol —
+      collect every `article_ids` list already logged for this symbol
+      (news entries store a *list* of covered ids, not a single one) —
       `get_equity_news` returns *recent* articles each call, not just
       new ones since the last run, so without this check the same
       article gets re-logged every day it stays in that recent window.
-      For each article whose `id` is NOT already logged, call
-      `record(symbol, "news", <preview_text or a 1-sentence summary of
-      content>, headline=title, publisher=publisher, article_id=id,
-      published_at=published_at)`.
+      Filter to articles whose `id` is NOT already covered. If none are
+      new, log nothing for this symbol. If one or more are new, write
+      **one consolidated entry**, not one entry per article — synthesize
+      a single 2-3 sentence summary of what's new across those articles
+      (the real signal: price moves, analyst rating/target changes,
+      earnings results, material announcements; skip pure filler like
+      "$1000 invested N years ago" pieces and mentions where the symbol
+      is only feed-tagged, not the subject) and call `record(symbol,
+      "news", <consolidated summary>, article_ids=[<ids of every new
+      article covered>], article_count=<count>,
+      published_at=<newest covered article's published_at>)`. This
+      keeps the log to one compact row per symbol per cycle instead of
+      up to `NEWS_LIMIT` rows, which is what was driving excessive
+      token use before this was changed (2026-09-24 audit).
 
-   b. **SEC filings.** Call `get_sec_filing_index(symbol,
-      form_type=FORM_TYPES, since=<today - LOOKBACK_DAYS>)`. It returns
-      `filings: [{filing_id, form_type, description, date_filed}]`.
-      Check `entries_for_asset(symbol)` for `filing_id`s already logged
-      (same dedup reasoning as news — a filing stays inside the lookback
-      window across multiple runs). For each new filing: call
-      `get_sec_filing(filing_id)` (no `section`) to get the table of
-      contents, then `get_sec_filing(filing_id, section=<id>)` for the
-      section(s) that look substantive (skip boilerplate cover pages);
-      summarize in 1-3 sentences what it discloses. **8-K filings get
-      priority attention** — that's the "material event" form type most
-      relevant to a sudden price move (an 8-K explains *why*, after the
-      fact, the way an earnings-date flag explains *when*, in advance).
-      Call `record(symbol, "sec_filing", <summary>, form_type=form_type,
-      filing_id=filing_id, filed_at=date_filed)`.
+   b. **SEC filings.** First check `entries_for_asset(symbol)` for any
+      existing `source_type="sec_filing"` entries.
+      - **Not yet populated for this symbol (bootstrap case, the first
+        cycle that covers it):** call `get_sec_filing_index(symbol,
+        form_type=FORM_TYPES)` with **no `since`** — fetch whatever's
+        most recent regardless of age — and log **only the single most
+        recent filing** (the first result; the tool returns
+        most-recent-first) as a baseline entry, so the log has a known
+        starting point without pulling the symbol's full filing
+        history. An empty result here is expected and not an error for
+        a foreign private issuer that files 20-F/6-K instead of
+        10-Q/10-K/8-K (e.g. CHKP), or a symbol too newly public to have
+        one yet (e.g. MAIR, IPO'd April 2026) — log nothing and move on.
+      - **Already populated:** call `get_sec_filing_index(symbol,
+        form_type=FORM_TYPES, since=<the latest already-logged
+        filed_at>)` to fetch only filings newer than what's logged.
+        Dedup by `filing_id` against existing entries as a safety net.
+      For each new filing found this way: call `get_sec_filing(filing_id)`
+      (no `section`) to get the table of contents, then
+      `get_sec_filing(filing_id, section=<id>)` for the section(s) that
+      look substantive (skip boilerplate cover pages); summarize in 1-3
+      sentences what it discloses. **8-K filings get priority
+      attention** — that's the "material event" form type most relevant
+      to a sudden price move (an 8-K explains *why*, after the fact, the
+      way an earnings-date flag explains *when*, in advance). Call
+      `record(symbol, "sec_filing", <summary>, form_type=form_type,
+      filing_id=filing_id, filed_at=date_filed)` — one entry per filing
+      is fine here, unlike news, since new filings are rare per cycle.
 
    c. **Upcoming earnings.** Call `get_earnings_results(symbol)`. Find
       the last entry where `eps.actual` is `null` (the not-yet-reported
@@ -84,10 +108,14 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
 - Never modify `trading_agent/config.py`, `RISK_LIMITS`, `WATCHLIST`, or
   `STOCK_WATCHLIST` — this agent reads the stock watchlist, it doesn't
   own or change it.
-- Always check `entries_for_asset`/`entries_for_date` for an existing
-  `article_id`/`filing_id` before calling `record()` for a news article
-  or SEC filing — re-scanning the same recent window every day without
+- Always check `entries_for_asset`/`entries_for_date` for existing
+  `article_ids`/`filing_id` values before calling `record()` for news or
+  a SEC filing — re-scanning the same recent window every day without
   this check would flood the log with duplicates.
+- News is logged as one consolidated entry per symbol per cycle, not one
+  entry per article — see step 2a. This keeps the log (and the tokens
+  spent reading it back) proportional to the watchlist size, not to
+  `NEWS_LIMIT`.
 - Crypto (`trading_agent.config.WATCHLIST`, the non-stock list) is out
   of scope — never call an equity-only tool (`get_equity_news`,
   `get_sec_filing_index`, `get_earnings_results`) with a crypto symbol.

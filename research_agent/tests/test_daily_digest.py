@@ -43,6 +43,16 @@ def test_format_daily_digest_labels_each_source_type():
     assert "Reports 2026-10-01 (am)" in digest
 
 
+def test_format_daily_digest_labels_a_consolidated_news_entry_with_its_article_count():
+    entries = [
+        _entry("CRWD", "news", "Hit a 52-week high on cybersecurity sector strength.",
+               article_count=5, article_ids=["a", "b", "c", "d", "e"]),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "**News**" in digest
+    assert "(5 new articles)" in digest
+
+
 def test_format_daily_digest_orders_entries_chronologically_within_asset():
     entries = [
         _entry("CRWD", "news", "second", timestamp="2026-09-24T15:00:00+00:00"),

@@ -14,6 +14,9 @@ def _describe_entry(entry):
     source_type = entry["source_type"]
     summary = entry["summary"]
     if source_type == "news":
+        count = entry.get("article_count")
+        if count:
+            return f"{summary} ({count} new article{'s' if count != 1 else ''})"
         url = entry.get("url")
         return f"{summary}" + (f" ({url})" if url else "")
     if source_type == "sec_filing":
