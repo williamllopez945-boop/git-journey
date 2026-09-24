@@ -107,3 +107,54 @@ def test_misaligned_series_lengths_raise():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+def test_max_trades_per_day_without_timestamps_raises():
+    series = {"A": list(_RAMP_AND_HOLD)}
+    try:
+        portfolio_backtest(series, short_window=2, long_window=4, max_trades_per_day=1)
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_max_trades_per_day_blocks_a_second_entry_the_same_day():
+    # Two assets that both fire a confirmed buy on the same bar (same day) -
+    # a cap of 1 should let only the first one through this cycle.
+    series = {"A": list(_RAMP_AND_HOLD), "B": list(_RAMP_AND_HOLD)}
+    timestamps = [f"2026-01-{1 + i // 24:02d}T00:00:00Z" for i in range(len(_RAMP_AND_HOLD))]
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+        timestamps=timestamps, max_trades_per_day=1,
+    )
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert len(buys) == 1
+
+
+def test_max_trades_per_day_resets_on_a_new_day():
+    # Same setup, but the cap is large enough that a fresh day's reset lets
+    # both assets' entries through (they fire on the same bar/day here, so
+    # this just confirms cap=2 doesn't block either of them).
+    series = {"A": list(_RAMP_AND_HOLD), "B": list(_RAMP_AND_HOLD)}
+    timestamps = [f"2026-01-{1 + i // 24:02d}T00:00:00Z" for i in range(len(_RAMP_AND_HOLD))]
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+        timestamps=timestamps, max_trades_per_day=2,
+    )
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert len(buys) == 2
+
+
+def test_max_trades_per_day_none_behaves_like_before_the_parameter_existed():
+    series = {"A": list(_RAMP_AND_HOLD), "B": list(_RAMP_AND_HOLD)}
+    trades_a, eq_a, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+    )
+    trades_b, eq_b, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None, max_trades_per_day=None,
+    )
+    assert eq_a == eq_b

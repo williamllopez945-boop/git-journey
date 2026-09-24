@@ -21,7 +21,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         min_strength_pct=0, cooldown_bars=None,
                         stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
                         take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
-                        max_aggregate_pct=None):
+                        max_aggregate_pct=None, timestamps=None, max_trades_per_day=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -46,6 +46,24 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     (default) disables the clamp, unchanged from before this parameter
     existed.
 
+    timestamps: optional list of ISO datetime/date strings, same length as
+    each series, bar i's timestamp for every asset (they're bar-aligned,
+    so one shared list suffices). Required only when max_trades_per_day is
+    set - day boundaries are taken from timestamps[i][:10] (the date
+    portion), matching RiskManager's UTC-day trades_today reset. None
+    (default) is fine whenever max_trades_per_day is also None.
+
+    max_trades_per_day: mirrors RiskManager.can_trade()/record_trade() -
+    a shared counter across every asset, reset each time the date in
+    timestamps changes, incremented by every trade (buy or sell alike),
+    same as the live can_trade()/record_trade() pairing. Protective exits
+    (stop-loss/take-profit) are never blocked by this cap, matching
+    PLAYBOOK.md's "Per-position exit rules" (they still increment the
+    counter, they're just never gated by it) - only a death-cross sell or
+    a fresh buy can be skipped for being at the cap. None (default)
+    disables the cap entirely, unchanged from before this parameter
+    existed.
+
     min_strength_pct/cooldown_bars/stop_loss_pct/take_profit_pct/
     take_profit_sell_fraction: same meaning as backtest.py's single-asset
     version, applied per-asset.
@@ -61,14 +79,23 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     for asset, closes in series.items():
         if len(closes) != n:
             raise ValueError(f"series must be aligned: {asset} has {len(closes)} bars, expected {n}")
+    if max_trades_per_day is not None and (timestamps is None or len(timestamps) != n):
+        raise ValueError("max_trades_per_day requires timestamps aligned with series")
 
     cash = starting_cash
     state = {asset: {"qty": 0.0, "avg_cost": 0.0, "took_profit": False, "last_exit_index": None}
               for asset in series}
     trades = []
     equity_curve = []
+    current_day = None
+    trades_today = 0
 
     for i in range(n):
+        if max_trades_per_day is not None:
+            day = timestamps[i][:10]
+            if day != current_day:
+                current_day = day
+                trades_today = 0
         # Protective exits (stop-loss/take-profit) run for every open
         # position first, before any death-cross or fresh-entry logic -
         # same ordering backtest.py uses for a single asset.
@@ -89,6 +116,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["avg_cost"] = 0.0
                 st["took_profit"] = False
                 st["last_exit_index"] = i
+                if max_trades_per_day is not None:
+                    trades_today += 1
             elif reason == "take_profit":
                 sell_qty = st["qty"] * fraction
                 proceeds = sell_qty * price
@@ -97,6 +126,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["took_profit"] = True
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "take_profit",
                                 "qty": sell_qty, "price": price, "cash_after": cash})
+                if max_trades_per_day is not None:
+                    trades_today += 1
 
         open_count = sum(1 for st in state.values() if st["qty"] > 0)
 
@@ -110,7 +141,12 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
             else:
                 signal = confirmed_signal(window, short_window, long_window, min_strength_pct)
 
+            day_cap_blocked = (
+                max_trades_per_day is not None and trades_today >= max_trades_per_day
+            )
             if st["qty"] > 0 and signal == "sell":
+                if day_cap_blocked:
+                    continue
                 proceeds = st["qty"] * price
                 cash += proceeds
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "death_cross",
@@ -120,7 +156,11 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["took_profit"] = False
                 st["last_exit_index"] = i
                 open_count -= 1
+                if max_trades_per_day is not None:
+                    trades_today += 1
             elif st["qty"] == 0 and cash > 0 and signal == "buy":
+                if day_cap_blocked:
+                    continue
                 in_cooldown = (
                     cooldown_bars is not None
                     and st["last_exit_index"] is not None
@@ -145,6 +185,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         trades.append({"index": i, "asset": asset, "action": "buy", "reason": "fresh_buy_cross",
                                         "qty": qty, "price": price, "cash_after": cash})
                         open_count += 1
+                        if max_trades_per_day is not None:
+                            trades_today += 1
 
         total_value = cash + sum(state[a]["qty"] * series[a][i] for a in series)
         equity_curve.append(total_value)
