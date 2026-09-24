@@ -168,15 +168,27 @@ WATCHLIST = [
 #
 # 2026-09-24: owner asked to raise RISK_LIMITS["max_trades_per_day"] from
 # 3 to 10 - not re-backtested against this change specifically (unlike the
-# position-sizing/concurrent-cap passes above). The per-trade guards this
-# doesn't touch still apply unchanged per trade: max_position_pct (20%),
-# max_aggregate_position_pct (50% hard cap, real backstop against
-# overconcentration), max_concurrent_positions (5), and
+# position-sizing/concurrent-cap passes above) at the time it was made.
+# The per-trade guards this doesn't touch still apply unchanged per trade:
+# max_position_pct (20%), max_aggregate_position_pct (50% hard cap, real
+# backstop against overconcentration), max_concurrent_positions (5), and
 # auto_execute_max_usd ($100, still the approval-gate threshold per
 # order). Raising the daily *count* only means more individual trades -
 # each still sized/capped/gated exactly as before - can execute in one
 # day; it does not raise how much any single trade or the portfolio's
 # total open exposure can be.
+#
+# 2026-09-24 (same day, reverted): added max_trades_per_day support to
+# portfolio_backtest.py (it had none before) and backtested the 3 vs 10
+# change against real hourly data for all 10 STOCK_WATCHLIST symbols
+# (~90 days) - see backtest_2026-09-24_trade_cap.md. cap=10 turned out
+# identical to no cap at all (daily trade count never exceeded 7 in this
+# window) and underperformed cap=3 (-2.81% vs +2.60% return, 34.1% vs
+# 42.4% win rate). A follow-up sweep (1-20) plus a split-window
+# robustness check confirmed cap=3 as the only value solidly positive in
+# BOTH independent halves of the window, not just a single-window peak.
+# Owner reverted to 3 based on this evidence. Crypto side not covered -
+# no historicals source for the current WATCHLIST composition.
 STOCK_WATCHLIST = [
     "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CHKP", "MAIR", "AR", "HUBS",
 ]
@@ -195,9 +207,14 @@ RISK_LIMITS = {
                                      # The real backstop against overconcentration is now
                                      # max_aggregate_position_pct below, not this value alone.
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
-    "max_trades_per_day": 10,       # combined across all watchlist assets (crypto + stocks
+    "max_trades_per_day": 3,        # combined across all watchlist assets (crypto + stocks
                                      # share this one counter - see module docstring). Raised
-                                     # from 3 on 2026-09-24 per owner request.
+                                     # 3 -> 10 on 2026-09-24 per owner request, then reverted
+                                     # 10 -> 3 the same day after backtest_2026-09-24_trade_cap.md
+                                     # found cap=3 was the only value solidly positive across
+                                     # both halves of a split-window robustness check (cap=10
+                                     # behaved identically to no cap at all, and underperformed:
+                                     # -2.81% vs cap=3's +2.60% on the ~90-day stock backtest).
     "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
                                      # automatically (all watchlist assets); larger orders
                                      # still require explicit per-trade approval. Raised from
