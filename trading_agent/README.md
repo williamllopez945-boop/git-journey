@@ -398,7 +398,9 @@ Each cycle's `classify()` call returns one of:
   confirmed entry now auto-executes unconditionally, not "at or under" a
   real binding threshold. Revisit `auto_execute_max_usd` if the approval
   gate is meant to matter again - it was left alone deliberately, not
-  by oversight (see `config.py`'s module docstring).
+  by oversight (see `CHANGELOG.md`). Reconfirmed still true in the
+  2026-09-24 audit - `config.py` now carries a NOTE on this setting
+  directly, not just here.
 - **Protective exits are not bounded the same way.** Stop-loss (10%) and
   take-profit (15%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
