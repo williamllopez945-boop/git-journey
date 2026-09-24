@@ -203,9 +203,25 @@ assets don't also need the polling path.
      executes, increment `open_position_count` and add its notional to
      `total_open_position_value` before moving to the next asset in this
      cycle.
-   - `fresh_sell_cross`: no cooldown check (cooldown only blocks new
-     entries, never exits). Compute the order notional with
-     `RiskManager.position_size(...)` (quantity × price).
+   - `fresh_sell_cross`: **first check the asset's held quantity**
+     (`quantity_transferable` from step 0's crypto positions). **If it's
+     0 — no open position in this asset — this is a spot, long-only
+     strategy with no shorting: there is nothing to sell.** Log
+     `CycleLogStore().record(asset, "fresh_sell_cross", crossover_pct,
+     "blocked_no_position")` (see the Cycle logging table below) and
+     move on to the next asset — do not call `preview_crypto_order` or
+     `place_crypto_order`. This is the common case for most watchlist
+     assets most cycles (a sell-cross firing on something you never
+     bought is not a signal to act on, just noise from tracking a wider
+     watchlist than what's actually held) and is distinct from
+     `excellent_watch`'s "worth discussing" framing — it needs no
+     notification, since there's no decision for the owner to make about
+     a position that doesn't exist. If `quantity_transferable > 0`, this
+     is a real exit: no cooldown check (cooldown only blocks new
+     entries, never exits). The order quantity is the **full held
+     `quantity_transferable`** — not `RiskManager.position_size(...)`,
+     which sizes a *buy* against `max_position_pct` and has no meaning
+     for a sell; compute notional as quantity × current price instead.
      **Auto-execution policy (owner-authorized 2026-09-22, see
      `config.py`):** if `DRY_RUN` is `False` and
      `RiskManager.can_auto_execute(order_notional_usd)` is `True` (i.e.
@@ -468,6 +484,7 @@ on both the polling and scanner paths, so the end-of-day review
 | `fresh_buy_cross` sized to 0 — `max_aggregate_position_pct` reached | `"blocked_aggregate_cap"` | |
 | Confirmed cross downgraded to `"hold"` inside `classify()` by the volume gate | `"blocked_volume"` | log this even though `classify()` itself returned `"hold"`, not `fresh_buy_cross` — the whole point is capturing what got filtered out |
 | `excellent_watch` | `"excellent_watch"` | |
+| `fresh_sell_cross` on an asset with no open position (nothing to sell — see the hard rule above) | `"blocked_no_position"` | no owner notification needed, nothing for them to decide |
 | Stop-loss or take-profit fired | `"protective_exit"` | include `reason` (`"stop_loss"`/`"take_profit"`), `price`, `avg_cost_basis`, resulting P/L |
 
 A plain `"hold"` with nothing else notable is not logged — this is an
