@@ -36,10 +36,14 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
       is only feed-tagged, not the subject) and call `record(symbol,
       "news", <consolidated summary>, article_ids=[<ids of every new
       article covered>], article_count=<count>,
-      published_at=<newest covered article's published_at>)`. This
-      keeps the log to one compact row per symbol per cycle instead of
-      up to `NEWS_LIMIT` rows, which is what was driving excessive
-      token use before this was changed (2026-09-24 audit).
+      published_at=<newest covered article's published_at>,
+      kind=<"baseline" if this symbol had no prior "news" entry, else
+      "delta">)`. This keeps the log to one compact row per symbol per
+      cycle instead of up to `NEWS_LIMIT` rows, which is what was
+      driving excessive token use before this was changed (2026-09-24
+      audit) - and the `kind` tag (also 2026-09-24) makes that
+      baseline/delta split explicit and queryable rather than implicit
+      in "was this the first entry."
 
    b. **SEC filings.** First check `entries_for_asset(symbol)` for any
       existing `source_type="sec_filing"` entries.
@@ -48,16 +52,19 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
         form_type=FORM_TYPES)` with **no `since`** — fetch whatever's
         most recent regardless of age — and log **only the single most
         recent filing** (the first result; the tool returns
-        most-recent-first) as a baseline entry, so the log has a known
-        starting point without pulling the symbol's full filing
-        history. An empty result here is expected and not an error for
-        a foreign private issuer that files 20-F/6-K instead of
+        most-recent-first) as a `kind="baseline"` entry (a short factual
+        summary, e.g. "Most recent {form_type} on file at first coverage
+        of this symbol" — no need to fetch/summarize its content), so
+        the log has a known starting point without pulling the symbol's
+        full filing history. An empty result here is expected and not an
+        error for a foreign private issuer that files 20-F/6-K instead of
         10-Q/10-K/8-K (e.g. CHKP), or a symbol too newly public to have
         one yet (e.g. MAIR, IPO'd April 2026) — log nothing and move on.
       - **Already populated:** call `get_sec_filing_index(symbol,
         form_type=FORM_TYPES, since=<the latest already-logged
         filed_at>)` to fetch only filings newer than what's logged.
         Dedup by `filing_id` against existing entries as a safety net.
+        Log each as a `kind="delta"` entry.
       For each new filing found this way: call `get_sec_filing(filing_id)`
       (no `section`) to get the table of contents, then
       `get_sec_filing(filing_id, section=<id>)` for the section(s) that
@@ -73,7 +80,7 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
       date_filed), with a summary noting content wasn't available, rather
       than skipping the filing entirely. Call `record(symbol, "sec_filing",
       <summary>, form_type=form_type, filing_id=filing_id,
-      filed_at=date_filed)` — one entry per filing
+      filed_at=date_filed, kind="delta")` — one entry per filing
       is fine here, unlike news, since new filings are rare per cycle.
 
    c. **Upcoming earnings.** Call `get_earnings_results(symbol)`. Find

@@ -53,6 +53,22 @@ def test_format_daily_digest_labels_a_consolidated_news_entry_with_its_article_c
     assert "(5 new articles)" in digest
 
 
+def test_format_daily_digest_tags_a_baseline_entry_but_not_a_delta():
+    entries = [
+        _entry("CRWD", "sec_filing", "Most recent 10-Q on file at first coverage of this symbol.",
+               form_type="10-Q", filed_at="2026-08-26", kind="baseline"),
+        _entry("CRWD", "sec_filing", "8-K current report filed same day as the 10-Q above.",
+               form_type="8-K", filed_at="2026-08-26", kind="delta"),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "*(baseline)*" in digest
+    lines = digest.splitlines()
+    baseline_line = next(l for l in lines if "Most recent 10-Q" in l)
+    delta_line = next(l for l in lines if "8-K current report" in l)
+    assert "*(baseline)*" in baseline_line
+    assert "*(baseline)*" not in delta_line
+
+
 def test_format_daily_digest_orders_entries_chronologically_within_asset():
     entries = [
         _entry("CRWD", "news", "second", timestamp="2026-09-24T15:00:00+00:00"),

@@ -53,7 +53,8 @@ def format_daily_digest(entries, date_iso):
         lines.append(f"## {asset}")
         for e in sorted(by_asset[asset], key=lambda x: x["timestamp"]):
             label = SOURCE_LABELS.get(e["source_type"], e["source_type"])
-            lines.append(f"- **{label}**: {_describe_entry(e)}")
+            tag = " *(baseline)*" if e.get("kind") == "baseline" else ""
+            lines.append(f"- **{label}**{tag}: {_describe_entry(e)}")
         lines.append("")
 
     return "\n".join(lines)

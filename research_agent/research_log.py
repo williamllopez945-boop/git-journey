@@ -14,6 +14,17 @@ existing url/filing_id values before calling record() again for the same
 article or filing - get_equity_news returns "recent" articles each call,
 not just new ones since the last run, so without this check the same
 article would get re-logged every day it stays in that recent window.
+
+Baseline + deltas (2026-09-24): every entry also carries a `kind` extra
+field, either "baseline" (the first entry logged for this asset +
+source_type pair - e.g. the single most-recent SEC filing at first
+coverage, or the first cycle's news summary) or "delta" (everything
+logged after that, scoped to genuinely new findings since the last
+entry). PLAYBOOK.md sets this by checking whether entries_for_asset(symbol)
+already has an entry of the same source_type before calling record() -
+same check the dedup logic above already needs, just also used to pick
+the tag. Kept as a plain string field (not a fixed schema) for the same
+reason source_type's own extra fields are freeform.
 """
 
 import json
