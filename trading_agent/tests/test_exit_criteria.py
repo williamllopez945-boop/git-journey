@@ -49,6 +49,68 @@ def test_default_take_profit_sell_fraction_is_70_percent():
     assert TAKE_PROFIT_SELL_FRACTION == 0.70
 
 
+def test_trailing_stop_disabled_by_default_after_take_profit():
+    # take_profit already taken, price has pulled back from a peak but is
+    # still well above the original entry-basis stop-loss - with no
+    # trailing_stop_pct passed (module default is None), nothing fires,
+    # matching pre-2026-09-24 behavior exactly.
+    reason, fraction = check_exit(current_price=120, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_take_profit=150)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_trailing_stop_fires_on_pullback_from_peak():
+    # Peak was 150, a 10% trailing stop means anything at/below 135 exits.
+    reason, fraction = check_exit(current_price=134, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_take_profit=150, trailing_stop_pct=0.10)
+    assert reason == "trailing_stop"
+    assert fraction == 1.0
+
+
+def test_trailing_stop_exact_threshold_triggers():
+    reason, fraction = check_exit(current_price=135, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_take_profit=150, trailing_stop_pct=0.10)
+    assert reason == "trailing_stop"
+    assert fraction == 1.0
+
+
+def test_trailing_stop_does_not_fire_within_band_of_peak():
+    reason, fraction = check_exit(current_price=140, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_take_profit=150, trailing_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_trailing_stop_never_checked_before_take_profit_taken():
+    # Even with trailing_stop_pct set, it's irrelevant until take-profit has
+    # actually fired once - the ordinary take_profit path still governs.
+    reason, fraction = check_exit(current_price=116, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_take_profit=200, trailing_stop_pct=0.10)
+    assert reason == "take_profit"
+
+
+def test_original_stop_loss_still_checked_first_even_after_take_profit():
+    # A sharp reversal straight through the original entry-basis stop-loss
+    # should still exit as "stop_loss", not "trailing_stop" - it's checked
+    # unconditionally before the take-profit/trailing branch.
+    reason, fraction = check_exit(current_price=89, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_take_profit=150, trailing_stop_pct=0.10)
+    assert reason == "stop_loss"
+    assert fraction == 1.0
+
+
+def test_trailing_stop_ignored_without_a_peak_price():
+    # trailing_stop_pct set but the caller never supplied a peak (e.g. a
+    # position that took profit before this feature existed) - inert, not
+    # an error. Price is above the entry-basis stop-loss so nothing else
+    # fires either.
+    reason, fraction = check_exit(current_price=120, avg_cost_basis=100, take_profit_already_taken=True,
+                                   trailing_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0
+
+
 def test_overrides_replace_module_defaults():
     # 5% stop-loss instead of the default 10% - a 6% drop now triggers.
     reason, fraction = check_exit(current_price=94, avg_cost_basis=100, take_profit_already_taken=False,

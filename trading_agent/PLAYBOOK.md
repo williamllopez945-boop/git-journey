@@ -235,7 +235,23 @@ assets don't also need the polling path.
      instead — asset, direction, current price, suggested size — and
      stop; do not call `place_crypto_order` until the owner explicitly
      approves that specific trade. Use `preview_crypto_order` to show
-     them exact cost/fee first in that case too.
+     them exact cost/fee first in that case too. **Order type (changed
+     2026-09-24, owner request - "limit orders to the best price from
+     our analysis"): use a marketable limit order (`type=limit`,
+     `limit_price` at or slightly above the current ask for a buy / at
+     or slightly below the current bid for a sell, from
+     `get_crypto_quotes`), not `type=market`.** `place_crypto_order`'s
+     own documented "collar" on plain market orders is up to ~1% worse
+     than the live quote for a buy and up to ~5% worse for a sell - a
+     confirmed signal could execute meaningfully worse than the price
+     that triggered it. A marketable limit gets the same effective
+     near-certain fill in normal liquidity while capping the worst case
+     at the limit price - mirrors what the stock scanner cycle
+     (`review_equity_order`/`place_equity_order`) already does below,
+     for the identical reason. This applies to every crypto order this
+     routine places: fresh-cross entries and exits here, and the
+     protective stop-loss/take-profit exits in "Per-position exit
+     rules" below - all of them switch from market to marketable limit.
    - `excellent_watch`: not a strategy-confirmed signal, never
      auto-executed regardless of size. Alert the account
      owner with the asset, its crossover_pct/% change, and why it didn't
@@ -350,7 +366,13 @@ positions.
    `PositionStateStore().took_profit(asset)` from
    `trading_agent/position_state.py`.
 3. Call `exit_criteria.check_exit(current_price, avg_cost_basis, took_profit)`
-   from `trading_agent/exit_criteria.py`. It returns one of:
+   from `trading_agent/exit_criteria.py` (no `peak_price_since_take_profit`
+   or `trailing_stop_pct` arguments live - the trailing-stop mechanism
+   exists and is tested, but `TRAILING_STOP_PCT` defaults to `None`
+   (disabled); see `backtest_2026-09-24_trailing_stop.md` for why it
+   wasn't turned on - it consistently hurt returns across every value
+   tested, sometimes severely, in a 12-series backtest). It returns one
+   of:
    - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
    - `("take_profit", 0.70)` — price is 15%+ above cost basis and profit
@@ -365,11 +387,13 @@ positions.
    breaker, and `auto_execute_max_usd`** — protective exits are never
    blocked by the gates that limit new risk-taking. The only gate that
    still applies is `DRY_RUN`: while `True`, log what would have been
-   sold and take no action; while `False`, place the sell
-   (`place_crypto_order`, side=sell) immediately, call
-   `RiskManager.record_trade(...)`, and notify the account owner
-   immediately with the reason (stop_loss/take_profit), quantity, price,
-   and resulting P/L.
+   sold and take no action; while `False`, place the sell immediately -
+   **`place_crypto_order`, `side=sell`, `type=limit`, `limit_price` at
+   or slightly below the current bid (same marketable-limit reasoning
+   as the scanner-cycle order type note above - not `type=market`,
+   changed 2026-09-24)** - call `RiskManager.record_trade(...)`, and
+   notify the account owner immediately with the reason (stop_loss/
+   take_profit), quantity, price, and resulting P/L.
 5. When a position's `quantity_transferable` reaches 0 (fully closed, by
    any combination of SMA exits and these protective exits), call both
    `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
