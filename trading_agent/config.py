@@ -165,6 +165,18 @@ WATCHLIST = [
 # that exact gap event and still came out ahead. No name was excluded on
 # a hindsight basis (that would be cherry-picking after the fact) - all
 # 10 are ordinary operating companies, not single-catalyst bets.
+#
+# 2026-09-24: owner asked to raise RISK_LIMITS["max_trades_per_day"] from
+# 3 to 10 - not re-backtested against this change specifically (unlike the
+# position-sizing/concurrent-cap passes above). The per-trade guards this
+# doesn't touch still apply unchanged per trade: max_position_pct (20%),
+# max_aggregate_position_pct (50% hard cap, real backstop against
+# overconcentration), max_concurrent_positions (5), and
+# auto_execute_max_usd ($100, still the approval-gate threshold per
+# order). Raising the daily *count* only means more individual trades -
+# each still sized/capped/gated exactly as before - can execute in one
+# day; it does not raise how much any single trade or the portfolio's
+# total open exposure can be.
 STOCK_WATCHLIST = [
     "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CHKP", "MAIR", "AR", "HUBS",
 ]
@@ -183,7 +195,9 @@ RISK_LIMITS = {
                                      # The real backstop against overconcentration is now
                                      # max_aggregate_position_pct below, not this value alone.
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
-    "max_trades_per_day": 3,        # combined across all watchlist assets
+    "max_trades_per_day": 10,       # combined across all watchlist assets (crypto + stocks
+                                     # share this one counter - see module docstring). Raised
+                                     # from 3 on 2026-09-24 per owner request.
     "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
                                      # automatically (all watchlist assets); larger orders
                                      # still require explicit per-trade approval. Raised from
