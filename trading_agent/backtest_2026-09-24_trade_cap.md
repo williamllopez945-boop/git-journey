@@ -73,3 +73,49 @@ noted for the same reason as always, not new to this result.
   This is information for that decision, not an automatic reversal.
 - Crypto-side impact is genuinely unknown from this data — flagged above,
   not glossed over.
+
+## Follow-up: sweeping for an optimal value (same day, second pass)
+
+Swept `max_trades_per_day` 1 through 20 on the same full window:
+
+| cap | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8-20 |
+|---|---|---|---|---|---|---|---|---|
+| Return | -0.80% | +2.14% | **+2.60%** | -3.49% | +0.04% | -2.89% | -2.81% | -2.81% |
+
+cap=3 is the peak, but the curve is jagged (a cliff at 4), not smooth -
+exactly the shape that should raise an overfitting flag on a single
+window (see this session's own precedent in `config.py`'s docstring:
+"re-optimizing for raw return... would reintroduce" the trap already
+caught once). 8+ all collapse to the uncapped result because trade
+activity never exceeded 7 in a single day anywhere in this window.
+
+**Robustness check: split the window into two independent halves**
+(2026-06-26 to 08-10, then 08-11 to 09-23, 186 bars each) and re-swept
+both separately, since a value that's only good on the full window but
+falls apart on sub-windows is a fit to noise, not a real edge:
+
+| cap | H1 return | H2 return |
+|---|---|---|
+| 1 | -3.74% | **+3.31%** |
+| 2 | -1.17% | -0.09% |
+| **3** | **+1.61%** | +1.51% |
+| 4 | -2.62% | +1.50% |
+| 5+ | mixed, mostly negative | +1.50% (flat - uncapped) |
+
+**cap=3 is the only value that's solidly positive in both halves.**
+cap=1 wins H2 outright but is the *worst* value in H1 (-3.74%) - unstable
+across time, not a real edge either. cap=4 and up are negative-to-flat in
+H1 and merely flat (uncapped-equivalent) in H2.
+
+## Recommendation
+
+**cap=3 (the original value) is the best-supported choice in this data** -
+not just the peak of one sweep, but the one value that held up when the
+window was split and re-tested independently. Raising it to 10 isn't
+supported by backtested stock performance; it happens to behave exactly
+like removing the cap, which this data says is worse than keeping it
+tight. This is evidence for the owner's decision, not an automatic
+revert - real-money config changes stay the owner's call, especially
+since this is stocks-only, one instrument set, and one quarter of data,
+not the kind of multi-regime validation this session used for e.g.
+`TAKE_PROFIT_SELL_FRACTION`.
