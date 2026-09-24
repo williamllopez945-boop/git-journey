@@ -212,3 +212,26 @@ except the first:
 3. Moved this changelog out of `config.py`'s module docstring into this
    file, so `config.py` stays short and shows current state, not a
    running narrative.
+
+**PYTH removed from WATCHLIST (same day, follow-up).** Owner asked
+whether PYTH's inclusion was still justified. Checked the record rather
+than assuming: every other current crypto holding has a documented
+reason (BTC/ETH/SOL are an explicit "core" carve-out; the other 10 came
+from the 2026-09-23 top-10-by-crossover-strength screener). PYTH's entry
+just said "added 2026-09-22" - no rationale anywhere in this repo, and
+it was explicitly left untouched (not re-evaluated) when the meme-coin
+removal pass later applied that same screener methodology to everything
+else. It was also structurally the worst-served asset on pure mechanics:
+the only one the scanner didn't cover, meaning the only one still needing
+the 32-hour local warm-up, never getting the volume-confirmation gate,
+and (as of the audit above) falling back to flat-cap sizing. Confirmed
+zero open PYTH position before removing - pure watchlist edit, no sell
+needed, same pattern as every prior watchlist change this session.
+`WATCHLIST` now 14 assets (was 15); `XLM` (also added 2026-09-22, but
+scanner-covered) is unaffected. The local-polling path this asset
+motivated (`price_history.py`, `entry_filter.confirmed_signal`,
+volatility-scaled sizing) now applies to zero assets - left in place as
+dormant, tested infrastructure rather than deleted, since a future
+non-scanner-covered addition would need it again; see `PLAYBOOK.md`'s
+note above its steps 1-6. `price_history.json` cleared to empty (no
+asset left to track).

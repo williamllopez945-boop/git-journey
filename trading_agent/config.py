@@ -13,8 +13,15 @@ here, so this file stays scannable (split out 2026-09-24, audit).
 WATCHLIST = [
     "BTC", "ETH", "SOL",  # core assets, always held regardless of screener rank
     "LIT", "BCH", "XCN", "HBAR", "DOT", "CRV", "ZORA", "LINK", "AVAX", "ASTER",  # top-10 blue-chip screener pick
-    "PYTH", "XLM",  # PYTH is NOT covered by the SMA screener (see README) - the one asset that uses the local-polling path
+    "XLM",  # added 2026-09-22, predates the screener methodology - see CHANGELOG.md
 ]
+# PYTH removed 2026-09-24 (audit follow-up) - it was the only watchlist
+# asset with no documented reason for inclusion (added 2026-09-22, never
+# screened or re-justified like everything else here) and the only one
+# not covered by the crypto scanner, so it was structurally worse-served
+# than every other asset (slower signal, no volume gate, flat-cap-only
+# sizing). Zero open position at removal - pure watchlist edit, no sell
+# needed. See CHANGELOG.md.
 
 # Top 10 by SMA(10,30) 1h crossover strength among liquid, large-cap stocks
 # (market cap > $10B, price > $10, 30d avg volume > 1M shares) - see
@@ -56,7 +63,7 @@ RISK_LIMITS = {
                                      # enough for $100 to be reachable, or lower this value if
                                      # the approval gate should have teeth sooner.
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
-                                     # position at once (~1/3 of the 15-asset watchlist) -
+                                     # position at once (~1/3 of the 14-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
     "max_aggregate_position_pct": 0.50,  # HARD cap: current mark-to-market value of ALL open
                                      # positions combined may never exceed this fraction of

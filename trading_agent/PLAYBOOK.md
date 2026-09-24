@@ -10,18 +10,23 @@ Run this cycle on a fixed schedule (e.g. hourly). Each run is one full pass
 over the watchlist.
 
 **Simplified 2026-09-24 (audit):** steps 1-6 below (the local-polling
-signal path) now run for **`PYTH` only** — it's the one `WATCHLIST` asset
-the crypto scanner doesn't cover, so it's the only asset that actually
-needs a locally-built price series. Every other asset gets real signals
-from the scanner-based cycle below from the first cycle it's on the
-watchlist, with no warm-up — running the polling path for them too was
-pure duplication: a same-day check found 14 of 15 watchlist assets sitting
-28-29 hours from their first real polling signal (the warm-up resets to
-zero on every watchlist swap, which has happened repeatedly), while the
-scanner path was already producing real signals for the same assets from
-day one. Nothing scanner-covered loses any capability by dropping this -
-volatility-scaled sizing (step 5d) was already polling-only and scanner
-entries never used it anyway.
+signal path) were narrowed to **`PYTH` only** — it was the one
+`WATCHLIST` asset the crypto scanner didn't cover, so it was the only
+asset that actually needed a locally-built price series. Every other
+asset gets real signals from the scanner-based cycle below from the
+first cycle it's on the watchlist, with no warm-up.
+
+**`PYTH` itself was then removed from `WATCHLIST` the same day** (no
+documented reason for its inclusion survived, and it was structurally
+the worst-served asset - see `CHANGELOG.md`). **Steps 1-6 below currently
+apply to zero assets** as a result - every current `WATCHLIST` member is
+scanner-covered. Left in place rather than deleted: the mechanism
+(`price_history.py`, `entry_filter.confirmed_signal`, volatility-scaled
+sizing) is real, tested infrastructure that would matter again the
+moment a non-scanner-covered asset is added - ripping it out now would
+just mean rebuilding it later. Skip steps 1-6 entirely while `WATCHLIST`
+has no such asset; re-activate them (scoped to whichever asset needs it,
+not the whole watchlist) if one is ever added.
 
 ## Steps, per cycle
 
@@ -67,8 +72,9 @@ entries never used it anyway.
    already hit, or the circuit breaker just tripped), stop — do not place
    any orders this cycle.
 
-5. **For `PYTH` only** (see the note above steps 1-6 - every other
-   `WATCHLIST` asset is covered by the scanner-based cycle below instead):
+5. **For any `WATCHLIST` asset not covered by the crypto scanner** (see the
+   note above steps 1-6 - currently none; skip this whole step until one
+   exists):
    a. Fetch the current mark price via `get_crypto_quotes`, then record it
       as this cycle's bar:
       `PriceHistoryStore().record(asset, mark_price, cycle_timestamp)`
@@ -120,13 +126,11 @@ entries never used it anyway.
       Both volatility calls need at least 3 accumulated bars for that
       asset — if either doesn't have enough yet (still warming up per
       step 5b), fall back to the flat `RISK_LIMITS["max_position_pct"]`
-      instead (pass no override). **Since step 5 is now PYTH-only (see
-      the note above steps 1-6), `BTC` itself is no longer polled, so its
-      benchmark series stays empty and this will fall back to the flat
-      cap in practice** — an accepted, documented tradeoff of the
-      simplification, not a new bug; PYTH still gets its own polling-path
-      signal, just sized at the flat rate instead of volatility-scaled.
-      Compute the order quantity with
+      instead (pass no override). **`BTC` itself is scanner-covered, not
+      polled (see the note above steps 1-6), so its benchmark series
+      will be empty whenever this step does run** - expect this to fall
+      back to the flat cap in practice, an accepted, documented tradeoff,
+      not a bug. Compute the order quantity with
       `RiskManager.position_size(portfolio_value, price, current_position_value, max_position_pct=<the scaled cap or None>, total_open_position_value=total_open_position_value)`.
       Skip if the resulting quantity is 0 (already at the per-asset cap,
       or the `max_aggregate_position_pct` cap is already fully used by
@@ -157,9 +161,9 @@ entries never used it anyway.
 ## Scanner-based cycle (real signals, no 31-cycle warm-up)
 
 Run this alongside steps 1-6 each cycle, for every `WATCHLIST` asset the
-scanner covers (all of them except `PYTH` - see the note above steps
-1-6). It uses real historical data from the start (the RobinHood
-scanner's server-side `closeAvg`), instead of waiting for
+scanner covers (currently all of them - see the note above steps 1-6).
+It uses real historical data from the start (the RobinHood scanner's
+server-side `closeAvg`), instead of waiting for
 `price_history.py` to accumulate enough local bars - this is why these
 assets don't also need the polling path.
 
@@ -429,10 +433,11 @@ positions.
   "Relative volume" column added 2026-09-23) — a confirmed buy cross on
   thin volume should be downgraded to `"hold"` inside `classify()` itself,
   not treated as a fresh entry. **Scope: scanner path only.** The polling
-  path (`price_history.py`, `PYTH`-only as of the 2026-09-24 simplification
-  above) has no volume field available — `get_crypto_quotes` doesn't
+  path (`price_history.py`, currently dormant - see the note above steps
+  1-6) has no volume field available — `get_crypto_quotes` doesn't
   return one and there's still no crypto historicals tool — so a
-  polling-detected `"buy"` signal on `PYTH` is never volume-gated; this is
+  polling-detected `"buy"` signal is never volume-gated whenever that
+  path does run; this is
   the mirror image of volatility-scaled sizing (step 5d), which is
   polling-only for the same underlying reason (the scanner has no raw
   price series to compute volatility from). It never blocks

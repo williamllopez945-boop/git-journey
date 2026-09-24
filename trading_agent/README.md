@@ -34,10 +34,13 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 **Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL
 (core) plus LIT, BCH, XCN, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER (top 10
 by SMA(10,30) crossover strength among blue-chip/established crypto,
-2026-09-23 — see `watchlist_2026-09-23_meme_removal.md`), plus PYTH and
-XLM (added 2026-09-22). Also synced to a real Robinhood watchlist ("Trading
-Agent Watchlist", list_id `d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for
-visibility in the app — purely organizational, `config.py` remains the
+2026-09-23 — see `watchlist_2026-09-23_meme_removal.md`), plus XLM (added
+2026-09-22). PYTH, also added 2026-09-22, was removed 2026-09-24 (see
+"Resolved" note below) - no documented reason for its inclusion survived
+and it was the one asset the scanner didn't cover. Also synced to a real
+Robinhood watchlist ("Trading Agent Watchlist", list_id
+`d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
+purely organizational, `config.py` remains the
 source of truth the agent reads from.
 
 **Meme-coin removal (2026-09-23):** the owner asked to "get out of meme
@@ -142,15 +145,22 @@ found its own fallback cost basis unrecoverable, since the buy that
 established it had aged into "yesterday." Fixed: `trade_log` now
 survives the rollover; only the truly daily-scoped fields reset.
 
-**Known gap: PYTH has no scanner coverage.** The SMA(10,30) screener
-(`scanner_signals.py`, scan_id `8f2ca450-...`) covers 49 crypto pairs, and
-PYTH is not one of them even though it's a normally tradable pair (real
-quotes work fine via `get_crypto_quotes`). Until that's resolved, PYTH's
-signal only comes from the slower `price_history.py` polling path (~31
-hourly cycles to warm up) — it does not get the scanner's immediate
-real-history signal that the other 14 watchlist assets get, and (since
-2026-09-23) it also never gets the volume confirmation gate below, which
-is scanner-only — `get_crypto_quotes` has no volume field.
+**Resolved (2026-09-24): PYTH removed from WATCHLIST, not just worked
+around.** It was previously the only watchlist asset the SMA(10,30)
+screener (`scanner_signals.py`, scan_id `8f2ca450-...`) didn't cover -
+real quotes worked fine via `get_crypto_quotes`, but its signal only
+ever came from the slower `price_history.py` polling path (~31 hourly
+cycles to warm up), never got the scanner's immediate real-history
+signal the rest of the watchlist gets, and never got the volume
+confirmation gate below (scanner-only - `get_crypto_quotes` has no
+volume field). An audit found no documented reason for PYTH's inclusion
+in the first place (added 2026-09-22, never screened or re-justified
+like every other current holding) - given it was also the worst-served
+asset on pure mechanics, it was dropped rather than fixed. Zero open
+position at the time, so a pure watchlist edit. The local-polling path
+this gap motivated (`price_history.py`, `entry_filter.confirmed_signal`,
+volatility-scaled sizing) is left in place but currently dormant - see
+`PLAYBOOK.md`'s note above its steps 1-6.
 
 ## What's here
 
@@ -203,7 +213,8 @@ than the other tunings on this page, since only those two series showed
 real engagement, but smooth and non-negative across every neighboring
 threshold and period tested. Never blocks a sell cross, and unavailable
 on the polling path (`price_history.py`/`get_crypto_quotes` have no
-volume field) - PYTH-only entries never get this gate.
+volume field) - never applies on the polling path, which is currently
+dormant (see "Resolved" note above and `PLAYBOOK.md`).
 
 **Tuning history, briefly (see `backtest_2026-09-23.md` for the full
 story):** an initial sweep against only IBIT/ETHA's one 6-month trending
@@ -286,7 +297,7 @@ it always sizes at the flat cap.
 
 ## Concurrent-positions cap
 
-`RISK_LIMITS["max_concurrent_positions"]` (5, out of the 15-asset
+`RISK_LIMITS["max_concurrent_positions"]` (5, out of the 14-asset
 watchlist) caps how many assets may have an open position at the same
 time — a fresh buy signal into a previously-flat asset is skipped, same
 as the whipsaw cooldown, while 5 are already open; it never blocks a
