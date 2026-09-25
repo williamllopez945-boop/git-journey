@@ -100,7 +100,44 @@ risk-tolerance call, same as the original 50%→75% change was, and the
 new evidence changes the picture materially enough to warrant another
 look before the next real trade sizes against it.
 
-**Not changed as part of this backtest** — `config.py` still reads 75%/
-awesome-trade override exactly as shipped earlier today. This file
-documents the test result; see the live log for the owner's decision on
-how to proceed.
+**Owner decision (same day, after reviewing the above): try a value
+between 60-65% rather than reverting outright or keeping 75%.** Swept
+below.
+
+## Sweep: 50/55/60/65/70/75%, same 5 windows (90-day hourly + full
+   3.7yr daily + its 3 regimes)
+
+| Window | 50% | 55% | 60% | 65% | 70% | 75% |
+|---|---|---|---|---|---|---|
+| hourly_90d | +4.33%/5.70dd | +4.22%/6.27dd | +4.41%/6.84dd | +13.77%/6.19dd | +12.60%/7.53dd | +6.26%/7.24dd |
+| daily_full | +50.71%/9.70dd | +55.07%/8.98dd | +56.40%/9.94dd | +45.23%/16.38dd | +38.95%/17.61dd | +37.27%/17.54dd |
+| regime1_2023 | +19.71%/5.42dd | +20.48%/5.54dd | +21.23%/5.67dd | +22.62%/5.54dd | +18.91%/5.38dd | +20.39%/5.23dd |
+| regime2_2024 | +9.22%/7.40dd | +11.42%/7.00dd | +13.63%/7.11dd | +17.54%/6.93dd | +16.15%/9.93dd | +18.43%/9.17dd |
+| regime3_2025-26 | +12.98%/9.54dd | +9.67%/10.49dd | +6.09%/11.47dd | +3.24%/12.44dd | -0.31%/13.39dd | -4.25%/14.87dd |
+
+**Worst-case across all 5 windows, per candidate** (this project's
+standing ranking rule — worst case first, not mean):
+
+| pct | worst-case return | worst-case drawdown | mean return |
+|---|---|---|---|
+| 50% | +4.33% | 9.70% | +19.39% |
+| 55% | +4.22% | 10.49% | +20.17% |
+| **60%** | **+4.41%** | 11.47% | +20.35% |
+| 65% | +3.24% | 16.38% | +20.48% |
+| 70% | -0.31% | 17.61% | +17.26% |
+| 75% | -4.25% | 17.54% | +15.62% |
+
+**60% wins clearly.** It has the *best* worst-case return of all six
+candidates (even beating 50%, +4.41% vs +4.33%) and a better mean than
+50%/55% (+20.35% vs +19.39%/+20.17%), for a modest, bounded worst-case
+drawdown increase (11.47% vs 50%'s 9.70%, +1.77pp). **65% is where the
+tradeoff turns bad**: worst-case drawdown jumps sharply (11.47% → 16.38%,
++4.91pp) while worst-case return actually *drops* (+4.41% → +3.24%) —
+no benefit for the added risk. 70%/75% are strictly worse than 60% on
+every axis tested.
+
+**Decision: `RISK_LIMITS["max_aggregate_position_pct"]` set to 0.60.**
+`awesome_trade_aggregate_pct` (100%) and `awesome_trade_min_crossover_pct`
+(5%) unchanged — the override was dormant at every aggregate-cap value
+tested, not specifically tied to 75%, and remains cheap, tested
+insurance for the rare case it does apply.

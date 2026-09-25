@@ -58,7 +58,7 @@ not the whole watchlist) if one is ever added.
      cycle, then keep it updated in-memory as positions open/close/
      partially exit during the cycle on either asset class. Feeds
      `RiskManager.position_size`'s aggregate cap (step 5d), which is one
-     75% ceiling over crypto and stock exposure together (100% for an
+     60% ceiling over crypto and stock exposure together (100% for an
      "awesome trade" — see the Hard rules section), not two separate
      ceilings.
 
@@ -225,7 +225,7 @@ done by hand, exactly as described below.
      whose `crossover_pct` also clears the `excellent_watch` bar, added
      2026-09-25, owner request) may size against the full
      `awesome_trade_aggregate_pct` ceiling (100%) instead of the normal
-     `max_aggregate_position_pct` (75%) — it's still using real, unlevered
+     `max_aggregate_position_pct` (60%) — it's still using real, unlevered
      capital, just allowed into the last slice of it that an ordinary
      signal cannot reach. `run_cycle.py` above tags these `[AWESOME]` in
      its output. (quantity × price) and continue below; skip this asset
@@ -444,21 +444,23 @@ positions.
   connection is live and correct.
 - Never size a fresh entry without passing `total_open_position_value`
   (step 2) into `RiskManager.position_size(...)`. `RISK_LIMITS["max_aggregate_position_pct"]`
-  (75%, raised from 50% 2026-09-25 — owner request, after the 50% cap
-  bound twice in one day: once from a live buy consuming the remaining
-  budget, once purely from already-held positions appreciating past it)
-  is a hard cap on the combined mark-to-market value of every open
-  position at once — it does not follow automatically from
-  `max_position_pct` and `max_concurrent_positions` alone (20% x 5 = 100%,
-  well over 75% if unchecked). It only ever limits or zeroes a fresh
-  entry's size, never an exit, and applies identically on both the
-  polling and scanner paths.
+  (60% as of 2026-09-25 — history: 50% → 75% same-day on live evidence
+  the 50% cap bound twice → 60% same day again after backtesting showed
+  75% losing to 50% in 3 of 4 windows, incl. a negative worst case; 60%
+  won on both worst-case AND mean return for a bounded drawdown cost —
+  see `backtest_2026-09-25_aggregate_cap.md`) is a hard cap on the
+  combined mark-to-market value of every open position at once — it
+  does not follow automatically from `max_position_pct` and
+  `max_concurrent_positions` alone (20% x 5 = 100%, well over 60% if
+  unchecked). It only ever limits or zeroes a fresh entry's size, never
+  an exit, and applies identically on both the polling and scanner
+  paths.
 - **"Awesome trade" override (added 2026-09-25, owner request):** a
   confirmed `fresh_buy_cross` whose `|crossover_pct|` also clears
   `RISK_LIMITS["awesome_trade_min_crossover_pct"]` (5.0 — the same bar
   `scanner_signals.EXCELLENT_CROSSOVER_PCT` uses for `excellent_watch`)
   may size against `RISK_LIMITS["awesome_trade_aggregate_pct"]` (100%)
-  instead of the normal 75% aggregate cap — pass that value as
+  instead of the normal 60% aggregate cap — pass that value as
   `RiskManager.position_size(...)`'s `max_aggregate_pct` argument for
   that one order only. This does not raise `max_position_pct` (still
   20% per asset) or `max_concurrent_positions` (still 5) — only the

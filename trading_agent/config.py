@@ -65,17 +65,24 @@ RISK_LIMITS = {
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
                                      # position at once (~1/3 of the 14-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
-    "max_aggregate_position_pct": 0.75,  # HARD cap: current mark-to-market value of ALL open
+    "max_aggregate_position_pct": 0.60,  # HARD cap: current mark-to-market value of ALL open
                                      # positions combined may never exceed this fraction of
-                                     # portfolio value - added 2026-09-23 at 50%, raised to 75%
-                                     # 2026-09-25 (owner request, after the 50% cap bound twice
-                                     # in one day - once from a live buy, once from pure price
-                                     # appreciation of already-held positions - see
-                                     # CHANGELOG.md and daily_logs/2026-09-24.md). Still exists
-                                     # because max_position_pct x max_concurrent_positions
-                                     # doesn't reliably compose into a portfolio-wide ceiling on
-                                     # its own (e.g. 20% x 5 = 100%, well over 75% if unchecked).
-                                     # See RiskManager.position_size and backtest_2026-09-23.md.
+                                     # portfolio value. History: 50% (2026-09-23) -> 75%
+                                     # (2026-09-25, un-backtested, same-day live evidence the
+                                     # 50% cap bound twice) -> 60% (2026-09-25, same day, after
+                                     # backtesting 75%: worse than 50% in 3 of 4 windows tested,
+                                     # incl. a negative-return worst case - see
+                                     # backtest_2026-09-25_aggregate_cap.md's sweep section for
+                                     # the full 50/55/60/65/70/75% comparison). 60% won on both
+                                     # worst-case return (+4.41% vs 50%'s +4.33%) AND mean
+                                     # return (+20.35% vs +19.39%) for a modest, bounded
+                                     # worst-case drawdown cost (11.47% vs 9.70%) - 65%+ already
+                                     # shows worst-case drawdown deteriorating sharply for no
+                                     # further worst-case return gain. Still exists because
+                                     # max_position_pct x max_concurrent_positions doesn't
+                                     # reliably compose into a portfolio-wide ceiling on its own
+                                     # (e.g. 20% x 5 = 100%, well over 60% if unchecked). See
+                                     # RiskManager.position_size and backtest_2026-09-23.md.
     "awesome_trade_min_crossover_pct": 5.0,  # added 2026-09-25 (owner request): a fresh_buy_cross
                                      # whose |crossover_pct| clears this bar - the same threshold
                                      # scanner_signals.EXCELLENT_CROSSOVER_PCT already uses for

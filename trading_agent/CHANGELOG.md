@@ -269,3 +269,22 @@ hand-written per-cycle Python `PLAYBOOK.md`'s scanner-based cycle used
 to require, and narrowed the crypto/stock scans (`update_scan_filters`)
 to just the current watchlist symbols instead of every instrument
 Robinhood offers — see the tool-call log for the exact filter payloads.
+
+**Same day, later: 75% backtested and found worse than 50%, replaced
+with 60%.** Owner asked to backtest the un-backtested 75% change above.
+`portfolio_backtest.py` extended with `awesome_trade_min_crossover_pct`/
+`awesome_trade_aggregate_pct` so the override could be tested too (see
+`backtest_2026-09-25_aggregate_cap.md`). Result: the awesome-trade
+override never fired once across ~4 years of real data (harmless,
+dormant); the 75% aggregate cap itself lost to 50% in 3 of 4windows
+tested, including a negative-return worst case (most recent regime:
+-4.25% vs 50%'s +12.98%, with higher drawdown). Reported back rather
+than silently reverting. Owner asked to try 60-65% — swept
+50/55/60/65/70/75% across the same 5 windows: **60% won on both
+worst-case return (+4.41%, beating even 50%'s +4.33%) and mean return
+(+20.35%), for a modest worst-case drawdown cost (11.47% vs 50%'s
+9.70%)**; 65% is where the tradeoff turns bad (drawdown jumps to
+16.38% for a worse worst-case return than 60%). `max_aggregate_position_pct`
+set to 0.60. `awesome_trade_aggregate_pct`/`awesome_trade_min_crossover_pct`
+unchanged (100%/5%) - dormant at every level tested, not specifically
+tied to 75%.
