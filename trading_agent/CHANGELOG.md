@@ -317,3 +317,21 @@ than it protects. `PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` left
 `None` (disabled) - mechanism built and tested, matching the trailing
 stop's own built-but-disabled treatment, but not shipped live. See
 `backtest_2026-09-25_profit_lock.md`.
+
+**Same day, later still: weekly watchlist review added.** Owner asked
+for a standing weekly review to drop underperforming
+`WATCHLIST`/`STOCK_WATCHLIST` names and bring in stronger candidates,
+rather than only reviewing on request as every prior watchlist change
+this session did (`watchlist_2026-09-22.md`,
+`watchlist_2026-09-23_meme_removal.md`,
+`watchlist_stocks_2026-09-23_large_cap.md`). Added
+`trading_agent/watchlist_review.py` (`rank_by_crossover_strength` for
+sourcing candidates - same method every past swap used - and
+`trailing_trade_pnl` for scoring current holdings by what they actually
+made or lost, not today's signal strength) plus a new "Weekly watchlist
+review" section in `PLAYBOOK.md` documenting the full procedure and a
+new self-bound "Weekly watchlist review" Routine (Sundays 15:00 UTC).
+**This review only ever produces a written recommendation** -
+`config.py` is never edited by the Routine itself; a swap happens only
+after explicit owner approval, same posture the hourly Routine already
+holds for `WATCHLIST`/`STOCK_WATCHLIST`. 13 new tests, 170/170 passing.

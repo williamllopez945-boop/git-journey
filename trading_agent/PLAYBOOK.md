@@ -567,3 +567,81 @@ on both the polling and scanner paths, so the end-of-day review
 
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.
+
+## Weekly watchlist review
+
+Runs once a week (owner request, 2026-09-25: "remove stocks and crypto
+that are not performing well and add those that have potential"). Every
+past watchlist change (`watchlist_2026-09-22.md`,
+`watchlist_2026-09-23_meme_removal.md`,
+`watchlist_stocks_2026-09-23_large_cap.md`) was a deliberate, reviewed,
+backtested swap, never a mechanical top-N replace — this keeps that
+posture on a standing cadence instead of only when asked. **This review
+never edits `config.py` itself.** It produces a written recommendation;
+`WATCHLIST`/`STOCK_WATCHLIST` only change after the owner approves it, a
+separate follow-up action — same rule the hourly Routine already states
+("Do not modify RISK_LIMITS, DRY_RUN, WATCHLIST, or STOCK_WATCHLIST from
+within this routine") extended to this Routine too.
+
+1. **Score current holdings by trailing performance**, not today's
+   signal strength (that's a different question from "should this
+   stay" — see step 3). Load `RiskManager.state["trade_log"]`. For each
+   `WATCHLIST`/`STOCK_WATCHLIST` asset, call
+   `watchlist_review.trailing_trade_pnl(asset, trade_log, current_price)`
+   (`trading_agent/watchlist_review.py`):
+   - Not `None` → real trade history exists, this dollar P&L is the
+     score.
+   - `None` → never traded (the common case for most assets most
+     weeks). Run a 90-day-hourly `backtest.py` pass against real
+     historicals (`IBIT`/`ETHA` proxies for crypto, direct
+     `get_equity_historicals` for stocks — same window used throughout
+     this session's backtests) and use that return as the score
+     instead.
+2. Rank worst-case-first (this project's standing rule — see any
+   `backtest_*.md`): sort ascending by score, check that the bottom
+   entries aren't a lucky/unlucky single data point before trusting
+   them. The bottom 1–2 are removal *candidates* — **skip any with a
+   currently open position** (`quantity_transferable > 0` /
+   `quantity > 0`); no forced liquidation as part of a routine review,
+   note it and revisit next week once flat.
+3. **Source addition candidates.** Run both production scans (crypto
+   `scan_id 8f2ca450-1f7f-4e69-b015-daafe494c14e`, stocks `scan_id
+   6e009dcf-d184-45a7-915f-ccfc50b4e6be` — filters already reflect the
+   established floors: `Asset type = CRYPTO`, `$10B+` market cap) and
+   call `watchlist_review.rank_by_crossover_strength(rows,
+   exclude=<current watchlist + the meme/political exclusion list from
+   watchlist_2026-09-23_meme_removal.md for crypto>)`. Take the top 2-3
+   non-watchlist names per asset class.
+   **Known gap (found 2026-09-25 dry run):** the stock scan's 397-name
+   `$10B+` universe returns only 200 rows (a `frontend_limit`, no
+   pagination — `run_scan` takes only `scan_id`), sorted by `Last desc`
+   (highest-priced first), not by crossover strength — so this can
+   systematically miss a strong candidate that's both lower-priced and
+   outside the top 200 by price. Not a blocker (the crypto scan's full
+   49-name universe always returns in full), but worth a mention in the
+   week's review doc when it happens, same as any other real gap this
+   project documents rather than silently working around.
+4. **Backtest every candidate before proposing it** — never swap on a
+   screener snapshot alone. Isolated `backtest.py` per candidate, plus a
+   combined `portfolio_backtest.py` run (candidate(s) + current
+   watchlist), same method as `watchlist_stocks_2026-09-23_large_cap.md`.
+5. **Decide.** Only propose replacing a removal candidate with an
+   addition candidate whose backtest *clearly* beats it (worst-case
+   return/drawdown first, same bar as every parameter change this
+   session). Most weeks the honest answer is "no change recommended" —
+   write that up too, the same standard this project holds for a
+   negative backtest result (see `backtest_2026-09-25_profit_lock.md`).
+6. Write `trading_agent/watchlist_review_<date>.md` (same structure as
+   the three existing watchlist docs: method, ranked table, backtest
+   numbers, decision) — every week, whether or not a change is proposed.
+   Commit and push it on `claude/robinhood-trading-mcp-sdp3cp`.
+7. Send one `PushNotification` naming the recommendation (or "no change
+   this week") and update the live log. Wait for explicit owner
+   approval before touching `config.py`; once approved, edit
+   `WATCHLIST`/`STOCK_WATCHLIST` and add the `CHANGELOG.md` entry, same
+   as every prior swap.
+
+Hard rules, same as the hourly Routine: never modify `RISK_LIMITS`,
+`DRY_RUN`, `WATCHLIST`, or `STOCK_WATCHLIST` from within this Routine
+itself; never place, preview, or cancel an order — this is a read-only
+research and recommendation cycle.

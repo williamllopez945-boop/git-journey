@@ -493,6 +493,21 @@ hands-off:
 `state.json`/`cycle_log.json`/etc. (live runtime data, never committed),
 the daily review is meant to be a durable, versioned record.
 
+- **Weekly watchlist review** (2026-09-25, owner request) — fires
+  **Sundays 15:00 UTC**, market closed. Scores current
+  `WATCHLIST`/`STOCK_WATCHLIST` members by trailing performance
+  (`watchlist_review.trailing_trade_pnl` against real trade history, or
+  a fresh `backtest.py` run for assets that never traded), sources
+  replacement candidates from the production scanners
+  (`watchlist_review.rank_by_crossover_strength`, same method every
+  past watchlist swap used), and backtests any candidate before
+  proposing it — see `PLAYBOOK.md`'s "Weekly watchlist review" section
+  for the full procedure. **Never edits `config.py` itself** — writes a
+  dated `watchlist_review_YYYY-MM-DD.md` recommendation (even a "no
+  change" week) and notifies the owner; a swap only happens after
+  explicit approval, same posture as the hourly Routine's own
+  `WATCHLIST`/`STOCK_WATCHLIST` hands-off rule.
+
 ## Adjusting or disabling live trading (the owner's own direct action)
 
 `DRY_RUN` was flipped to `False` by the account owner directly — Claude
