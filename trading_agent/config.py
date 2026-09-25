@@ -65,15 +65,31 @@ RISK_LIMITS = {
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
                                      # position at once (~1/3 of the 14-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
-    "max_aggregate_position_pct": 0.50,  # HARD cap: current mark-to-market value of ALL open
+    "max_aggregate_position_pct": 0.75,  # HARD cap: current mark-to-market value of ALL open
                                      # positions combined may never exceed this fraction of
-                                     # portfolio value - added 2026-09-23 because
-                                     # max_position_pct x max_concurrent_positions doesn't
-                                     # reliably compose into a portfolio-wide ceiling on its
-                                     # own (e.g. 20% x 5 = 100%, well over 50% if unchecked).
-                                     # This is what actually enforces "never use over 50% of
-                                     # capital" - see RiskManager.position_size and
-                                     # backtest_2026-09-23.md
+                                     # portfolio value - added 2026-09-23 at 50%, raised to 75%
+                                     # 2026-09-25 (owner request, after the 50% cap bound twice
+                                     # in one day - once from a live buy, once from pure price
+                                     # appreciation of already-held positions - see
+                                     # CHANGELOG.md and daily_logs/2026-09-24.md). Still exists
+                                     # because max_position_pct x max_concurrent_positions
+                                     # doesn't reliably compose into a portfolio-wide ceiling on
+                                     # its own (e.g. 20% x 5 = 100%, well over 75% if unchecked).
+                                     # See RiskManager.position_size and backtest_2026-09-23.md.
+    "awesome_trade_min_crossover_pct": 5.0,  # added 2026-09-25 (owner request): a fresh_buy_cross
+                                     # whose |crossover_pct| clears this bar - the same threshold
+                                     # scanner_signals.EXCELLENT_CROSSOVER_PCT already uses for
+                                     # "worth a look" - is strong enough to size against
+                                     # awesome_trade_aggregate_pct below instead of the normal
+                                     # 75% cap, i.e. it may use the last 25% of aggregate budget
+                                     # that an ordinary signal cannot. Deliberately reuses the
+                                     # existing excellent_watch bar rather than inventing a new
+                                     # number - untested via backtest, since PLAYBOOK.md sizing
+                                     # policy isn't something backtest.py models; revisit if this
+                                     # override fires often enough to be worth backtesting.
+    "awesome_trade_aggregate_pct": 1.00,  # the aggregate ceiling an "awesome" trade (see above)
+                                     # may size against - never higher than 100% of portfolio
+                                     # value; still fully deployed, not leveraged.
 }
 
 # Master safety switch: no real orders are placed while True, auto-executed

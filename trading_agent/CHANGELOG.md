@@ -235,3 +235,37 @@ dormant, tested infrastructure rather than deleted, since a future
 non-scanner-covered addition would need it again; see `PLAYBOOK.md`'s
 note above its steps 1-6. `price_history.json` cleared to empty (no
 asset left to track).
+
+## 2026-09-25
+
+Owner reviewed the day's 3 trades (DOT, LINK, HBAR buys) and 2 blocked
+signals (XLM, BCH — both `blocked_aggregate_cap`) and asked for two
+changes:
+
+1. **`max_aggregate_position_pct` raised 0.50 → 0.75.** The 50% cap had
+   bound twice in one day: once from a live buy (HBAR) consuming the
+   last of the budget, once purely from the already-held DOT/LINK/HBAR
+   positions appreciating past it (BCH's cross sized to $0 with no new
+   buy involved). At $200 and ~$40/position that left room for only
+   ~2-3 concurrent positions even though `max_concurrent_positions=5`
+   suggests more. Not backtested against this specific change (the cap
+   itself isn't a `backtest.py` parameter, unlike `stop_loss_pct`/
+   `take_profit_pct`/etc.) — a direct owner risk-tolerance call.
+2. **New "awesome trade" override**
+   (`awesome_trade_min_crossover_pct=5.0`, `awesome_trade_aggregate_pct=1.00`):
+   a confirmed `fresh_buy_cross` whose `|crossover_pct|` also clears the
+   `excellent_watch` bar (5%, matching `scanner_signals.EXCELLENT_CROSSOVER_PCT`
+   — reused rather than inventing a new number) may size against 100% of
+   portfolio value instead of the normal 75% cap. Still fully deployed
+   capital, never leveraged; `max_position_pct` (20%) and
+   `max_concurrent_positions` (5) are unchanged — only the aggregate
+   ceiling moves, and only for a trade strong enough to already qualify
+   as `excellent_watch`-tier on its own. See `PLAYBOOK.md`'s "Hard
+   rules" section for the exact sizing-call change.
+
+Same session: added `trading_agent/run_cycle.py` (token-efficiency
+request, unrelated to the risk-limit change above) to replace the
+hand-written per-cycle Python `PLAYBOOK.md`'s scanner-based cycle used
+to require, and narrowed the crypto/stock scans (`update_scan_filters`)
+to just the current watchlist symbols instead of every instrument
+Robinhood offers — see the tool-call log for the exact filter payloads.

@@ -58,7 +58,8 @@ not the whole watchlist) if one is ever added.
      cycle, then keep it updated in-memory as positions open/close/
      partially exit during the cycle on either asset class. Feeds
      `RiskManager.position_size`'s aggregate cap (step 5d), which is one
-     50% ceiling over crypto and stock exposure together, not two 50%
+     75% ceiling over crypto and stock exposure together (100% for an
+     "awesome trade" — see the Hard rules section), not two separate
      ceilings.
 
 3. **Initialize risk state for the day.** Construct a `RiskManager` from
@@ -167,6 +168,27 @@ server-side `closeAvg`), instead of waiting for
 `price_history.py` to accumulate enough local bars - this is why these
 assets don't also need the polling path.
 
+**Preferred: `trading_agent/run_cycle.py` (added 2026-09-25, token
+efficiency).** Once `run_scan`, `get_portfolio`, and `get_crypto_positions`
+(or `get_equity_positions` for the stock cycle below) have been called
+this cycle, save each raw response to a file and run:
+`python3 trading_agent/run_cycle.py --asset-class crypto --scan-file
+<scan.json> --portfolio-file <portfolio.json> --positions-file
+<positions.json>` (`--asset-class stock` and `get_equity_positions` for
+the stock cycle). It runs `start_of_day`/`check_circuit_breaker`/
+`can_trade()`, calls `scanner_signals.classify(...)` for every watchlist
+asset present in the scan and `exit_criteria.check_exit(...)` for every
+held position, logs `excellent_watch` entries to `CycleLogStore` as a
+side effect (pass `--no-log` to skip that), and tags any `fresh_buy_cross`
+strong enough to qualify for the "awesome trade" aggregate-cap override
+(see the Hard rules section) as `[AWESOME]` in its output — replacing
+the hand-written per-cycle Python this playbook used to require. It is
+read-only otherwise: it never calls a RobinHood tool or places an order.
+Acting on what it reports — cooldown/concurrent-cap checks, sizing,
+`preview_crypto_order`/`place_crypto_order`, `RiskManager.record_trade`,
+and logging the outcome (`executed`/`blocked_cooldown`/etc.) — is still
+done by hand, exactly as described below.
+
 1. Run the saved scan (`run_scan`, scan_id `8f2ca450-1f7f-4e69-b015-daafe494c14e`
    — "Crypto SMA(10,30) 1h Crossover — Strategy Screener"), which returns
    `SMA 10 (1h)`, `SMA 30 (1h)`, `Relative volume`, and `% Change` for
@@ -196,10 +218,19 @@ assets don't also need the polling path.
      — if `False`, skip this asset entirely this cycle too (the
      concurrent-positions cap, see step 5d above; same rule applies here).
      Otherwise compute the order notional with
-     `RiskManager.position_size(..., total_open_position_value=total_open_position_value)`
-     (quantity × price) and continue below; skip this asset if the
-     resulting quantity is 0 (the `max_aggregate_position_pct` cap is
-     already fully used — see the hard rule below). If the order
+     `RiskManager.position_size(..., total_open_position_value=total_open_position_value,
+     max_aggregate_pct=RISK_LIMITS["awesome_trade_aggregate_pct"] if
+     abs(crossover_pct) >= RISK_LIMITS["awesome_trade_min_crossover_pct"]
+     else None)` — an "awesome trade" (a confirmed `fresh_buy_cross`
+     whose `crossover_pct` also clears the `excellent_watch` bar, added
+     2026-09-25, owner request) may size against the full
+     `awesome_trade_aggregate_pct` ceiling (100%) instead of the normal
+     `max_aggregate_position_pct` (75%) — it's still using real, unlevered
+     capital, just allowed into the last slice of it that an ordinary
+     signal cannot reach. `run_cycle.py` above tags these `[AWESOME]` in
+     its output. (quantity × price) and continue below; skip this asset
+     if the resulting quantity is 0 (the aggregate cap in effect for this
+     trade is already fully used — see the hard rule below). If the order
      executes, increment `open_position_count` and add its notional to
      `total_open_position_value` before moving to the next asset in this
      cycle.
@@ -413,12 +444,29 @@ positions.
   connection is live and correct.
 - Never size a fresh entry without passing `total_open_position_value`
   (step 2) into `RiskManager.position_size(...)`. `RISK_LIMITS["max_aggregate_position_pct"]`
-  (50%) is a hard cap on the combined mark-to-market value of every open
+  (75%, raised from 50% 2026-09-25 — owner request, after the 50% cap
+  bound twice in one day: once from a live buy consuming the remaining
+  budget, once purely from already-held positions appreciating past it)
+  is a hard cap on the combined mark-to-market value of every open
   position at once — it does not follow automatically from
   `max_position_pct` and `max_concurrent_positions` alone (20% x 5 = 100%,
-  well over 50% if unchecked). It only ever limits or zeroes a fresh
+  well over 75% if unchecked). It only ever limits or zeroes a fresh
   entry's size, never an exit, and applies identically on both the
   polling and scanner paths.
+- **"Awesome trade" override (added 2026-09-25, owner request):** a
+  confirmed `fresh_buy_cross` whose `|crossover_pct|` also clears
+  `RISK_LIMITS["awesome_trade_min_crossover_pct"]` (5.0 — the same bar
+  `scanner_signals.EXCELLENT_CROSSOVER_PCT` uses for `excellent_watch`)
+  may size against `RISK_LIMITS["awesome_trade_aggregate_pct"]` (100%)
+  instead of the normal 75% aggregate cap — pass that value as
+  `RiskManager.position_size(...)`'s `max_aggregate_pct` argument for
+  that one order only. This does not raise `max_position_pct` (still
+  20% per asset) or `max_concurrent_positions` (still 5) — only the
+  aggregate ceiling moves, and only for a trade strong enough to already
+  qualify as `excellent_watch`-tier on its own. Untested via backtest
+  (PLAYBOOK.md sizing policy isn't something `backtest.py` models);
+  revisit if this override fires often enough to be worth backtesting.
+  See `config.py`'s comment on these two keys for the full rationale.
 - **Shared budget, crypto + stocks (owner's explicit choice, 2026-09-23):**
   `RISK_LIMITS` is one set of numbers spanning `WATCHLIST` and
   `STOCK_WATCHLIST` together — `max_aggregate_position_pct`,
