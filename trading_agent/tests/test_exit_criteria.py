@@ -133,3 +133,82 @@ def test_overrides_replace_module_defaults():
                                    take_profit_sell_fraction=0.5)
     assert reason == "take_profit"
     assert fraction == 0.5
+
+
+def test_profit_lock_disabled_by_default():
+    # Peak cleared 15% but neither profit_lock param is set (module
+    # defaults are both None) - price falling to +5% triggers nothing.
+    reason, fraction = check_exit(current_price=105, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=116)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_profit_lock_fires_after_peak_clears_trigger_and_price_falls_to_floor():
+    # Peak hit +16% (cleared the 15% trigger), price has since fallen to
+    # +8%, at/below the 10% floor.
+    reason, fraction = check_exit(current_price=108, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=116,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason == "profit_lock_stop"
+    assert fraction == 1.0
+
+
+def test_profit_lock_exact_threshold_triggers():
+    reason, fraction = check_exit(current_price=110, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=115,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason == "profit_lock_stop"
+    assert fraction == 1.0
+
+
+def test_profit_lock_does_not_fire_before_peak_clears_trigger():
+    # Peak only reached +12% - never cleared the 15% trigger - so a
+    # pullback to +5% (below the 10% floor) is NOT profit_lock_stop; it's
+    # just an ordinary in-band hold (well above the -10% stop-loss).
+    reason, fraction = check_exit(current_price=105, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=112,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_profit_lock_does_not_fire_while_still_above_the_floor():
+    # Peak cleared 15%, but price is still at +12%, above the 10% floor -
+    # no exit yet.
+    reason, fraction = check_exit(current_price=112, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=116,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_original_stop_loss_still_checked_first_even_with_profit_lock_configured():
+    # A sharp reversal straight through the original entry-basis stop-loss
+    # should still exit as "stop_loss", not "profit_lock_stop" - it's
+    # checked unconditionally before the profit-lock branch.
+    reason, fraction = check_exit(current_price=89, avg_cost_basis=100, take_profit_already_taken=False,
+                                   peak_price_since_entry=116,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason == "stop_loss"
+    assert fraction == 1.0
+
+
+def test_profit_lock_never_applies_once_take_profit_already_taken():
+    # Once take-profit has fired, the post-take-profit regime (trailing
+    # stop, currently disabled) governs instead - profit_lock is a
+    # pre-take-profit mechanism only.
+    reason, fraction = check_exit(current_price=105, avg_cost_basis=100, take_profit_already_taken=True,
+                                   peak_price_since_entry=116,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0
+
+
+def test_profit_lock_ignored_without_a_peak_price():
+    # profit_lock params set but the caller never supplied a peak - inert,
+    # not an error.
+    reason, fraction = check_exit(current_price=105, avg_cost_basis=100, take_profit_already_taken=False,
+                                   profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
+    assert reason is None
+    assert fraction == 0.0

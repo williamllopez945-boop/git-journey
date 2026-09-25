@@ -397,13 +397,17 @@ positions.
    `PositionStateStore().took_profit(asset)` from
    `trading_agent/position_state.py`.
 3. Call `exit_criteria.check_exit(current_price, avg_cost_basis, took_profit)`
-   from `trading_agent/exit_criteria.py` (no `peak_price_since_take_profit`
-   or `trailing_stop_pct` arguments live - the trailing-stop mechanism
-   exists and is tested, but `TRAILING_STOP_PCT` defaults to `None`
-   (disabled); see `backtest_2026-09-24_trailing_stop.md` for why it
-   wasn't turned on - it consistently hurt returns across every value
-   tested, sometimes severely, in a 12-series backtest). It returns one
-   of:
+   from `trading_agent/exit_criteria.py` (no `peak_price_since_take_profit`/
+   `trailing_stop_pct` or `peak_price_since_entry`/`profit_lock_trigger_pct`/
+   `profit_lock_stop_pct` arguments live - both the trailing-stop and
+   profit-lock mechanisms exist and are tested, but `TRAILING_STOP_PCT`
+   and `PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` default to `None`
+   (disabled); see `backtest_2026-09-24_trailing_stop.md` and
+   `backtest_2026-09-25_profit_lock.md` for why neither was turned on -
+   both consistently hurt returns, sometimes severely, across real-series
+   backtests, for the same underlying reason: clipping a position before
+   a strong trend fully plays out costs more than it protects). It
+   returns one of:
    - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
    - `("take_profit", 0.70)` — price is 20%+ above cost basis and profit

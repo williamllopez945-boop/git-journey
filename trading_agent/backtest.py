@@ -25,6 +25,7 @@ from .volume_filter import passes_volume_filter, DEFAULT_VOLUME_PERIOD, DEFAULT_
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
              stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
              take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION, trailing_stop_pct=None,
+             profit_lock_trigger_pct=None, profit_lock_stop_pct=None,
              rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
              volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO):
     """Run the strategy over a closing-price series (oldest first).
@@ -46,6 +47,14 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     trailing_stop_pct=None (the default) disables the trailing-stop check
     on the post-take-profit remainder entirely, same as exit_criteria.py's
     own default.
+
+    profit_lock_trigger_pct/profit_lock_stop_pct: override
+    exit_criteria.py's PROFIT_LOCK_TRIGGER_PCT/PROFIT_LOCK_STOP_PCT
+    (both None disables the check entirely, same as exit_criteria.py's
+    own default) - once the position's peak unrealized gain since entry
+    clears profit_lock_trigger_pct, the stop floor tightens from
+    -stop_loss_pct to profit_lock_stop_pct for the remainder of the hold
+    (pre-take-profit only; see exit_criteria.check_exit).
 
     rsi_period/rsi_overbought_pct: when rsi_period is set, a fresh buy
     entry additionally requires rsi_filter.passes_rsi_filter (RSI below
@@ -69,6 +78,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     avg_cost_basis = 0.0
     took_profit = False
     peak_since_take_profit = None
+    peak_since_entry = None
     trades = []
     equity_curve = []
     last_exit_index = None
@@ -79,20 +89,25 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
         if position_qty > 0:
             if took_profit:
                 peak_since_take_profit = max(peak_since_take_profit, price)
+            peak_since_entry = max(peak_since_entry, price)
             reason, fraction = check_exit(price, avg_cost_basis, took_profit,
                                            peak_price_since_take_profit=peak_since_take_profit,
+                                           peak_price_since_entry=peak_since_entry,
                                            stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
                                            take_profit_sell_fraction=take_profit_sell_fraction,
-                                           trailing_stop_pct=trailing_stop_pct)
-            if reason == "stop_loss":
+                                           trailing_stop_pct=trailing_stop_pct,
+                                           profit_lock_trigger_pct=profit_lock_trigger_pct,
+                                           profit_lock_stop_pct=profit_lock_stop_pct)
+            if reason in ("stop_loss", "profit_lock_stop"):
                 proceeds = position_qty * price
                 cash += proceeds
-                trades.append({"index": i, "action": "sell", "reason": "stop_loss",
+                trades.append({"index": i, "action": "sell", "reason": reason,
                                 "qty": position_qty, "price": price, "cash_after": cash})
                 position_qty = 0.0
                 avg_cost_basis = 0.0
                 took_profit = False
                 peak_since_take_profit = None
+                peak_since_entry = None
                 last_exit_index = i
             elif reason == "take_profit":
                 sell_qty = position_qty * fraction
@@ -112,6 +127,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 avg_cost_basis = 0.0
                 took_profit = False
                 peak_since_take_profit = None
+                peak_since_entry = None
                 last_exit_index = i
 
         if min_strength_pct is None:
@@ -128,6 +144,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
             avg_cost_basis = 0.0
             took_profit = False
             peak_since_take_profit = None
+            peak_since_entry = None
             last_exit_index = i
         elif position_qty == 0 and cash > 0 and signal == "buy":
             in_cooldown = (
@@ -147,6 +164,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 qty = cash / price
                 position_qty = qty
                 avg_cost_basis = price
+                peak_since_entry = price
                 trades.append({"index": i, "action": "buy", "reason": "fresh_buy_cross",
                                 "qty": qty, "price": price, "cash_after": 0.0})
                 cash = 0.0

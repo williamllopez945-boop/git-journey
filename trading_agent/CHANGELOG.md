@@ -300,3 +300,20 @@ combinations already failed at: -25.84% to -75.26%). Shipped:
 `exit_criteria.TAKE_PROFIT_PCT = 0.20`, `STOP_LOSS_PCT` unchanged at
 10%, `TAKE_PROFIT_SELL_FRACTION` unchanged at 70%. See
 `backtest_2026-09-25_stop_take.md`.
+
+**Same day, later still: profit-lock stop built, tested, NOT adopted.**
+Owner asked to tighten the stop-loss from -10% to +10% once a position's
+unrealized gain hits 15% (pre-take-profit), so a reversal can't fully
+round-trip a gain into a loss. Built the mechanism (mirrors the existing
+disabled trailing stop's peak-tracking pattern exactly) and backtested
+it against the same 48-series set used for the take-profit ratio change
+that same day, at the requested 15%/10% plus two neighboring pairs.
+**Every variant hurt more than it helped** - 15%/10% itself: 2 helped/6
+hurt/40 flat, mean -1.36%, worst case -25.00% (a strong-trend regime cut
+short before it would have reached the real 20% take-profit). Same root
+cause as the 2026-09-24 trailing-stop finding, mirror-image mechanism:
+clipping a position before a strong trend fully plays out costs more
+than it protects. `PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` left
+`None` (disabled) - mechanism built and tested, matching the trailing
+stop's own built-but-disabled treatment, but not shipped live. See
+`backtest_2026-09-25_profit_lock.md`.
