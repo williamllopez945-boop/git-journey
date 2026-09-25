@@ -13,7 +13,7 @@ asset's price at index i.
 
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
-from .entry_filter import confirmed_signal
+from .entry_filter import _sma, confirmed_signal, crossover_strength_pct
 
 
 def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
@@ -21,7 +21,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         min_strength_pct=0, cooldown_bars=None,
                         stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
                         take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
-                        max_aggregate_pct=None, timestamps=None, max_trades_per_day=None):
+                        max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
+                        awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -63,6 +64,16 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     a fresh buy can be skipped for being at the cap. None (default)
     disables the cap entirely, unchanged from before this parameter
     existed.
+
+    awesome_trade_min_crossover_pct / awesome_trade_aggregate_pct: added
+    2026-09-25 to backtest PLAYBOOK.md's "awesome trade" sizing override
+    (see CHANGELOG.md and RISK_LIMITS). When both are set, a fresh buy
+    whose SMA gap (entry_filter.crossover_strength_pct at the signal bar)
+    clears awesome_trade_min_crossover_pct sizes against
+    awesome_trade_aggregate_pct instead of max_aggregate_pct for that one
+    allocation only - mirrors RiskManager.position_size's max_aggregate_pct
+    override argument. Either left None (default) disables the override,
+    unchanged from before this parameter existed.
 
     min_strength_pct/cooldown_bars/stop_loss_pct/take_profit_pct/
     take_profit_sell_fraction: same meaning as backtest.py's single-asset
@@ -174,8 +185,16 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                     total_open_value = sum(state[a2]["qty"] * series[a2][i] for a2 in series)
                     portfolio_value = cash + total_open_value
                     alloc = min(portfolio_value * max_position_pct, cash)
-                    if max_aggregate_pct is not None:
-                        remaining_aggregate = max(portfolio_value * max_aggregate_pct - total_open_value, 0.0)
+                    effective_aggregate_pct = max_aggregate_pct
+                    if (awesome_trade_min_crossover_pct is not None
+                            and awesome_trade_aggregate_pct is not None):
+                        sma_short = _sma(window, short_window)
+                        sma_long = _sma(window, long_window)
+                        if (sma_short is not None and sma_long not in (None, 0)
+                                and crossover_strength_pct(sma_short, sma_long) >= awesome_trade_min_crossover_pct):
+                            effective_aggregate_pct = awesome_trade_aggregate_pct
+                    if effective_aggregate_pct is not None:
+                        remaining_aggregate = max(portfolio_value * effective_aggregate_pct - total_open_value, 0.0)
                         alloc = min(alloc, remaining_aggregate)
                     if alloc > 0:
                         qty = alloc / price

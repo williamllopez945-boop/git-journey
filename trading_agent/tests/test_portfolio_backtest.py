@@ -158,3 +158,53 @@ def test_max_trades_per_day_none_behaves_like_before_the_parameter_existed():
         max_position_pct=0.5, max_concurrent_positions=None, max_trades_per_day=None,
     )
     assert eq_a == eq_b
+
+
+# A weaker ramp than _RAMP_AND_HOLD (5.0 -> 5.2, ~4% move) so its confirmed
+# SMA gap stays well under a strength threshold that _RAMP_AND_HOLD's much
+# larger 5.0 -> 9.0 move clears easily - lets a test discriminate an
+# "awesome" entry from an ordinary one using the same bar timing.
+_WEAK_RAMP = [5.0] * 30 + [5.0] * 5 + [5.2] * 10
+
+
+def test_awesome_trade_override_lets_a_strong_signal_use_the_extra_budget():
+    # "A" (weak) opens first and fully consumes the normal 30% aggregate
+    # cap; "B" (strong enough to qualify as an awesome trade) should still
+    # be able to open against the higher awesome_trade_aggregate_pct.
+    series = {"A": list(_WEAK_RAMP), "B": list(_RAMP_AND_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.3, max_concurrent_positions=None, max_aggregate_pct=0.3,
+        awesome_trade_min_crossover_pct=10.0, awesome_trade_aggregate_pct=0.6,
+    )
+    buys = {t["asset"] for t in trades if t["action"] == "buy"}
+    assert buys == {"A", "B"}
+    total_deployed = sum(t["qty"] * t["price"] for t in trades if t["action"] == "buy")
+    assert total_deployed <= 1000.0 * 0.6 + 1e-6
+    assert total_deployed > 1000.0 * 0.3 + 1e-6  # actually used the extra room
+
+
+def test_without_awesome_override_the_strong_signal_is_capped_like_any_other():
+    series = {"A": list(_WEAK_RAMP), "B": list(_RAMP_AND_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.3, max_concurrent_positions=None, max_aggregate_pct=0.3,
+    )
+    buys = {t["asset"] for t in trades if t["action"] == "buy"}
+    # "A" opens and uses the entire 30% aggregate budget; "B"'s later,
+    # stronger signal still gets zero room without the override.
+    assert buys == {"A"}
+
+
+def test_awesome_trade_params_none_behaves_like_before_the_parameter_existed():
+    series = {"A": list(_WEAK_RAMP), "B": list(_RAMP_AND_HOLD)}
+    trades_a, eq_a, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.3, max_concurrent_positions=None, max_aggregate_pct=0.3,
+    )
+    trades_b, eq_b, _ = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.3, max_concurrent_positions=None, max_aggregate_pct=0.3,
+        awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
+    )
+    assert eq_a == eq_b
