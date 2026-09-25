@@ -406,7 +406,7 @@ positions.
    of:
    - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
-   - `("take_profit", 0.70)` — price is 15%+ above cost basis and profit
+   - `("take_profit", 0.70)` — price is 20%+ above cost basis and profit
      hasn't been taken yet. Sell **70%** of `quantity_transferable`
      (round down to the pair's `min_order_quantity_increment` from
      `get_currency_pairs`), then call

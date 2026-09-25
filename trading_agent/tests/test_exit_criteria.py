@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from trading_agent.exit_criteria import check_exit, TAKE_PROFIT_SELL_FRACTION
+from trading_agent.exit_criteria import check_exit, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 
 
 def test_no_action_within_bands():
@@ -26,8 +26,8 @@ def test_stop_loss_exact_threshold_triggers():
 
 
 def test_take_profit_triggers_partial_exit():
-    # 100 -> 116 is a 16% gain, past the 15% take-profit
-    reason, fraction = check_exit(current_price=116, avg_cost_basis=100, take_profit_already_taken=False)
+    # 100 -> 121 is a 21% gain, past the 20% take-profit
+    reason, fraction = check_exit(current_price=121, avg_cost_basis=100, take_profit_already_taken=False)
     assert reason == "take_profit"
     assert fraction == TAKE_PROFIT_SELL_FRACTION
 
@@ -47,6 +47,12 @@ def test_default_take_profit_sell_fraction_is_70_percent():
     # Locks in the tuned default explicitly (backtest_2026-09-23.md) so an
     # accidental change to the constant is caught, not just self-compared.
     assert TAKE_PROFIT_SELL_FRACTION == 0.70
+
+
+def test_default_take_profit_pct_is_20_percent():
+    # Locks in the tuned default explicitly (backtest_2026-09-25_stop_take.md)
+    # so an accidental change to the constant is caught, not just self-compared.
+    assert TAKE_PROFIT_PCT == 0.20
 
 
 def test_trailing_stop_disabled_by_default_after_take_profit():
@@ -85,7 +91,7 @@ def test_trailing_stop_does_not_fire_within_band_of_peak():
 def test_trailing_stop_never_checked_before_take_profit_taken():
     # Even with trailing_stop_pct set, it's irrelevant until take-profit has
     # actually fired once - the ordinary take_profit path still governs.
-    reason, fraction = check_exit(current_price=116, avg_cost_basis=100, take_profit_already_taken=False,
+    reason, fraction = check_exit(current_price=121, avg_cost_basis=100, take_profit_already_taken=False,
                                    peak_price_since_take_profit=200, trailing_stop_pct=0.10)
     assert reason == "take_profit"
 
@@ -117,13 +123,13 @@ def test_overrides_replace_module_defaults():
                                    stop_loss_pct=0.05)
     assert reason == "stop_loss"
 
-    # 20% take-profit instead of the default 15% - a 16% gain no longer triggers.
-    reason, fraction = check_exit(current_price=116, avg_cost_basis=100, take_profit_already_taken=False,
-                                   take_profit_pct=0.20)
+    # 25% take-profit instead of the default 20% - a 21% gain no longer triggers.
+    reason, fraction = check_exit(current_price=121, avg_cost_basis=100, take_profit_already_taken=False,
+                                   take_profit_pct=0.25)
     assert reason is None
 
     # Custom sell fraction is honored.
-    reason, fraction = check_exit(current_price=116, avg_cost_basis=100, take_profit_already_taken=False,
+    reason, fraction = check_exit(current_price=121, avg_cost_basis=100, take_profit_already_taken=False,
                                    take_profit_sell_fraction=0.5)
     assert reason == "take_profit"
     assert fraction == 0.5

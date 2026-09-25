@@ -288,3 +288,15 @@ worst-case return (+4.41%, beating even 50%'s +4.33%) and mean return
 set to 0.60. `awesome_trade_aggregate_pct`/`awesome_trade_min_crossover_pct`
 unchanged (100%/5%) - dormant at every level tested, not specifically
 tied to 75%.
+
+**Same day, later still: `TAKE_PROFIT_PCT` raised 15% → 20%.** Owner
+asked for a 1:2 risk/reward ratio (10% stop-loss / 20% take-profit).
+The original 2026-09-23 stop-loss/take-profit sweep never tested this
+specific combination (only 50%-take-profit variants, both rejected).
+Backtested first against 48 real series (current watchlist composition,
+90-day hourly + 3 daily regimes) - 22 helped/9 hurt/17 flat, mean delta
++2.02%, worst case -8.06% (well inside what the 50%-take-profit
+combinations already failed at: -25.84% to -75.26%). Shipped:
+`exit_criteria.TAKE_PROFIT_PCT = 0.20`, `STOP_LOSS_PCT` unchanged at
+10%, `TAKE_PROFIT_SELL_FRACTION` unchanged at 70%. See
+`backtest_2026-09-25_stop_take.md`.

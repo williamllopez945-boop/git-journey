@@ -14,10 +14,14 @@ Tuning (backtest_2026-09-23.md's stop-loss/take-profit sweep): swept
 stop_loss_pct and take_profit_pct together against the 11-series
 robustness set (IBIT/ETHA plus GBTC's 6 regimes plus 3 Solana ETFs),
 ranking by worst-case regime delta vs each series' own baseline first
-(not mean or win-count) - every alternative combination tested had a
-worse worst-case outcome than the original 10%/15%, so those two values
-are unchanged, now empirically validated rather than just an initial
-guess. TAKE_PROFIT_SELL_FRACTION did improve on the same sweep: 70%
+(not mean or win-count) - every combination tested that day ((8%/50%),
+(10%/50%)) had a worse worst-case outcome than the original 10%/15%.
+That sweep never tested a 10%/20% combination specifically - see
+backtest_2026-09-25_stop_take.md for that value (owner-requested 1:2
+risk/reward ratio), which DID clear the bar (worst case -8.06% vs the
+50%-take-profit combinations' -25.84% to -75.26%) and is now live -
+TAKE_PROFIT_PCT is 20%, STOP_LOSS_PCT unchanged at 10%.
+TAKE_PROFIT_SELL_FRACTION did improve on the original 10%/15% sweep: 70%
 raised the mean delta (+6.77%) and win count (7/11) with only a small,
 smooth worst-case cost (-3.38%, confirmed not a lucky single point by
 checking neighboring values 65-75%) - a much more favorable risk/reward
@@ -45,7 +49,18 @@ whether a value was actually adopted or left disabled (None).
 
 STOP_LOSS_PCT = 0.10              # exit the full position if price drops
                                    # this far below the average cost basis
-TAKE_PROFIT_PCT = 0.15            # trigger level for partial profit-taking
+TAKE_PROFIT_PCT = 0.20            # trigger level for partial profit-taking.
+                                   # Raised from 15% 2026-09-25 (owner request,
+                                   # a 1:2 risk/reward ratio against the 10%
+                                   # stop-loss) - backtested first against 48
+                                   # real series (current watchlist composition,
+                                   # 90-day hourly + 3 daily regimes): 22 helped/
+                                   # 9 hurt/17 flat, mean delta +2.02%, worst
+                                   # case -8.06% - a real but bounded cost, well
+                                   # inside what the original 2026-09-23 sweep
+                                   # already rejected at other levels (-25.84%
+                                   # to -75.26% for 50% take-profit). See
+                                   # backtest_2026-09-25_stop_take.md.
 TAKE_PROFIT_SELL_FRACTION = 0.70  # fraction of the position sold at the
                                    # take-profit trigger; the rest keeps riding
 TRAILING_STOP_PCT = None          # see backtest_2026-09-24_trailing_stop.md;
