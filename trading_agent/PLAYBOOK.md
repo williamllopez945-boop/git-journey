@@ -301,20 +301,37 @@ hours (see "Hard rules" below) - skip this whole section outside that
 window rather than evaluating signals that can't reliably execute. v1
 scope: extended-hours trading is not implemented.
 
-1. Run the saved scan (`run_scan`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`
-   — "Stock SMA(10,30) 1h Crossover — Strategy Screener"), which returns
-   `SMA 10 (1h)`, `SMA 30 (1h)`, `Relative volume`, `Crossover %`, and
-   `% Change` for liquid stocks (market cap > $2B, price > $10, 30d avg
-   volume > 1M shares - see watchlist_stocks_2026-09-23.md for why the
-   unfiltered STOCK universe isn't usable directly).
-2. Filter the results to `STOCK_WATCHLIST` from `config.py`.
-3. For each watchlist stock, call
+1. **Do NOT use the saved stock scan (scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`)
+   to source signals — retired for this purpose 2026-09-25 (see "Known gap"
+   below: it silently dropped 9 of 10 `STOCK_WATCHLIST` names almost every
+   cycle observed on 2026-09-24/25 due to its 200-row pagination cap).**
+   Instead, call `get_equity_historicals(symbols=STOCK_WATCHLIST` (all 10
+   in one call — the tool accepts up to 10 symbols), `interval="hour",
+   bounds="regular", start_time=<~7 days back, comfortably covers 30
+   regular-hours 1h bars even across a weekend>)` and
+   `get_equity_quotes(symbols=STOCK_WATCHLIST)` once each, up front.
+2. For each `STOCK_WATCHLIST` symbol, compute the signal inputs via
+   `equity_signals.py` (new module, added 2026-09-25) instead of reading
+   scan columns:
+   - `sma10, sma30 = equity_signals.sma_pair(closes)` — `closes` is that
+     symbol's `bars[].close_price`, oldest-to-newest. If `sma10` comes
+     back `None` (fewer than 30 bars — a newly-added watchlist symbol
+     still warming up), skip that symbol silently this cycle, same as a
+     symbol missing from a scan page.
+   - `relative_volume = equity_signals.relative_volume(volumes)` —
+     `volumes` is that symbol's `bars[].volume`, same order.
+   - `pct_change = equity_signals.pct_change_from_quote(last_trade_price, previous_close)`
+     from that symbol's `get_equity_quotes` result (`quote.last_trade_price`,
+     `quote.previous_close`).
+3. Call
    `scanner_signals.classify(asset, sma10, sma30, pct_change, relative_volume=relative_volume)`
-   — the exact same function used for crypto (it's asset-agnostic, keyed
-   only by the symbol string); it persists state in the same
-   `scanner_state.json`, so crypto and stock symbols coexist there without
-   collision as long as tickers don't overlap (they don't). Same
-   persistence-then-strength-then-volume gating as the crypto cycle.
+   — unchanged, still the exact same function used for crypto (it's
+   asset-agnostic, keyed only by the symbol string); it persists state in
+   the same `scanner_state.json`, so crypto and stock symbols coexist
+   there without collision as long as tickers don't overlap (they don't).
+   Same persistence-then-strength-then-volume gating as the crypto cycle.
+   (`run_cycle.py --asset-class stock --historicals-file ... --quotes-file ...`
+   wraps steps 1-3 in one script, same as it already does for crypto.)
 4. Act on the classification, mirroring the crypto scanner cycle exactly,
    with these substitutions:
    - Tool substitutions: `get_equity_quotes` instead of `get_crypto_quotes`;

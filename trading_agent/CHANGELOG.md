@@ -335,3 +335,35 @@ new self-bound "Weekly watchlist review" Routine (Sundays 15:00 UTC).
 `config.py` is never edited by the Routine itself; a swap happens only
 after explicit owner approval, same posture the hourly Routine already
 holds for `WATCHLIST`/`STOCK_WATCHLIST`. 13 new tests, 170/170 passing.
+
+## 2026-09-25 (later): stock scan pagination gap fixed
+
+After the owner asked whether two market days of live data (2026-09-24,
+2026-09-25) surfaced anything worth changing, review of both days'
+after-action logs found that the production stock scan (scan_id
+`6e009dcf-...`) had silently evaluated only 1 of `STOCK_WATCHLIST`'s 10
+names (`ILMN`) on nearly every market-hours cycle either day - the scan's
+~398-stock universe returns only its first 200 rows (sorted by price,
+no pagination exposed), and the other 9 names never landed on that page.
+Not a strategy problem - a data-sourcing one, and one the strategy could
+not have surfaced itself, since a symbol that never appears in the scan
+also never gets logged as "skipped."
+
+**Fixed** by no longer sourcing `STOCK_WATCHLIST`'s live signals from
+that scan at all: new `equity_signals.py` computes sma10/sma30/
+pct_change/relative_volume directly per symbol from `get_equity_historicals`
+(1h bars, regular hours - 10 symbols per call, exactly the watchlist
+size) and `get_equity_quotes` (previous close). `scanner_signals.classify()`
+needed no changes - it was already asset-agnostic, just fed bad/missing
+inputs for 9 of 10 stocks. `run_cycle.py --asset-class stock` now takes
+`--historicals-file`/`--quotes-file` instead of `--scan-file`. Dry-run
+verified live against real `get_equity_historicals`/`get_equity_quotes`
+data for the full watchlist before wiring it in: all 10 symbols now
+produce real classifications every cycle, not just `ILMN`. 12 new tests
+(`test_equity_signals.py` plus `run_cycle.py` coverage), 183/183 passing.
+`PLAYBOOK.md`'s stock scanner cycle (steps 1-3) and `README.md` updated
+to match. The stock scan itself is untouched and still used, unchanged,
+for sourcing *new* candidates during the weekly watchlist review - that
+use case needs to discover symbols outside the watchlist, which
+`equity_signals.py` can't do by design, so that narrower gap (documented
+in `PLAYBOOK.md`'s "Weekly watchlist review" section) remains open.

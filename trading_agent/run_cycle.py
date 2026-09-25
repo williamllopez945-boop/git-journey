@@ -21,10 +21,27 @@ outcome) is still the calling session's job - this script only reports
 what the signal was and what can_trade()/the circuit breaker currently
 allow.
 
-Usage:
+Usage (crypto - uses the production crypto scan, unaffected by the
+pagination gap below since its 49-instrument universe is well under the
+200-row cap):
     python3 trading_agent/run_cycle.py --asset-class crypto \\
         --scan-file scan.json --portfolio-file portfolio.json \\
         --positions-file positions.json
+
+Usage (stock - --scan-file is NOT used here; see equity_signals.py):
+    python3 trading_agent/run_cycle.py --asset-class stock \\
+        --historicals-file historicals.json --quotes-file quotes.json \\
+        --portfolio-file portfolio.json --positions-file positions.json
+
+Found 2026-09-25: the production stock scan (scan_id
+6e009dcf-d184-45a7-915f-ccfc50b4e6be) covers a ~398-stock universe but
+returns only its first 200 rows, sorted by price, with no pagination
+parameter exposed - most of STOCK_WATCHLIST fell outside that page on
+almost every cycle observed (only ILMN ever appeared). Stocks now source
+sma10/sma30/pct_change/relative_volume directly per watchlist symbol via
+get_equity_historicals (1h bars, regular hours) + get_equity_quotes
+(previous close), computed by equity_signals.py - see its module
+docstring. classify() itself needed no changes either way.
 
 Each *-file accepts either the raw MCP tool response (e.g.
 {"data": {"result": {"results": [...]}}}) or the already-unwrapped
@@ -42,6 +59,7 @@ import json
 
 from trading_agent.config import RISK_LIMITS, WATCHLIST, STOCK_WATCHLIST
 from trading_agent.cycle_log import CycleLogStore, LOG_PATH as DEFAULT_CYCLE_LOG_PATH
+from trading_agent.equity_signals import sma_pair, relative_volume, pct_change_from_quote
 from trading_agent.exit_criteria import check_exit
 from trading_agent.position_state import PositionStateStore, STATE_PATH as DEFAULT_POSITION_STATE_PATH
 from trading_agent.risk_manager import RiskManager, STATE_PATH as DEFAULT_RISK_STATE_PATH
@@ -84,10 +102,56 @@ def _numeric_or_none(value):
     return float(value)
 
 
+def _equity_signal_columns(historicals_json, quotes_json):
+    """Build a scan-row-shaped {symbol: columns} dict for STOCK_WATCHLIST
+    from get_equity_historicals + get_equity_quotes responses, replacing
+    the production stock scan's 200-row pagination cap (see
+    equity_signals.py's module docstring for why). Symbols without enough
+    bars yet for SMA30 are silently omitted, same as a symbol missing
+    from a scan page - the caller already handles that as "not in this
+    cycle's data, skipped"."""
+    hist_data = historicals_json.get("data", historicals_json)
+    quotes_data = quotes_json.get("data", quotes_json)
+    quote_by_symbol = {r["quote"]["symbol"]: r["quote"] for r in quotes_data["results"]}
+
+    by_ticker = {}
+    for row in hist_data["results"]:
+        symbol = row["symbol"]
+        closes = [float(b["close_price"]) for b in row["bars"]]
+        volumes = [float(b["volume"]) for b in row["bars"]]
+        sma10, sma30 = sma_pair(closes)
+        if sma10 is None:
+            continue
+        rel_vol = relative_volume(volumes)
+        quote = quote_by_symbol.get(symbol)
+        last = closes[-1] if closes else None
+        pct_change = None
+        if quote:
+            last = float(quote["last_trade_price"])
+            prev_close = _numeric_or_none(quote.get("previous_close"))
+            pct_change = pct_change_from_quote(last, prev_close)
+        by_ticker[symbol] = {
+            "Symbol": symbol,
+            "SMA 10 (1h)": str(sma10),
+            "SMA 30 (1h)": str(sma30),
+            "% Change": "" if pct_change is None else str(pct_change),
+            "Relative volume": "" if rel_vol is None else str(rel_vol),
+            "Last": "" if last is None else str(last),
+        }
+    return by_ticker
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--asset-class", choices=["crypto", "stock"], required=True)
-    parser.add_argument("--scan-file", required=True)
+    parser.add_argument("--scan-file",
+                         help="required for --asset-class crypto (the production crypto scan's raw response)")
+    parser.add_argument("--historicals-file",
+                         help="required for --asset-class stock (get_equity_historicals' raw response for "
+                              "STOCK_WATCHLIST) - replaces --scan-file for stocks, see equity_signals.py")
+    parser.add_argument("--quotes-file",
+                         help="required for --asset-class stock (get_equity_quotes' raw response for "
+                              "STOCK_WATCHLIST, supplies previous_close for pct_change)")
     parser.add_argument("--portfolio-file", required=True)
     parser.add_argument("--positions-file", required=True)
     parser.add_argument("--no-log", action="store_true",
@@ -112,8 +176,15 @@ def main():
     print(f"circuit_breaker_halted: {halted}")
     print(f"can_trade: {can_trade} (trades_today={rm.state['trades_today']}/{RISK_LIMITS['max_trades_per_day']})")
 
-    rows = _scan_rows(_load_json(args.scan_file))
-    by_ticker = {r["columns"].get("Symbol", r.get("ticker")): r["columns"] for r in rows if r.get("ticker") or r.get("columns", {}).get("Symbol")}
+    if args.asset_class == "stock":
+        if not args.historicals_file or not args.quotes_file:
+            parser.error("--asset-class stock requires --historicals-file and --quotes-file (see equity_signals.py)")
+        by_ticker = _equity_signal_columns(_load_json(args.historicals_file), _load_json(args.quotes_file))
+    else:
+        if not args.scan_file:
+            parser.error("--asset-class crypto requires --scan-file")
+        rows = _scan_rows(_load_json(args.scan_file))
+        by_ticker = {r["columns"].get("Symbol", r.get("ticker")): r["columns"] for r in rows if r.get("ticker") or r.get("columns", {}).get("Symbol")}
 
     pss = PositionStateStore(path=Path(args.position_state_path))
     log = CycleLogStore(path=Path(args.cycle_log_path))

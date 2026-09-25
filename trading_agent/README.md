@@ -162,6 +162,29 @@ this gap motivated (`price_history.py`, `entry_filter.confirmed_signal`,
 volatility-scaled sizing) is left in place but currently dormant - see
 `PLAYBOOK.md`'s note above its steps 1-6.
 
+**Known gap: stock scan pagination — found 2026-09-25, fixed same day.**
+The production stock scan (scan_id `6e009dcf-...`) covers a ~398-stock
+universe but its `run_scan` response caps at 200 rows, sorted by `Last
+desc` (price), with no pagination parameter exposed. On every
+market-hours cycle observed across 2026-09-24 and 2026-09-25, only
+`ILMN` (of the 10-name `STOCK_WATCHLIST`) ever landed on that page — the
+other 9 names (CRWD, PANW, TWLO, IR, PTC, CHKP, MAIR, AR, HUBS) were
+silently never evaluated for a crossover all day, either day, not
+because nothing happened but because they never appeared on the
+returned page. In effect the stock half of the strategy was running on
+1 of 10 names. **Fixed:** `equity_signals.py` (new module) computes
+sma10/sma30/pct_change/relative_volume directly per `STOCK_WATCHLIST`
+symbol from `get_equity_historicals` (1h bars, regular hours) +
+`get_equity_quotes` (previous close) instead of depending on the scan
+page — `get_equity_historicals` takes up to 10 symbols per call, exactly
+the watchlist size, so one call now covers the whole watchlist every
+cycle. `scanner_signals.classify()` itself needed no changes (it was
+always asset-agnostic). The stock scan is still used, unchanged, for
+sourcing *new candidates* during the weekly watchlist review (see
+`PLAYBOOK.md`'s "Weekly watchlist review" section) — that use case
+genuinely needs to discover symbols outside the current watchlist, which
+`equity_signals.py` can't do, so that narrower gap remains open there.
+
 ## What's here
 
 | File | Purpose |
@@ -170,7 +193,8 @@ volatility-scaled sizing) is left in place but currently dormant - see
 | `strategy.py` | Raw SMA crossover signal logic (pure computation, no network) |
 | `entry_filter.py` | Wraps `strategy.py` with an entry confirmation filter (1-bar persistence + minimum crossover strength) - cuts whipsaw losses, see `backtest_2026-09-23.md` |
 | `price_history.py` | Builds the crypto price series locally by recording one bar per cycle — persisted to `price_history.json` |
-| `scanner_signals.py` | Detects real SMA(10,30) crossover events using the RobinHood scanner's server-side `closeAvg` (real historical candles, no warm-up needed); gates a confirmed buy cross on real `Relative volume` from the same scan — persisted to `scanner_state.json`. Asset-agnostic (keyed by symbol string) — used for both the crypto scan (scan_id `8f2ca450-...`) and the stock scan (scan_id `6e009dcf-...`, added 2026-09-23) |
+| `scanner_signals.py` | Detects real SMA(10,30) crossover events (persisted to `scanner_state.json`); gates a confirmed buy cross on real `Relative volume`. Asset-agnostic (keyed by symbol string, doesn't care where sma10/sma30/pct_change/relative_volume came from) — fed by the crypto scan (scan_id `8f2ca450-...`) for `WATCHLIST` and by `equity_signals.py` for `STOCK_WATCHLIST` (see below; the stock scan itself, scan_id `6e009dcf-...`, is retired as a signal source as of 2026-09-25) |
+| `equity_signals.py` | Computes `STOCK_WATCHLIST`'s sma10/sma30/pct_change/relative_volume directly from `get_equity_historicals` + `get_equity_quotes` per symbol, feeding `scanner_signals.classify` the same way the crypto scan does. Added 2026-09-25 to replace the retired stock scan as a signal source — see "Known gap: stock scan pagination" below |
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
