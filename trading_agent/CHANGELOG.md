@@ -607,3 +607,31 @@ CRV, ZORA, LINK, AVAX, ASTER, XLM`. Updated the `max_concurrent_positions`
 comment and README's watchlist description to match the new count.
 Synced the real "Trading Agent Watchlist" Robinhood watchlist to add
 `DOGE`. 215/215 tests passing (no test asserted the old 14-count).
+
+## 2026-09-26 — Owner confirmed the deposit; concurrent-cap re-check (5 -> 10?)
+
+Owner confirmed the large balance/position change found on the 16:31
+UTC rescan was a manual transfer they made themselves - not an error,
+not something to reverse. The placeholder cost basis recorded for
+DOGE/SOL (current mark price at detection time, since the real
+acquisition price isn't visible to this account) stands unless/until
+the owner provides the actual entry price.
+
+Owner also asked: "Increase to 10 positions if the back testing
+supports it" (`RISK_LIMITS["max_concurrent_positions"]`, currently 5).
+Re-ran `portfolio_backtest.py`'s concurrent-cap sweep against a larger,
+fresher 12-series test bed (all 10 `STOCK_WATCHLIST` names + IBIT/ETHA
+crypto-beta proxies, 378 real bar-aligned hourly bars) at current
+production settings. **Result: it doesn't support the change.** Caps
+5 through 12 are byte-for-byte identical (peak concurrency never
+exceeds 5) - the 60% aggregate cap combined with 20%-per-position
+sizing already limits real simultaneous exposure to 5, so raising the
+raw count to 10 would change nothing. Checked further: even with the
+aggregate cap experimentally relaxed to 90% (which does let more
+positions open), a cap of 10 (reaching 8 concurrent) underperforms a
+cap of 5 on both return (+6.93% vs +10.55%) and worst-case drawdown
+(9.12% vs 7.85%) - the same "correlated assets concentrate risk rather
+than diversify it" finding `backtest_2026-09-23.md` established,
+confirmed again on fresh data. **No change made** -
+`max_concurrent_positions` stays at 5. See
+`backtest_2026-09-26_concurrent_cap.md` for the full sweep.
