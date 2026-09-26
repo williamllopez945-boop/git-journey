@@ -29,8 +29,10 @@ live configuration, old runbooks, or recorded research/backtests changed.
 - Remote: `https://github.com/williamllopez945-boop/git-journey.git`.
 - Default branch: `main`.
 - Original base: `e84105f34e8972b4ab6aab9824cec53933beaed8`.
+- Current review base (latest fetched GitHub main):
+  `2bcdac37be476279aeceb917d73e1d9b7132257c`.
 - Latest implementation commit:
-  `a1fc0de5fecd1590c16e1bad1269848e1dbc5042`.
+  `47b73fb795c133daccf2947099e1cf8bc6dfbfc0`.
 - Test/environment commit:
   `3f375c1982610bec5ef602e3c46e8661200bbd34`.
 - Latest handoff commit: run
@@ -56,6 +58,9 @@ live configuration, old runbooks, or recorded research/backtests changed.
   overrides; it previously wrote default risk state before argument validation.
 - Created local task commits only. No push, default-branch merge, deployment,
   trading, brokerage connection, or credential copying was performed.
+- After the owner's update, fetched five newer main commits and merged them
+  into this task branch at `47b73fb` without conflicts. Preserved the updated
+  cycle log and backtest documents exactly. Local main itself was not advanced.
 
 ## Tests and results
 
@@ -79,6 +84,11 @@ unchanged by the documentation commit `a1fc0de`):
 seven production-default runtime JSON files existed in the Codex worktree.
 No live state was used as a fixture.
 
+After combining the latest GitHub main with setup, re-ran the same full command
+at `47b73fb795c133daccf2947099e1cf8bc6dfbfc0`: **215 passed in 2.53 seconds**.
+Verified no runtime state was created and production source/application docs
+match the current review base (`2bcdac3`) exactly.
+
 Other verification:
 - `git diff --check` and staged whitespace checks passed.
 - Both instruction entry points resolve to the same shared guidance.
@@ -87,7 +97,7 @@ Other verification:
 - Ignore rules checked for `.env`, `.env.local`, `.venv`, and every named
   runtime state path. None are tracked.
 - Production Python source and existing application documentation are unchanged
-  from the base; only the named test files under the two agents changed.
+  from current GitHub main; only the named test files under the two agents changed.
 - Real historical backtests: not run; no strategy or application behavior changed.
 
 ## Outstanding issues and next steps
@@ -98,7 +108,7 @@ Other verification:
   guide delivered alongside the control clone. The Claude checkout should
   include this note; stop if its actual commit differs unexpectedly.
 - Receiving reviewer: inspect `git status`, branch, actual
-  `git diff e84105f..a1fc0de`, changed tests, and shared guidance. Read this
+  `git diff 2bcdac3..47b73fb`, changed tests, and shared guidance. Read this
   note's saving commit too. Verify evidence and run the full suite yourself.
 - Report findings first. If saving a report, use
   `docs/handoffs/collaboration-setup.review-claude.md` on the review branch;
