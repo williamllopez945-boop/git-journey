@@ -1,0 +1,78 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from research_agent.daily_digest import format_daily_digest
+
+
+def _entry(asset, source_type, summary, timestamp="2026-09-24T13:00:00+00:00", **extra):
+    return {"asset": asset, "source_type": source_type, "summary": summary,
+            "timestamp": timestamp, **extra}
+
+
+def test_format_daily_digest_no_findings():
+    digest = format_daily_digest([], "2026-09-24")
+    assert "2026-09-24" in digest
+    assert "No new findings today." in digest
+
+
+def test_format_daily_digest_groups_by_asset():
+    entries = [
+        _entry("CRWD", "news", "Beats Q2 estimates"),
+        _entry("PANW", "news", "New product launch"),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "## CRWD" in digest
+    assert "## PANW" in digest
+    assert digest.index("## CRWD") < digest.index("## PANW")  # alphabetical
+
+
+def test_format_daily_digest_labels_each_source_type():
+    entries = [
+        _entry("HUBS", "news", "Beats estimates", url="https://example.com/a"),
+        _entry("HUBS", "sec_filing", "Material event disclosed", form_type="8-K", filed_at="2026-09-24"),
+        _entry("HUBS", "earnings_upcoming", "Q3 report", report_date="2026-10-01", timing="am"),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "**News**" in digest
+    assert "https://example.com/a" in digest
+    assert "**SEC filing**" in digest
+    assert "[8-K, filed 2026-09-24]" in digest
+    assert "**Upcoming earnings**" in digest
+    assert "Reports 2026-10-01 (am)" in digest
+
+
+def test_format_daily_digest_labels_a_consolidated_news_entry_with_its_article_count():
+    entries = [
+        _entry("CRWD", "news", "Hit a 52-week high on cybersecurity sector strength.",
+               article_count=5, article_ids=["a", "b", "c", "d", "e"]),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "**News**" in digest
+    assert "(5 new articles)" in digest
+
+
+def test_format_daily_digest_tags_a_baseline_entry_but_not_a_delta():
+    entries = [
+        _entry("CRWD", "sec_filing", "Most recent 10-Q on file at first coverage of this symbol.",
+               form_type="10-Q", filed_at="2026-08-26", kind="baseline"),
+        _entry("CRWD", "sec_filing", "8-K current report filed same day as the 10-Q above.",
+               form_type="8-K", filed_at="2026-08-26", kind="delta"),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert "*(baseline)*" in digest
+    lines = digest.splitlines()
+    baseline_line = next(l for l in lines if "Most recent 10-Q" in l)
+    delta_line = next(l for l in lines if "8-K current report" in l)
+    assert "*(baseline)*" in baseline_line
+    assert "*(baseline)*" not in delta_line
+
+
+def test_format_daily_digest_orders_entries_chronologically_within_asset():
+    entries = [
+        _entry("CRWD", "news", "second", timestamp="2026-09-24T15:00:00+00:00"),
+        _entry("CRWD", "news", "first", timestamp="2026-09-24T10:00:00+00:00"),
+    ]
+    digest = format_daily_digest(entries, "2026-09-24")
+    assert digest.index("first") < digest.index("second")
