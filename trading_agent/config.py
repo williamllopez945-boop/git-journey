@@ -106,19 +106,20 @@ RISK_LIMITS = {
 # themselves - see CHANGELOG.md.
 DRY_RUN = False
 
-# Options wheel strategy (cash-secured puts -> covered calls, added
-# 2026-09-26) - a second, independent strategy on the same account.
-# Deliberately NOT part of RISK_LIMITS/WATCHLIST above: a CSP's risk is
-# reserved cash collateral (100 x strike per contract), not a
-# mark-to-market position, so it doesn't compose with the crypto/stock
-# bot's aggregate-position-value cap. See PLAYBOOK.md's "Options wheel
-# strategy" section and CHANGELOG.md for the full rationale.
-WHEEL_WATCHLIST = []  # starts empty - populated by the live candidate
-                      # screen each cycle (see wheel_candidates.py), not
-                      # hand-picked like WATCHLIST/STOCK_WATCHLIST were.
+# VOLTRAP - the options wheel strategy (cash-secured puts -> covered
+# calls, added 2026-09-26, renamed to VOLTRAP same day) - a second,
+# independent strategy on the same account. Deliberately NOT part of
+# RISK_LIMITS/WATCHLIST above: a CSP's risk is reserved cash collateral
+# (100 x strike per contract), not a mark-to-market position, so it
+# doesn't compose with the crypto/stock bot's aggregate-position-value
+# cap. See PLAYBOOK.md's "VOLTRAP" section and CHANGELOG.md for the
+# full rationale.
+VOLTRAP_WATCHLIST = []  # starts empty - populated by the live candidate
+                        # screen each cycle (see voltrap_candidates.py),
+                        # not hand-picked like WATCHLIST/STOCK_WATCHLIST.
 
-WHEEL_RISK_LIMITS = {
-    "max_wheel_pct": 0.25,           # ceiling on total reserved options collateral
+VOLTRAP_RISK_LIMITS = {
+    "max_voltrap_pct": 0.25,         # ceiling on total reserved options collateral
                                       # (CSP strikes + any assigned shares' cost
                                       # basis) as a fraction of total portfolio
                                       # value - proposed default, owner to confirm
@@ -133,7 +134,7 @@ WHEEL_RISK_LIMITS = {
                                       # Falls back to an OTM-percentage proxy of
                                       # the same band if delta isn't available on
                                       # the option quote payload.
-    "min_avg_options_volume": 100,    # liquidity floor for a wheel candidate -
+    "min_avg_options_volume": 100,    # liquidity floor for a VOLTRAP candidate -
     "min_open_interest": 500,        # a rich-premium but illiquid chain has real
                                       # slippage risk on the actual fill.
     "min_implied_volatility": 0.35,  # candidate screen's IV floor (fraction, not
@@ -146,4 +147,4 @@ WHEEL_RISK_LIMITS = {
 # 2026-09-26) - every cycle proposes a specific contract and waits for
 # explicit approval, same bootstrap posture the crypto/stock bot itself
 # started at before its own bounded auto-execution was authorized.
-WHEEL_AUTO_EXECUTE = False
+VOLTRAP_AUTO_EXECUTE = False

@@ -1,6 +1,6 @@
-"""Per-symbol state machine for the options wheel strategy (cash-secured
-puts -> covered calls, see PLAYBOOK.md's "Options wheel strategy"
-section for the full weekly/daily procedure this feeds into).
+"""Per-symbol state machine for VOLTRAP, the options wheel strategy
+(cash-secured puts -> covered calls, see PLAYBOOK.md's "VOLTRAP" section
+for the full weekly/daily procedure this feeds into).
 
     idle -> csp_open -> [expires OTM] -> idle (keep premium)
                      -> [assigned]    -> holding_shares
@@ -14,14 +14,14 @@ one crypto/stock position's simpler take-profit-flag/cooldown pair.
 
 Deliberately independent of RiskManager/PositionStateStore: a CSP's
 risk is reserved cash collateral, not a mark-to-market position, and has
-no crypto/stock analogue - see PLAYBOOK.md's "Options wheel strategy"
-section for why this stays a separate system.
+no crypto/stock analogue - see PLAYBOOK.md's "VOLTRAP" section for why
+this stays a separate system.
 """
 
 import json
 from pathlib import Path
 
-STATE_PATH = Path(__file__).parent / "wheel_state.json"
+STATE_PATH = Path(__file__).parent / "voltrap_state.json"
 
 IDLE = "idle"
 CSP_OPEN = "csp_open"
@@ -42,7 +42,7 @@ def next_state_after_covered_call_expiration(called_away):
     return IDLE if called_away else HOLDING_SHARES
 
 
-class WheelStateStore:
+class VoltrapStateStore:
     def __init__(self, path=STATE_PATH):
         self.path = path
         self.data = self._load()

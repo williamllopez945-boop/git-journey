@@ -1,13 +1,13 @@
-"""Candidate screening and strike selection for the options wheel
-strategy (see PLAYBOOK.md's "Options wheel strategy" section for the
-full procedure). Mirrors watchlist_review.py's role: pure functions that
+"""Candidate screening and strike selection for VOLTRAP, the options
+wheel strategy (see PLAYBOOK.md's "VOLTRAP" section for the full
+procedure). Mirrors watchlist_review.py's role: pure functions that
 cut the repeated ranking/filtering work out of the live cycle, without
 wrapping the actual chain/quote tool calls themselves (those stay live
 per cycle, since the tradeable universe and its budget both move week
 to week).
 
 Two independent pieces:
-- rank_by_wheel_fit: given one cycle's options-focused scan results
+- rank_by_voltrap_fit: given one cycle's options-focused scan results
   (scan_id built via create_scan, preset HIGH_OPTIONS_VOLUME_IV plus
   custom IV/liquidity/price filters - see PLAYBOOK.md), filters out
   anything the current budget can't secure 100 shares of and anything
@@ -23,8 +23,8 @@ Two independent pieces:
 """
 
 
-def rank_by_wheel_fit(scan_rows, max_collateral_per_contract, min_avg_options_volume=None, min_open_interest=None):
-    """scan_rows: {"ticker": ..., "columns": {...}} dicts from the wheel
+def rank_by_voltrap_fit(scan_rows, max_collateral_per_contract, min_avg_options_volume=None, min_open_interest=None):
+    """scan_rows: {"ticker": ..., "columns": {...}} dicts from the VOLTRAP
     candidate scan, columns keyed by the scanner's own display names
     ("Last", "Implied volatility", "Average options volume",
     "Open interest").

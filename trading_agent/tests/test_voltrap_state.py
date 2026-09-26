@@ -4,8 +4,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from trading_agent.wheel_state import (
-    WheelStateStore, IDLE, CSP_OPEN, HOLDING_SHARES, COVERED_CALL_OPEN,
+from trading_agent.voltrap_state import (
+    VoltrapStateStore, IDLE, CSP_OPEN, HOLDING_SHARES, COVERED_CALL_OPEN,
     next_state_after_csp_expiration, next_state_after_covered_call_expiration,
 )
 
@@ -21,8 +21,8 @@ def test_next_state_after_covered_call_expiration():
 
 
 def _store():
-    tmp = Path(tempfile.mkdtemp()) / "wheel_state.json"
-    return WheelStateStore(path=tmp)
+    tmp = Path(tempfile.mkdtemp()) / "voltrap_state.json"
+    return VoltrapStateStore(path=tmp)
 
 
 def test_new_symbol_starts_idle():
@@ -98,9 +98,9 @@ def test_resolve_covered_call_called_away_returns_to_idle_and_clears_everything(
 
 
 def test_state_persists_across_store_instances():
-    tmp = Path(tempfile.mkdtemp()) / "wheel_state.json"
-    store1 = WheelStateStore(path=tmp)
+    tmp = Path(tempfile.mkdtemp()) / "voltrap_state.json"
+    store1 = VoltrapStateStore(path=tmp)
     store1.open_csp("SOFI", "opt-1", strike=15.0, expiration="2026-10-03",
                      premium_collected=42.0, quantity=1)
-    store2 = WheelStateStore(path=tmp)
+    store2 = VoltrapStateStore(path=tmp)
     assert store2.state("SOFI") == CSP_OPEN

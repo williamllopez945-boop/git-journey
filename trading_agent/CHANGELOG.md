@@ -484,3 +484,24 @@ order matters, and this one already happens to be the right one.
 
 No other issues found. Full history in this file and `daily_logs/
 2026-09-24-live-log.md`.
+
+## 2026-09-26 — Options wheel strategy renamed to VOLTRAP
+
+Owner request (naming only - no behavior change). The options wheel
+strategy built earlier today is now branded **VOLTRAP**. Renamed
+throughout: `wheel_state.py` -> `voltrap_state.py`, `wheel_candidates.py`
+-> `voltrap_candidates.py` (and their test files), `WheelStateStore` ->
+`VoltrapStateStore`, `rank_by_wheel_fit` -> `rank_by_voltrap_fit`,
+`WHEEL_WATCHLIST`/`WHEEL_RISK_LIMITS`/`WHEEL_AUTO_EXECUTE` (config.py) ->
+`VOLTRAP_WATCHLIST`/`VOLTRAP_RISK_LIMITS`/`VOLTRAP_AUTO_EXECUTE`,
+`max_wheel_pct` -> `max_voltrap_pct`, `wheel_state.json` ->
+`voltrap_state.json` (was empty - no data migration needed).
+`PLAYBOOK.md`'s "Options wheel strategy" section is now "VOLTRAP", and
+`README.md` updated to match.
+
+Older entries above this one still say `wheel_state.py`/`WHEEL_*` -
+that's the accurate historical record of what things were named when
+they were built; left as-is rather than rewritten. Everything currently
+live uses the VOLTRAP names. No open PR/Routine referenced the old
+names (VOLTRAP has no Routine yet - still unfunded, see above), so
+nothing else needed updating. 215/215 tests passing after the rename.
