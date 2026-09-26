@@ -635,3 +635,18 @@ than diversify it" finding `backtest_2026-09-23.md` established,
 confirmed again on fresh data. **No change made** -
 `max_concurrent_positions` stays at 5. See
 `backtest_2026-09-26_concurrent_cap.md` for the full sweep.
+
+## 2026-09-26 — Daily trade cap re-check (3 -> higher?): still worse
+
+Owner asked "will increase daily trade cap be better or worse" -
+re-ran `backtest_2026-09-24_trade_cap.md`'s sweep on fresh data (the
+same 12-series test bed from the concurrent-cap re-check above,
+current `STOCK_WATCHLIST` with `CRDO`/`PYPL` now included). **Same
+answer as two days ago: worse.** `cap=3` is again the clear full-window
+peak (+8.94% vs +5.79% for cap 4 and up, which all collapse to the
+same plateau) and again the *only* value positive in both independent
+half-windows (+0.24%/+1.18% vs cap 4+'s -4.40% in H1 despite looking
+fine in H2 alone - the exact overfitting shape this project's
+split-window check exists to catch). **No change made** -
+`max_trades_per_day` stays at 3. See
+`backtest_2026-09-26_trade_cap_recheck.md`.
