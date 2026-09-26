@@ -16,7 +16,7 @@ decisions" — a loose, file-based coupling, not a trade gate.
 
 | File | Purpose |
 |---|---|
-| `config.py` | Research-specific settings (lookback windows, news limit, filing form types, earnings lookahead). The watchlist itself is imported directly from `trading_agent.config.STOCK_WATCHLIST` — never duplicated, so it can't drift out of sync when the trading agent's watchlist changes |
+| `config.py` | Research-specific settings (lookback windows, news limit, filing form types, earnings lookahead). The watchlist itself is imported directly — the union of `trading_agent.config.STOCK_WATCHLIST` and `VOLTRAP_WATCHLIST` (added 2026-09-26), never duplicated, so it can't drift out of sync when either watchlist changes |
 | `research_log.py` | `ResearchLogStore` — append-only log of findings (news/SEC filings/upcoming earnings), persisted to `research_log.json`. Modeled directly on `trading_agent/cycle_log.py`'s `CycleLogStore` |
 | `daily_digest.py` | Assembles the daily research digest markdown from a day's logged findings, grouped by asset |
 | `PLAYBOOK.md` | Step-by-step runbook the daily research Routine follows |
@@ -31,16 +31,26 @@ decisions" — a loose, file-based coupling, not a trade gate.
 - `get_earnings_results` — upcoming earnings report dates, to flag
   earnings-driven gap risk *before* it happens
 
-## Known gap: crypto has no research coverage in v1
+## Coverage: stocks AND VOLTRAP candidates, still not crypto (updated 2026-09-26)
 
 RobinHood's news and SEC-filing tools are equity-specific — there is no
 analogous tool for crypto (`trading_agent.config.WATCHLIST`) in this
 session's toolset, and crypto pairs aren't SEC filers. The owner was
 asked explicitly (AskUserQuestion, 2026-09-23) whether to add a
 web-search source to cover crypto anyway, and chose to scope v1 to
-stocks-only instead. This is a deliberate, documented scope boundary,
-not an oversight — revisit if/when a crypto-relevant news source is
-added to the toolset.
+stocks-only instead. Re-confirmed 2026-09-26 when the owner asked for
+crypto/options/stock watchlist support together — still stocks only,
+by explicit choice, not an oversight.
+
+**VOLTRAP (the options wheel strategy) is in scope, though**, added the
+same day: every VOLTRAP candidate is a real stock/ETF underneath the
+option (a cash-secured put or covered call is written on real shares),
+so the exact same equity news/SEC-filing/earnings tools already apply —
+no new data source needed, just widening `WATCHLIST` in `config.py` to
+include `VOLTRAP_WATCHLIST` alongside `STOCK_WATCHLIST`. This is a
+deliberate, documented scope boundary (equity-underlying research: yes;
+crypto: no), not an oversight — revisit crypto coverage if/when a
+crypto-relevant news source is added to the toolset.
 
 ## How the trading agent uses this
 

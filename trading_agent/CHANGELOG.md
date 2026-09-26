@@ -505,3 +505,63 @@ they were built; left as-is rather than rewritten. Everything currently
 live uses the VOLTRAP names. No open PR/Routine referenced the old
 names (VOLTRAP has no Routine yet - still unfunded, see above), so
 nothing else needed updating. 215/215 tests passing after the rename.
+
+## 2026-09-26 — Three-watchlist refresh + research_agent scope extension
+
+Owner request: "work on our watchlists. One for crypto. One for
+options, and one for just stocks. Have our research agent support this
+effort." Clarified via `AskUserQuestion`: refresh all three with real
+candidates now (not just a process rebuild), and extend `research_agent`
+to cover stocks + VOLTRAP (not crypto - that scope decision from
+2026-09-23 stands).
+
+**Three review docs written, matching this project's standing "screen
+-> backtest/trailing-perf -> write a doc -> owner approves before
+config.py changes" discipline** (same as every prior watchlist swap):
+
+- `watchlist_review_2026-09-26_crypto.md` - re-ran the crossover screen
+  plus real trailing P&L (`trade_log`) for the 4 traded assets, and
+  multi-day `cycle_log.json` history (not just today's snapshot) for
+  the rest. Found `XCN`'s scanner data is **frozen dead** (SMA10==SMA30
+  every cycle observed, zero volume) - a structural defect, not just
+  weak form. One clean swap proposed: `XCN` -> `AERO`. Everything else
+  that looked weak on today's snapshot alone (BCH, XLM, ASTER) turned
+  out to be noisy/oscillating on the multi-day check, not persistently
+  bad - no change proposed for those (avoided a false-positive swap).
+- `watchlist_review_2026-09-26_stocks.md` - stocks have a real
+  historicals source, so this ran genuine `backtest.py` passes (90d
+  hourly) for every current member and every screened candidate, not
+  just a crossover snapshot. `HUBS` (-30.71%) and `CHKP` (-22.77%) are
+  clear bottom-2 by backtested return; proposed swapping them for
+  `PYPL` (+16.82%) and `CRDO` (+17.59%). Notably, the top-ranked
+  screener candidate by today's crossover (`BE`) backtested **negative**
+  (-4.03%) and was rejected on that basis alone - exactly the "never
+  swap on a screener snapshot alone" scenario this project's rule
+  exists for.
+- `watchlist_review_2026-09-26_voltrap.md` - VOLTRAP_WATCHLIST turns
+  from "always empty, populated live" into a **reviewed, standing list**
+  for the first time: screened the tuned candidate scan, excluded two
+  clinical-stage biotechs (`SMMT`, `PGEN` - same binary-catalyst-risk
+  reasoning that excluded TNGX/ARQT from the stock watchlist) and one
+  thin small-cap (`GRRR`) despite all three clearing the technical
+  IV/liquidity filters, landing on 8 names: `SMCI, MARA, OKLO, CLSK,
+  RGTI, ASST, NVDL, SEDG`.
+
+**`research_agent` scope extended** (`research_agent/config.py`):
+`WATCHLIST` is now the union of `STOCK_WATCHLIST` and
+`VOLTRAP_WATCHLIST` (deduplicated), not `STOCK_WATCHLIST` alone -
+every VOLTRAP candidate is a real stock/ETF underneath the option, so
+the same equity news/SEC-filing/earnings tools already cover it, no new
+data source needed. Crypto remains explicitly out of scope (owner
+re-confirmed this, not revisited). `README.md`/`PLAYBOOK.md` updated in
+both `trading_agent/` and `research_agent/`; the daily research
+Routine's own stored prompt updated to match (same reason the hourly
+trading Routine's prompt needed updating after the stock-scan-pagination
+fix - it duplicates the procedure rather than only pointing at it).
+
+**None of the three `config.py` watchlists have been edited.** All
+three docs are recommendations awaiting explicit owner approval, per
+this project's standing rule that a watchlist swap is never a side
+effect of an automated or delegated review. 215/215 tests still passing
+(only `research_agent/config.py`'s `WATCHLIST` computation actually
+changed code-wise; the rest of this pass is docs).

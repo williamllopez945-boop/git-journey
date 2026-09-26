@@ -6,9 +6,13 @@ Run once per weekday, before market open (~8am ET) — news and SEC
 filings don't change hour to hour the way price does, so this doesn't
 need the trading agent's hourly cadence.
 
-**Scope: stocks only.** `research_agent.config.WATCHLIST` is imported
-directly from `trading_agent.config.STOCK_WATCHLIST` — the crypto
-watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
+**Scope: stocks + VOLTRAP candidates, not crypto.**
+`research_agent.config.WATCHLIST` is the union of
+`trading_agent.config.STOCK_WATCHLIST` and `VOLTRAP_WATCHLIST` (added
+2026-09-26 — every VOLTRAP candidate is a real stock/ETF underneath the
+option, so the same equity tools apply). The crypto watchlist
+(`trading_agent.config.WATCHLIST`) is still out of scope (see
+README.md's "Coverage" section).
 
 ## Steps, per cycle
 
@@ -118,9 +122,9 @@ watchlist is out of scope for v1 (see README.md's "Known gap: crypto").
 - Never place, preview, or cancel an order. This agent only reads
   market/news/filing data and writes to `research_agent/research_log.json`
   and `research_agent/research_notes/`.
-- Never modify `trading_agent/config.py`, `RISK_LIMITS`, `WATCHLIST`, or
-  `STOCK_WATCHLIST` — this agent reads the stock watchlist, it doesn't
-  own or change it.
+- Never modify `trading_agent/config.py`, `RISK_LIMITS`, `WATCHLIST`,
+  `STOCK_WATCHLIST`, or `VOLTRAP_WATCHLIST` — this agent reads those
+  watchlists, it doesn't own or change any of them.
 - Always check `entries_for_asset`/`entries_for_date` for existing
   `article_ids`/`filing_id` values before calling `record()` for news or
   a SEC filing — re-scanning the same recent window every day without
