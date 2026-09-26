@@ -105,3 +105,45 @@ RISK_LIMITS = {
 # this to False is a separate, deliberate action the account owner takes
 # themselves - see CHANGELOG.md.
 DRY_RUN = False
+
+# Options wheel strategy (cash-secured puts -> covered calls, added
+# 2026-09-26) - a second, independent strategy on the same account.
+# Deliberately NOT part of RISK_LIMITS/WATCHLIST above: a CSP's risk is
+# reserved cash collateral (100 x strike per contract), not a
+# mark-to-market position, so it doesn't compose with the crypto/stock
+# bot's aggregate-position-value cap. See PLAYBOOK.md's "Options wheel
+# strategy" section and CHANGELOG.md for the full rationale.
+WHEEL_WATCHLIST = []  # starts empty - populated by the live candidate
+                      # screen each cycle (see wheel_candidates.py), not
+                      # hand-picked like WATCHLIST/STOCK_WATCHLIST were.
+
+WHEEL_RISK_LIMITS = {
+    "max_wheel_pct": 0.25,           # ceiling on total reserved options collateral
+                                      # (CSP strikes + any assigned shares' cost
+                                      # basis) as a fraction of total portfolio
+                                      # value - proposed default, owner to confirm
+                                      # before first real order. Conservative vs.
+                                      # RISK_LIMITS' 60% aggregate cap since this
+                                      # is a brand-new, unbacktested mechanism on
+                                      # real assignment risk. History: CHANGELOG.md.
+    "target_delta_min": 0.15,        # target strike band for both CSPs and
+    "target_delta_max": 0.30,        # covered calls: roughly 70-85% chance of
+                                      # expiring OTM (the point of the strategy -
+                                      # collect premium, don't want assignment).
+                                      # Falls back to an OTM-percentage proxy of
+                                      # the same band if delta isn't available on
+                                      # the option quote payload.
+    "min_avg_options_volume": 100,    # liquidity floor for a wheel candidate -
+    "min_open_interest": 500,        # a rich-premium but illiquid chain has real
+                                      # slippage risk on the actual fill.
+    "min_implied_volatility": 0.35,  # candidate screen's IV floor (fraction, not
+                                      # percent - see get_scanner_filter_specs'
+                                      # 0-1 gotcha) - the source of "richer
+                                      # premium" this strategy is chasing.
+}
+
+# Auto-execution: recommend-only to start (my recommendation, approved
+# 2026-09-26) - every cycle proposes a specific contract and waits for
+# explicit approval, same bootstrap posture the crypto/stock bot itself
+# started at before its own bounded auto-execution was authorized.
+WHEEL_AUTO_EXECUTE = False

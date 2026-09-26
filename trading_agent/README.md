@@ -206,8 +206,34 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `rsi_filter.py` | RSI entry confirmation filter — built and backtested but **not** wired into live entries (see `backtest_2026-09-23.md`'s "RSI entry confirmation filter" section: it hurt worst-case robustness in every setting that meaningfully engaged) |
 | `cycle_log.py` | Append-only log of every non-hold signal/gate event each cycle (executed, recommended, blocked-by-X, excellent_watch, protective exit) — feeds `daily_review.py`, persisted to `cycle_log.json` |
 | `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log, including a chronological executive summary of every buy/sell/hold decision and why — see "Daily after-action review" below |
+| `wheel_state.py` | Options wheel strategy (added 2026-09-26) — per-symbol state machine (idle → csp_open → holding_shares → covered_call_open → ...), persisted to `wheel_state.json`. See "Options wheel strategy" below |
+| `wheel_candidates.py` | Options wheel strategy — candidate ranking (`rank_by_wheel_fit`) and strike selection (`pick_strike_by_delta`/`pick_strike_by_otm_pct`), pure functions mirroring `watchlist_review.py`'s pattern |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
+
+## Options wheel strategy (added 2026-09-26)
+
+A second, independent strategy on the same account: sell weekly
+cash-secured puts for premium; if assigned, sell weekly covered calls
+against the resulting shares. Goal is collecting premium, not wanting
+assignment. Full mechanism, candidate screen, and weekly/daily cycle
+procedure documented in `PLAYBOOK.md`'s "Options wheel strategy"
+section — deliberately kept separate from `RISK_LIMITS`/`WATCHLIST`
+above (own `WHEEL_RISK_LIMITS`/`WHEEL_WATCHLIST`/`WHEEL_AUTO_EXECUTE` in
+`config.py`, own state file), since a cash-secured put's risk is
+reserved collateral, not a mark-to-market position, and doesn't compose
+with the crypto/stock bot's aggregate cap.
+
+**Not live yet.** The account already has `option_level_3` (no upgrade
+needed), but the account's free cash (~$82) is nowhere near what even
+one real contract needs — confirmed live via `review_option_order`
+(a real MARA cash-secured put needed $1,150 collateral against $81.71
+available). The owner is depositing new funds specifically for this
+strategy, sized as a % of total portfolio value; no real order will be
+placed and no Routine created until that funding lands and the exact
+percentage is confirmed. See `CHANGELOG.md` for the full build history,
+including why the candidate screen's filters were tuned twice against
+real data before they stopped surfacing mostly distressed microcaps.
 
 ## Strategy
 

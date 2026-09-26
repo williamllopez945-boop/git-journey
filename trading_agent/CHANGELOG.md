@@ -367,3 +367,82 @@ for sourcing *new* candidates during the weekly watchlist review - that
 use case needs to discover symbols outside the watchlist, which
 `equity_signals.py` can't do by design, so that narrower gap (documented
 in `PLAYBOOK.md`'s "Weekly watchlist review" section) remains open.
+
+## 2026-09-26: options wheel strategy added (cash-secured puts -> covered calls)
+
+Owner requested a second, independent strategy on the same account:
+sell weekly cash-secured puts for premium, sell weekly covered calls if
+assigned, goal being income (collect premium) not assignment. Leveraged
+ETFs explicitly in scope. Resolved via `AskUserQuestion` before building:
+capital comes from **new funds the owner will deposit**, sized as a
+**% of total portfolio value** rather than a fixed dollar cap.
+
+Verified the account (`581911765`) already has `option_level_3` - no
+upgrade needed. Found live: free cash is only ~$82 (rest is in the
+crypto bot's positions) - confirmed via a real `review_option_order`
+call on a real candidate (MARA $11.50 put, 2026-10-02 expiration) that
+this genuinely can't go live yet: the order preview returned
+`OPTION_NOT_ENOUGH_BP_FOR_COLLATERAL`, needing a **$1,055.35** deposit
+against the $1,150 collateral requirement. Nothing was placed - this
+confirms the mechanism end-to-end without funding it.
+
+**New, independent system - deliberately not part of `RISK_LIMITS`:**
+a CSP's risk is reserved cash collateral, not a mark-to-market position,
+so it doesn't compose with the crypto/stock bot's aggregate-position-value
+cap. Added `WHEEL_RISK_LIMITS` (own dict, `config.py`) with a proposed
+`max_wheel_pct` of 25% (owner to confirm before going live - conservative
+vs. the crypto/stock bot's 60%, since this is a brand-new, unbacktested
+mechanism carrying real assignment risk and no options-historicals
+source exists here to backtest it against), a `target_delta_min`/`_max`
+band of 0.15-0.30 (roughly 70-85% chance of expiring OTM - the point of
+the strategy), and liquidity floors. Added `WHEEL_WATCHLIST` (starts
+empty, populated by the live screen each cycle) and `WHEEL_AUTO_EXECUTE`
+(`False` - recommend-only to start, same conservative bootstrap the
+crypto/stock bot itself used before its own auto-execution was
+authorized).
+
+New files: `wheel_state.py` (per-symbol state machine:
+idle -> csp_open -> {idle, holding_shares} -> covered_call_open ->
+{holding_shares, idle}, mirrors `position_state.py`'s persisted-store
+pattern) and `wheel_candidates.py` (`rank_by_wheel_fit`,
+`pick_strike_by_delta`/`pick_strike_by_otm_pct`, mirrors
+`watchlist_review.py`'s pure-function pattern). 33 new tests, 204/204
+passing.
+
+**Candidate screen tuned live against real data, not guessed:** built a
+new saved scan (`create_scan`, `HIGH_OPTIONS_VOLUME_IV`-style custom
+filters) and iterated twice before it was usable. First attempt (IV >
+35% alone, loose liquidity floors) surfaced almost entirely distressed
+microcap/biotech names with 100-300% IV - real tail/binary-event risk,
+not genuine wheel candidates. Second attempt raised liquidity floors
+(avg options volume > 1,000, open interest > 5,000) but still mostly
+speculative microcaps. **Fixed:** bounded IV to a BETWEEN band (35-80%,
+not floor-only - a ceiling turns out to matter as much as a floor, since
+"higher IV" alone selects for scarier tail risk, not richer safe premium),
+raised liquidity floors further (avg options volume > 5,000, open
+interest > 20,000), and added a $5 price floor. The resulting scan
+(`e3983260-740b-4a84-8369-54420cbeafdd`, sorted `Last asc` to bias
+toward budget-affordable names) surfaces recognizable liquid names
+(SMCI, MARA, RGTI, OKLO, NVDL, TSLL, BITX) instead of penny-stock/biotech
+noise. Also found (same known class of gap as the stock scan's own
+pagination cap): 392-400 total matches, 200-row cap, so the returned
+page's sort order matters a lot and must be reconsidered as the wheel's
+real budget changes - documented in `PLAYBOOK.md`.
+
+Dry-run verified the full pipeline against real market data before
+shipping: `rank_by_wheel_fit` against real scan rows (with an
+illustrative $2,000 budget, not the real ~$82 one, purely to prove the
+filtering/sorting logic) correctly kept 110 of 200 candidates within
+collateral and above the liquidity floors; `get_option_chains` /
+`get_option_instruments` / `get_option_quotes` for real MARA puts
+confirmed the quote payload **does carry `delta`** (so
+`pick_strike_by_delta` is the primary path, `pick_strike_by_otm_pct`
+only a documented fallback) and that `pick_strike_by_delta` correctly
+picked the one real contract (11.50 strike, delta -0.185) inside the
+0.15-0.30 target band out of seven real strikes checked.
+
+New "Options wheel strategy" section added to `PLAYBOOK.md` documenting
+the full state machine, screen, and weekly/daily cycle procedure. **Not
+live**: no Routine created, no real order will be placed, until (a) the
+owner confirms the `max_wheel_pct` number and (b) new funds are visible
+in the account.

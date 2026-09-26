@@ -662,3 +662,117 @@ Hard rules, same as the hourly Routine: never modify `RISK_LIMITS`,
 `DRY_RUN`, `WATCHLIST`, or `STOCK_WATCHLIST` from within this Routine
 itself; never place, preview, or cancel an order — this is a read-only
 research and recommendation cycle.
+
+## Options wheel strategy (cash-secured puts → covered calls)
+
+Added 2026-09-26 (owner request): a **second, independent** strategy on
+the same account (`581911765`, already `option_level_3` — no upgrade
+needed). Goal: sell weekly cash-secured puts (CSPs) for premium; if
+assigned, sell weekly covered calls against the resulting shares. The
+point is **collecting premium, not wanting assignment** — CSPs are an
+income play here, not a way to acquire stock cheaply.
+
+**Deliberately NOT part of `RISK_LIMITS`/`WATCHLIST` above.** A CSP's
+risk is reserved cash collateral (100 × strike per contract), not a
+mark-to-market position — a different accounting shape with no
+crypto/stock analogue, so it gets its own budget (`WHEEL_RISK_LIMITS`
+in `config.py`), own state file (`wheel_state.json`, via
+`wheel_state.WheelStateStore`), own watchlist (`WHEEL_WATCHLIST`, starts
+empty — populated by the live screen below each cycle, not hand-picked),
+and its own go-live switch (`WHEEL_AUTO_EXECUTE`, currently `False` —
+**recommend-only**, same conservative bootstrap the crypto/stock bot
+itself started at before its own bounded auto-execution was authorized).
+`DRY_RUN` continues to gate only the crypto/stock bot.
+
+**Not live yet.** Free cash is currently ~$82 — nowhere near the ~$1,000+
+a single real contract needs (confirmed live via `review_option_order`,
+see CHANGELOG.md). The owner is depositing new funds specifically for
+this strategy, sized as a % of total portfolio value
+(`WHEEL_RISK_LIMITS["max_wheel_pct"]`, proposed default 25%, owner to
+confirm the exact number). **Do not place any real option order, and do
+not create either Routine below, until (a) the owner confirms
+`max_wheel_pct` and (b) `get_portfolio` shows real free cash for it.**
+Until then this section documents the mechanism only.
+
+### State machine (`wheel_state.py`, per symbol)
+
+```
+idle -> csp_open -> [expires OTM] -> idle (keep premium)
+                 -> [assigned]    -> holding_shares
+holding_shares -> covered_call_open -> [expires OTM] -> holding_shares
+                                    -> [called away]  -> idle
+```
+
+### Candidate screening
+
+Saved scan `e3983260-740b-4a84-8369-54420cbeafdd` ("Options Wheel
+Candidates — IV/Liquidity Screener"), sorted `Last asc` (biases the
+returned page toward affordable names — **re-check this sort against
+the current wheel budget each time it matters**: if the budget grows
+large enough that price is no longer the binding constraint, an ascending
+price sort may cut off better-IV, higher-priced candidates the same way
+it deliberately favors cheap ones now — same 200-row pagination cap as
+every scan on this account, see README's "Known gap: stock scan
+pagination"). Current filters (tuned live 2026-09-26 — see CHANGELOG.md
+for why the first two attempts were rejected):
+- `Asset type` `ANY_OF` `[STOCK, ETF]` — ETF is required to include
+  leveraged names (SOXL/TQQQ/TSLL-style), explicitly in scope per the
+  owner.
+- `Implied volatility` `BETWEEN` `[0.35, 0.80]` — a floor alone (no
+  ceiling) surfaced almost nothing but distressed microcap/binary-event
+  names (150%+ IV) with real assignment-into-a-blowup risk, not genuine
+  wheel candidates; the ceiling keeps the screen in "rich premium,
+  liquid, real company/ETF" territory instead of "reflects a coin-flip
+  FDA decision."
+- `Average options volume` `>` `5000` (30d, 1d interval) and
+  `Total open interest` `>` `20000` (1d interval) — liquidity floors,
+  raised twice live before landing here; anything looser let through
+  illiquid names with real slippage risk.
+- `Last` `>` `5` — keeps out sub-$5 names, which skew penny-stock/low
+  quality even when the liquidity/IV filters are otherwise satisfied.
+
+Per cycle: `run_scan` this scan → `wheel_candidates.rank_by_wheel_fit(rows, max_collateral_per_contract=<current budget / desired concurrent positions>, min_avg_options_volume=WHEEL_RISK_LIMITS["min_avg_options_volume"], min_open_interest=WHEEL_RISK_LIMITS["min_open_interest"])`
+→ for the top few survivors: `get_option_chains(underlying_symbol=...)`
+→ `get_option_instruments(chain_id=..., expiration_dates=<nearest Friday>, type="put")`
+→ `get_option_quotes(instrument_ids=[...])` for each strike (confirmed
+live: the quote payload **does carry `delta`**, alongside
+`chance_of_profit_short` — the direct "probability this expires OTM"
+figure, worth cross-checking against the delta band) →
+`wheel_candidates.pick_strike_by_delta(instruments, WHEEL_RISK_LIMITS["target_delta_min"], WHEEL_RISK_LIMITS["target_delta_max"], "put")`
+(falls back to `pick_strike_by_otm_pct` only if a quote payload is ever
+missing delta) → `review_option_order` (pass `chain_symbol`/
+`underlying_type` for real collateral + fee numbers) before ever
+proposing a contract.
+
+### Weekly + daily cycles (two new Routines, created only once funded)
+
+1. **Weekly entry** (Monday, shortly after open): for `WHEEL_WATCHLIST`
+   symbols in `idle`, run the screen above and open new CSPs within
+   budget. For symbols in `holding_shares` (assigned the prior week),
+   sell a covered call at/above `cost_basis` (never below — that would
+   lock in a loss on assignment).
+2. **Daily monitor** (once per market day, near close): check open
+   `csp_open`/`covered_call_open` positions for deep-ITM/early-assignment
+   risk; on expiration day, reconcile via `get_option_positions`/
+   `get_option_orders` and drive the state transition via
+   `WheelStateStore.resolve_csp`/`resolve_covered_call`. Rolling (buy-to-
+   close + sell-to-open before expiration to avoid an unwanted
+   assignment) is a real wheel technique but **out of scope for v1** —
+   add only if the owner asks once the mechanism is proven live.
+
+### Auto-execution
+
+`WHEEL_AUTO_EXECUTE = False` (recommend-only): every cycle proposes a
+specific contract (strike, expiration, premium, collateral, via
+`review_option_order`'s real numbers) through `PushNotification` and
+waits for explicit approval before `place_option_order`. Revisit once
+it's run for a few real weeks — same graduation path the crypto/stock
+bot followed before its own bounded auto-execution was authorized.
+
+Hard rules: never modify `WHEEL_RISK_LIMITS`, `WHEEL_WATCHLIST`, or
+`WHEEL_AUTO_EXECUTE` from within either Routine itself (same posture as
+`RISK_LIMITS`/`WATCHLIST` above — these are deliberate, reviewed
+decisions, never a side effect of an automated cycle); never place a
+naked option (every put is cash-secured, every call is covered — no
+exceptions, no margin leverage beyond what's already reserved as
+collateral).
