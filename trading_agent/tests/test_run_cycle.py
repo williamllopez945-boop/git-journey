@@ -174,7 +174,11 @@ def test_stock_asset_class_requires_historicals_and_quotes_files():
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--asset-class", "stock",
-             "--portfolio-file", portfolio_file, "--positions-file", positions_file, "--no-log"],
+             "--portfolio-file", portfolio_file, "--positions-file", positions_file, "--no-log",
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(Path(tmp) / "scanner_state.json"),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
             capture_output=True, text=True, cwd=str(REPO_ROOT),
         )
         assert result.returncode != 0

@@ -1,0 +1,2 @@
+# Unit-test dependency only; production modules use the Python standard library.
+pytest==9.1.1

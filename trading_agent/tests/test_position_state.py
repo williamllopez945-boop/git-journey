@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -9,7 +10,9 @@ from trading_agent.position_state import PositionStateStore
 
 
 def _new_store():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     return PositionStateStore(path=tmp)
 
@@ -40,7 +43,9 @@ def test_assets_tracked_independently():
 
 
 def test_persists_across_instances():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     store1 = PositionStateStore(path=tmp)
     store1.mark_took_profit("SOL")

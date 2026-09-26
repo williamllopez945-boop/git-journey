@@ -32,3 +32,9 @@ research_agent/research_log.json
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Per-workspace development environments (never shared between agents)
+.venv/
+
+# VOLTRAP runtime state, like the other production state above
+trading_agent/voltrap_state.json

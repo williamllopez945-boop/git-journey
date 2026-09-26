@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -9,7 +10,9 @@ from trading_agent.cycle_log import CycleLogStore
 
 
 def _tmp_path():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     return tmp
 
