@@ -11,7 +11,12 @@ here, so this file stays scannable (split out 2026-09-24, audit).
 """
 
 WATCHLIST = [
-    "BTC", "ETH", "SOL",  # core assets, always held regardless of screener rank
+    "BTC", "ETH", "SOL", "DOGE",  # core assets, always held regardless of screener rank.
+                                  # DOGE re-added 2026-09-26 (explicit owner request) - it
+                                  # was part of the original BTC/ETH/SOL/DOGE core carve-out
+                                  # until the 2026-09-23 meme-coin removal dropped it. See
+                                  # CHANGELOG.md - this is a deliberate reversal of that
+                                  # decision, not a re-litigation of it.
     "LIT", "BCH", "AERO", "HBAR", "DOT", "CRV", "ZORA", "LINK", "AVAX", "ASTER",  # top-10 blue-chip screener pick
     "XLM",  # added 2026-09-22, predates the screener methodology - see CHANGELOG.md
 ]
@@ -71,7 +76,7 @@ RISK_LIMITS = {
                                      # enough for $100 to be reachable, or lower this value if
                                      # the approval gate should have teeth sooner.
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
-                                     # position at once (~1/3 of the 14-asset watchlist) -
+                                     # position at once (~1/3 of the 15-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
     "max_aggregate_position_pct": 0.60,  # HARD cap: current mark-to-market value of ALL open
                                      # positions combined may never exceed this fraction of

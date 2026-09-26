@@ -592,3 +592,18 @@ visibility in the app - a display convenience, not something the
 trading/research agents read from. See README.md's "Robinhood
 watchlists" note for the mechanism and the standing rule about keeping
 them in sync going forward.
+
+## 2026-09-26 — DOGE re-added to the crypto watchlist (owner request)
+
+Explicit owner request: "Include SOL, DOGE, and ETH." SOL and ETH were
+already core `WATCHLIST` members; `DOGE` was part of the original
+BTC/ETH/SOL/DOGE core carve-out until `watchlist_2026-09-23_meme_removal.md`
+dropped it as part of the broader meme-coin cleanup. This is a
+deliberate reversal of that one piece, not a re-litigation of the whole
+meme-coin decision - the rest of that cleanup (WIF/BONK/PENGU/FLOKI/MEW/
+POPCAT/SHIB/PEPE all still excluded) is untouched. `WATCHLIST` is now
+15 assets (was 14): `BTC, ETH, SOL, DOGE, LIT, BCH, AERO, HBAR, DOT,
+CRV, ZORA, LINK, AVAX, ASTER, XLM`. Updated the `max_concurrent_positions`
+comment and README's watchlist description to match the new count.
+Synced the real "Trading Agent Watchlist" Robinhood watchlist to add
+`DOGE`. 215/215 tests passing (no test asserted the old 14-count).

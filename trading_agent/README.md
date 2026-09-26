@@ -31,14 +31,19 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
-**Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL
-(core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER (top 10
-by SMA(10,30) crossover strength among blue-chip/established crypto,
-2026-09-23, refreshed 2026-09-26 — `XCN` swapped for `AERO` after its
-scanner feed was found frozen dead, see `watchlist_review_2026-09-26_crypto.md`),
-plus XLM (added 2026-09-22). PYTH, also added 2026-09-22, was removed
-2026-09-24 (see "Resolved" note below) - no documented reason for its
-inclusion survived and it was the one asset the scanner didn't cover.
+**Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
+DOGE (core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER
+(top 10 by SMA(10,30) crossover strength among blue-chip/established
+crypto, 2026-09-23, refreshed 2026-09-26 — `XCN` swapped for `AERO`
+after its scanner feed was found frozen dead, see
+`watchlist_review_2026-09-26_crypto.md`), plus XLM (added 2026-09-22).
+PYTH, also added 2026-09-22, was removed 2026-09-24 (see "Resolved"
+note below) - no documented reason for its inclusion survived and it
+was the one asset the scanner didn't cover. **DOGE re-added 2026-09-26**
+(explicit owner request) - it was part of the original core carve-out
+until `watchlist_2026-09-23_meme_removal.md` dropped it; the owner
+chose to bring it back, a deliberate reversal rather than a re-run of
+that decision.
 
 ## Robinhood watchlists (organizational, `config.py` is still the source of truth)
 
@@ -364,7 +369,7 @@ it always sizes at the flat cap.
 
 ## Concurrent-positions cap
 
-`RISK_LIMITS["max_concurrent_positions"]` (5, out of the 14-asset
+`RISK_LIMITS["max_concurrent_positions"]` (5, out of the 15-asset
 watchlist) caps how many assets may have an open position at the same
 time — a fresh buy signal into a previously-flat asset is skipped, same
 as the whipsaw cooldown, while 5 are already open; it never blocks a
