@@ -565,3 +565,30 @@ this project's standing rule that a watchlist swap is never a side
 effect of an automated or delegated review. 215/215 tests still passing
 (only `research_agent/config.py`'s `WATCHLIST` computation actually
 changed code-wise; the rest of this pass is docs).
+
+## 2026-09-26 — Watchlist swaps approved and applied ("Push to Robinhood")
+
+Owner approved all three recommendations from the same-day review docs
+and asked to push them live and create matching Robinhood watchlists.
+`config.py` changed:
+
+- `WATCHLIST`: `XCN` -> `AERO`.
+- `STOCK_WATCHLIST`: `CHKP` -> `CRDO`, `HUBS` -> `PYPL`.
+- `VOLTRAP_WATCHLIST`: `[]` -> `["SMCI", "MARA", "OKLO", "CLSK", "RGTI",
+  "ASST", "NVDL", "SEDG"]` (first standing list - previously always
+  empty, populated live from the scan each cycle with nothing
+  persisted).
+
+No sell orders needed - none of the removed names (`XCN`, `CHKP`,
+`HUBS`) held an open position. `research_agent.config.WATCHLIST`
+recomputes automatically from the union (no separate edit needed - see
+the prior entry). Full reasoning for each swap is in the three
+`watchlist_review_2026-09-26_*.md` docs; this entry just records that
+they were approved and applied, same day. 215/215 tests passing.
+
+Also created three real Robinhood watchlists this pass (crypto, stock,
+VOLTRAP-candidates), mirroring these three lists 1:1 for the owner's own
+visibility in the app - a display convenience, not something the
+trading/research agents read from. See README.md's "Robinhood
+watchlists" note for the mechanism and the standing rule about keeping
+them in sync going forward.

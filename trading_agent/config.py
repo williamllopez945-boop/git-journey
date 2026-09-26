@@ -12,7 +12,7 @@ here, so this file stays scannable (split out 2026-09-24, audit).
 
 WATCHLIST = [
     "BTC", "ETH", "SOL",  # core assets, always held regardless of screener rank
-    "LIT", "BCH", "XCN", "HBAR", "DOT", "CRV", "ZORA", "LINK", "AVAX", "ASTER",  # top-10 blue-chip screener pick
+    "LIT", "BCH", "AERO", "HBAR", "DOT", "CRV", "ZORA", "LINK", "AVAX", "ASTER",  # top-10 blue-chip screener pick
     "XLM",  # added 2026-09-22, predates the screener methodology - see CHANGELOG.md
 ]
 # PYTH removed 2026-09-24 (audit follow-up) - it was the only watchlist
@@ -22,14 +22,22 @@ WATCHLIST = [
 # than every other asset (slower signal, no volume gate, flat-cap-only
 # sizing). Zero open position at removal - pure watchlist edit, no sell
 # needed. See CHANGELOG.md.
+# XCN -> AERO (2026-09-26 watchlist review): XCN's scanner data was frozen
+# dead (SMA10==SMA30 every cycle observed, zero volume) - structurally
+# incapable of ever firing a signal, not just weak-form. See
+# watchlist_review_2026-09-26_crypto.md and CHANGELOG.md.
 
 # Top 10 by SMA(10,30) 1h crossover strength among liquid, large-cap stocks
 # (market cap > $10B, price > $10, 30d avg volume > 1M shares) - see
 # watchlist_stocks_2026-09-23_large_cap.md for the full methodology and
 # ranking. Shares RISK_LIMITS with WATCHLIST (shared budget), not a
 # separate risk pool. Full change history: CHANGELOG.md.
+# CHKP -> CRDO, HUBS -> PYPL (2026-09-26 watchlist review): CHKP/HUBS were
+# the two worst 90-day backtested performers (-22.77%/-30.71%); CRDO/PYPL
+# backtested +17.59%/+16.82% and passed the same $10B+ market cap screen.
+# See watchlist_review_2026-09-26_stocks.md and CHANGELOG.md.
 STOCK_WATCHLIST = [
-    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CHKP", "MAIR", "AR", "HUBS",
+    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "MAIR", "AR", "PYPL",
 ]
 
 STRATEGY = {
@@ -114,9 +122,17 @@ DRY_RUN = False
 # doesn't compose with the crypto/stock bot's aggregate-position-value
 # cap. See PLAYBOOK.md's "VOLTRAP" section and CHANGELOG.md for the
 # full rationale.
-VOLTRAP_WATCHLIST = []  # starts empty - populated by the live candidate
-                        # screen each cycle (see voltrap_candidates.py),
-                        # not hand-picked like WATCHLIST/STOCK_WATCHLIST.
+VOLTRAP_WATCHLIST = [
+    "SMCI", "MARA", "OKLO", "CLSK", "RGTI", "ASST", "NVDL", "SEDG",
+]  # first standing list, 2026-09-26 (previously always [] - populated
+   # live from the candidate screen each cycle with nothing persisted).
+   # Screened via the tuned IV/liquidity scan, then vetted with
+   # get_equity_fundamentals to exclude clinical-stage biotech
+   # binary-catalyst risk (SMMT, PGEN) and one thin small-cap (GRRR)
+   # that cleared the technical filters but not a fundamentals check.
+   # See watchlist_review_2026-09-26_voltrap.md and CHANGELOG.md. Still
+   # gated the same as ever: no real option order and no Routine until
+   # max_voltrap_pct is confirmed and the account is funded.
 
 VOLTRAP_RISK_LIMITS = {
     "max_voltrap_pct": 0.25,         # ceiling on total reserved options collateral

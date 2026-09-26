@@ -32,16 +32,33 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > confirmation" below.
 
 **Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL
-(core) plus LIT, BCH, XCN, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER (top 10
+(core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER (top 10
 by SMA(10,30) crossover strength among blue-chip/established crypto,
-2026-09-23 — see `watchlist_2026-09-23_meme_removal.md`), plus XLM (added
-2026-09-22). PYTH, also added 2026-09-22, was removed 2026-09-24 (see
-"Resolved" note below) - no documented reason for its inclusion survived
-and it was the one asset the scanner didn't cover. Also synced to a real
-Robinhood watchlist ("Trading Agent Watchlist", list_id
-`d3d77136-1b9e-403b-8c4a-46e59f8f1d91`) for visibility in the app —
-purely organizational, `config.py` remains the
-source of truth the agent reads from.
+2026-09-23, refreshed 2026-09-26 — `XCN` swapped for `AERO` after its
+scanner feed was found frozen dead, see `watchlist_review_2026-09-26_crypto.md`),
+plus XLM (added 2026-09-22). PYTH, also added 2026-09-22, was removed
+2026-09-24 (see "Resolved" note below) - no documented reason for its
+inclusion survived and it was the one asset the scanner didn't cover.
+
+## Robinhood watchlists (organizational, `config.py` is still the source of truth)
+
+Three real Robinhood watchlists, synced 1:1 with the three `config.py`
+lists below, for the owner's own visibility in the app — none of the
+three agents (trading, VOLTRAP, research) read from these; they exist
+purely so the owner can see the current lists on their phone/the
+Robinhood app without opening this repo. Keep these in sync by hand
+whenever a watchlist review is approved and applied (same step as the
+`config.py` edit) - they will not update themselves.
+
+| Watchlist | list_id | Mirrors |
+|---|---|---|
+| "Trading Agent Watchlist" | `d3d77136-1b9e-403b-8c4a-46e59f8f1d91` | `WATCHLIST` (crypto) |
+| "Trading Agent — Stock Watchlist" | `147f9bb2-57c1-4b31-b4fe-d09a57747d2e` | `STOCK_WATCHLIST` |
+| "VOLTRAP Candidates" | `91ebc73f-4a3f-42be-89aa-639461f222dc` | `VOLTRAP_WATCHLIST` |
+
+The crypto list predates this table (created 2026-09-22) and had drifted
+out of sync (still had `PYTH`/`XCN`, missing `AERO`) until the
+2026-09-26 pass fixed it alongside creating the other two.
 
 **Meme-coin removal (2026-09-23):** the owner asked to "get out of meme
 coins and into [assets] that has a future," clarified as blue-chip crypto
