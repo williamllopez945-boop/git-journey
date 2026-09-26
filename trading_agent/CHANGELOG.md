@@ -446,3 +446,41 @@ the full state machine, screen, and weekly/daily cycle procedure. **Not
 live**: no Routine created, no real order will be placed, until (a) the
 owner confirms the `max_wheel_pct` number and (b) new funds are visible
 in the account.
+
+## 2026-09-26 — System audit (owner request, after the HBAR permission fix)
+
+Full-system pass across `trading_agent/` and `research_agent/`: 204+11
+tests re-run green, `.mcp.json`/`.gitignore` checked for exposed
+secrets (none), every scheduled Routine's stored prompt cross-checked
+against the current `PLAYBOOK.md` (all four in sync), no stray
+TODO/FIXME markers, all "built but not wired live" modules
+(`rsi_filter.py`, the `price_history.py`/`entry_filter.py`/
+`volatility_sizing.py` polling path, `TRAILING_STOP_PCT`/
+`PROFIT_LOCK_*`) confirmed intentional and already documented
+(backtest-rejected or scoped to zero current assets), not orphaned code.
+
+**One real gap found and fixed:** the manual HBAR sell (see the 15:47
+UTC entry in today's live log) skipped `PositionStateStore().record_exit`
+- the 4h re-entry whipsaw cooldown that's supposed to start on every
+full position close. Added retroactively from the real fill timestamp.
+
+**One gap re-confirmed, still open (not urgent - unfunded):** the
+options-wheel candidate scan's 200-row cap (documented above) is sorted
+`Last asc` (cheapest-first) - as the wheel's budget grows this will
+keep hiding pricier, possibly-better candidates rather than just
+trimming weak ones. Revisit the scan's filters/sort before scaling the
+budget up.
+
+**Checked and NOT a bug:** the weekly watchlist review's stock
+candidate-sourcing scan (`6e009dcf...`, same 200-row cap) is sorted
+`Crossover % desc` - the cap only trims the *weakest* 198 signals of
+398, which is exactly what `rank_by_crossover_strength` wants; current
+`STOCK_WATCHLIST` members correctly don't appear in the top 200 (their
+crossover has cooled since they were picked) but that's irrelevant since
+they're excluded from "addition candidate" ranking anyway. This looked
+like the same class of bug as the already-fixed hourly-cycle stock-scan
+gap (sorted by price, applied to a small fixed list) but isn't - sort
+order matters, and this one already happens to be the right one.
+
+No other issues found. Full history in this file and `daily_logs/
+2026-09-24-live-log.md`.
