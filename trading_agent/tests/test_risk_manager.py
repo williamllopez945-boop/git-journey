@@ -12,7 +12,7 @@ LIMITS = {
     "max_position_pct": 0.05,
     "daily_loss_limit_pct": 0.03,
     "max_trades_per_day": 3,
-    "auto_execute_max_usd": 5.0,
+    "auto_execute_max_pct": 0.05,
 }
 
 
@@ -54,14 +54,22 @@ def test_circuit_breaker_halts_past_daily_loss_limit():
 
 def test_can_auto_execute_at_or_under_threshold():
     rm = _new_manager()
-    assert rm.can_auto_execute(5.0) is True
-    assert rm.can_auto_execute(2.50) is True
+    # auto_execute_max_pct=0.05, portfolio $100 -> $5 threshold
+    assert rm.can_auto_execute(5.0, portfolio_value=100) is True
+    assert rm.can_auto_execute(2.50, portfolio_value=100) is True
 
 
 def test_can_auto_execute_over_threshold():
     rm = _new_manager()
-    assert rm.can_auto_execute(5.01) is False
-    assert rm.can_auto_execute(25.0) is False
+    assert rm.can_auto_execute(5.01, portfolio_value=100) is False
+    assert rm.can_auto_execute(25.0, portfolio_value=100) is False
+
+
+def test_can_auto_execute_scales_with_portfolio_value():
+    rm = _new_manager()
+    # same order notional, larger portfolio -> threshold rises with it
+    assert rm.can_auto_execute(50.0, portfolio_value=1_000) is True
+    assert rm.can_auto_execute(50.0, portfolio_value=100) is False
 
 
 def test_can_auto_execute_defaults_to_false_without_configured_limit():
@@ -70,7 +78,7 @@ def test_can_auto_execute_defaults_to_false_without_configured_limit():
     tmp = Path(name)
     tmp.unlink()
     rm = RiskManager({"max_position_pct": 0.05, "daily_loss_limit_pct": 0.03, "max_trades_per_day": 3}, state_path=tmp)
-    assert rm.can_auto_execute(0.01) is False
+    assert rm.can_auto_execute(0.01, portfolio_value=1_000_000) is False
 
 
 def test_position_size_override_replaces_configured_cap():

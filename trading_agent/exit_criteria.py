@@ -5,7 +5,7 @@ condition is met first (or both) triggers an exit for that portion of the
 position.
 
 Unlike new entries, these exits are never blocked by can_trade(), the
-circuit breaker, or the auto_execute_max_usd size cap once DRY_RUN is
+circuit breaker, or the auto_execute_max_pct size cap once DRY_RUN is
 False - those gates limit new risk-taking, and applying them to an exit
 would mean being unable to cut a loss or lock in a gain exactly when it
 matters. DRY_RUN itself still applies: no exit executes while it's True.

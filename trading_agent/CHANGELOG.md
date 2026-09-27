@@ -753,3 +753,38 @@ multi-regime data is in progress via Codex's Alpaca connector
 (`codex/orb-alpaca-data` handoff); this evaluation will be re-run once
 that lands before any different conclusion is drawn. No code or config
 changed.
+
+## 2026-09-27 (later still) — auto_execute_max_usd -> auto_execute_max_pct
+
+Owner request, prompted by this hour's cycle: account equity jumped
+$200.40 -> $578.35 (a deposit, not a market move), which made the
+existing flat-dollar `auto_execute_max_usd` ($100) stale again - the
+exact problem flagged in the 2026-09-24 audit note on this same setting.
+Owner asked for the cap to scale with capital instead of needing a
+manual bump every time equity changes materially.
+
+Replaced `RISK_LIMITS["auto_execute_max_usd"]` (flat $100) with
+`RISK_LIMITS["auto_execute_max_pct"]` (0.20 = 20%), checked against
+current total portfolio value (`get_portfolio`'s `total_value`) instead
+of a fixed number. Set equal to `max_position_pct` (also 20%, owner
+choice) so a properly-sized confirmed entry always auto-executes and
+approval stays the exception (oversized or unconfirmed signals only) -
+the original 2026-09-22 design intent, now self-maintaining as equity
+moves instead of drifting stale.
+
+`RiskManager.can_auto_execute` signature changed:
+`can_auto_execute(order_value_usd)` -> `can_auto_execute(order_value_usd,
+portfolio_value)`, threshold = `portfolio_value * auto_execute_max_pct`.
+Every call site (the hourly cycle, both crypto and stock) already fetches
+current portfolio value in step 0 for the shared position-sizing
+counters, so no new data fetch is needed - just pass it through.
+
+This is an automation/approval-gate parameter, not a strategy parameter
+- it doesn't change which signals fire or how positions are sized, only
+whether a properly-sized order needs a human okay first. Historical
+backtesting (which assumes every signal executes) doesn't model an
+approval workflow, so none was run for this change, unlike a real
+strategy-parameter change. Updated `config.py`, `risk_manager.py`,
+`PLAYBOOK.md`, `README.md`, `cycle_log.py`, `daily_review.py`,
+`exit_criteria.py` (comments only), and `tests/test_risk_manager.py`.
+Full suite green after the change (see verification below).

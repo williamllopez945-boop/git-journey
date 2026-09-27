@@ -86,8 +86,8 @@ def _describe_event(entry):
         notional = entry.get("notional")
         amount = f" (${notional:.2f})" if isinstance(notional, (int, float)) else ""
         return (f"**{asset}** — confirmed `{classification}` (crossover {cross}){amount}, "
-                f"sized above `auto_execute_max_usd`: presented as a recommendation, "
-                f"awaiting approval rather than bought/sold automatically.")
+                f"sized above `auto_execute_max_pct` of portfolio value: presented as a "
+                f"recommendation, awaiting approval rather than bought/sold automatically.")
     if action == "blocked_cooldown":
         return (f"**{asset}** — confirmed `{classification}` (crossover {cross}) but held, "
                 f"not bought: still inside the post-exit whipsaw cooldown.")

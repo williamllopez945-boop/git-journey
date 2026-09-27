@@ -135,10 +135,15 @@ class RiskManager:
             return True
         return open_position_count < max_concurrent
 
-    def can_auto_execute(self, order_value_usd):
+    def can_auto_execute(self, order_value_usd, portfolio_value):
         """Whether an order of this notional value may execute without
-        per-trade approval, per RISK_LIMITS["auto_execute_max_usd"]."""
-        return order_value_usd <= self.limits.get("auto_execute_max_usd", 0.0)
+        per-trade approval. The cap is RISK_LIMITS["auto_execute_max_pct"]
+        of current total portfolio value (2026-09-27, owner request -
+        replaces a flat dollar cap that went stale as portfolio value
+        changed; see CHANGELOG.md), so it scales automatically instead of
+        needing a manual bump every time equity moves meaningfully."""
+        max_pct = self.limits.get("auto_execute_max_pct", 0.0)
+        return order_value_usd <= portfolio_value * max_pct
 
     def record_trade(self, asset, side, quantity, price):
         self.state["trades_today"] += 1

@@ -61,20 +61,18 @@ RISK_LIMITS = {
     "max_trades_per_day": 3,        # combined across all watchlist assets (crypto + stocks
                                      # share this one counter). Backtest-validated at 3 - see
                                      # backtest_2026-09-24_trade_cap.md and CHANGELOG.md.
-    "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
+    "auto_execute_max_pct": 0.20,    # fresh-crossover orders at/under this fraction of current
+                                     # total portfolio value (RiskManager.can_auto_execute,
+                                     # computed fresh each cycle from get_portfolio) execute
                                      # automatically (all watchlist assets); larger orders
-                                     # still require explicit per-trade approval. History:
-                                     # CHANGELOG.md.
-                                     # NOTE (2026-09-24 audit): at the current ~$200 portfolio
-                                     # and 20% max_position_pct, the largest possible single
-                                     # trade is ~$40 - well under this $100 threshold, so the
-                                     # approval gate can't currently trigger; every properly-
-                                     # sized entry auto-executes. This is intentional headroom
-                                     # for when the account grows, not a bug - but it means the
-                                     # "requires approval above $100" description above isn't
-                                     # doing anything today. Revisit if/when the account grows
-                                     # enough for $100 to be reachable, or lower this value if
-                                     # the approval gate should have teeth sooner.
+                                     # still require explicit per-trade approval. Set equal to
+                                     # max_position_pct (2026-09-27, owner request) so a
+                                     # properly-sized confirmed entry always auto-executes and
+                                     # approval stays the exception (oversized/unconfirmed
+                                     # signals only) - the original 2026-09-22 design intent.
+                                     # Replaces the flat-dollar auto_execute_max_usd, which was
+                                     # a one-time snapshot of portfolio value (2026-09-23) that
+                                     # went stale as equity changed - see CHANGELOG.md.
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
                                      # position at once (~1/3 of the 15-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
@@ -114,7 +112,7 @@ RISK_LIMITS = {
 
 # Master safety switch: no real orders are placed while True, auto-executed
 # or approved. The bounded auto-execution policy above (RISK_LIMITS
-# ["auto_execute_max_usd"]) is owner-authorized and ready, but flipping
+# ["auto_execute_max_pct"]) is owner-authorized and ready, but flipping
 # this to False is a separate, deliberate action the account owner takes
 # themselves - see CHANGELOG.md.
 DRY_RUN = False

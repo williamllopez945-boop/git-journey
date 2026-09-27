@@ -150,7 +150,8 @@ not the whole watchlist) if one is ever added.
       below: if `DRY_RUN` is `True`, never place an order — log what
       would have been ordered and move on. If `DRY_RUN` is `False`, place
       the order automatically only when `RiskManager.can_auto_execute`
-      says the notional is at/under `auto_execute_max_usd`, then notify
+      says the notional is at/under `auto_execute_max_pct` of current
+      total portfolio value, then notify
       the owner after the fact; otherwise present it as a recommendation
       and wait for explicit per-trade approval before calling
       `place_crypto_order`.
@@ -255,9 +256,11 @@ done by hand, exactly as described below.
      for a sell; compute notional as quantity × current price instead.
      **Auto-execution policy (owner-authorized 2026-09-22, see
      `config.py`):** if `DRY_RUN` is `False` and
-     `RiskManager.can_auto_execute(order_notional_usd)` is `True` (i.e.
-     the order is at or under `RISK_LIMITS["auto_execute_max_usd"]`),
-     preview the order with `preview_crypto_order`, place it with
+     `RiskManager.can_auto_execute(order_notional_usd, portfolio_value)` is
+     `True` (i.e. the order is at or under
+     `RISK_LIMITS["auto_execute_max_pct"]` of current total portfolio
+     value, from this cycle's `get_portfolio` call), preview the order
+     with `preview_crypto_order`, place it with
      `place_crypto_order`, call `RiskManager.record_trade(...)` with the
      actual filled quantity/price, and then **notify the account owner
      after the fact** with what was executed — do not ask first, this is
@@ -356,7 +359,8 @@ scope: extended-hours trading is not implemented.
      keyed by asset symbol / a shared counter, neither assumes crypto.
    - Auto-execution policy is identical: `RiskManager.can_auto_execute`
      doesn't distinguish asset class, so a confirmed stock signal at/under
-     `auto_execute_max_usd` auto-executes exactly like a crypto one.
+     `auto_execute_max_pct` of current total portfolio value auto-executes
+     exactly like a crypto one.
    - `excellent_watch` and `hold` handling: identical to the crypto cycle.
    - **Research context on recommendations only (added 2026-09-23, see
      `research_agent/README.md`):** when a stock signal is presented as a
@@ -436,7 +440,7 @@ positions.
    - `(None, 0.0)` — no protective exit fires this cycle; the SMA
      death-cross check above still applies independently.
 4. **These exits bypass `can_trade()`, the daily trade cap, the circuit
-   breaker, and `auto_execute_max_usd`** — protective exits are never
+   breaker, and `auto_execute_max_pct`** — protective exits are never
    blocked by the gates that limit new risk-taking. The only gate that
    still applies is `DRY_RUN`: while `True`, log what would have been
    sold and take no action; while `False`, place the sell immediately -
@@ -507,8 +511,10 @@ positions.
   that falls inside market hours. Crypto is unaffected (24/7, unchanged).
 - Auto-execution is bounded and narrow, not a general license: only a
   `fresh_buy_cross` / `fresh_sell_cross` signal, only when `DRY_RUN` is
-  `False`, only when `RiskManager.can_auto_execute(order_notional_usd)` is
-  `True` (at/under `RISK_LIMITS["auto_execute_max_usd"]`, owner-set).
+  `False`, only when
+  `RiskManager.can_auto_execute(order_notional_usd, portfolio_value)` is
+  `True` (at/under `RISK_LIMITS["auto_execute_max_pct"]` of current total
+  portfolio value, owner-set).
   `excellent_watch` is never auto-executed regardless of size. Anything
   outside those conditions is a recommendation requiring the account
   owner's explicit, per-trade approval before `place_crypto_order` is
@@ -573,7 +579,7 @@ on both the polling and scanner paths, so the end-of-day review
 | Event | `action` | Notes |
 |---|---|---|
 | Auto-executed new entry | `"executed"` | include `price`, `quantity`, `notional`, `order_id` |
-| New entry above `auto_execute_max_usd`, awaiting approval | `"recommended"` | include the suggested `price`/`quantity`/`notional` |
+| New entry above `auto_execute_max_pct` of portfolio value, awaiting approval | `"recommended"` | include the suggested `price`/`quantity`/`notional` |
 | `fresh_buy_cross` skipped — in cooldown | `"blocked_cooldown"` | |
 | `fresh_buy_cross` skipped — `max_concurrent_positions` reached | `"blocked_concurrent_cap"` | |
 | `fresh_buy_cross` sized to 0 — `max_aggregate_position_pct` reached | `"blocked_aggregate_cap"` | |

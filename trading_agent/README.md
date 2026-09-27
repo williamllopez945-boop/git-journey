@@ -10,8 +10,10 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > **Live trading status (2026-09-22): LIVE.** `DRY_RUN = False`, flipped
 > directly by the account owner (Claude Code's own auto-mode safety
 > classifier blocked doing this via an agent commit twice; the owner did
-> it themselves via a direct push to `main`). `RISK_LIMITS["auto_execute_max_usd"]`
-> is $100 (raised from $5 on 2026-09-23), `max_position_pct` is 20% (5% →
+> it themselves via a direct push to `main`). `RISK_LIMITS["auto_execute_max_pct"]`
+> is 20% of current total portfolio value (a flat $100 cap 2026-09-23 →
+> a percentage 2026-09-27, so it scales with equity - see `CHANGELOG.md`),
+> `max_position_pct` is 20% (5% →
 > 50% → 15% → 20% the same day, across three re-backtested passes — see
 > "Risk limits" and "Concurrent-positions cap" below), and
 > `max_aggregate_position_pct` is a new **hard cap at 50% of portfolio
@@ -450,7 +452,8 @@ persisted one to detect an actual crossover *event*, not just a state.
 Each cycle's `classify()` call returns one of:
 - `fresh_buy_cross` / `fresh_sell_cross` — SMA10 crossed SMA30 since the
   last cycle. This is a genuine strategy signal. If the order notional is
-  at/under `auto_execute_max_usd` and `DRY_RUN` is `False`, it executes
+  at/under `auto_execute_max_pct` of current total portfolio value and
+  `DRY_RUN` is `False`, it executes
   automatically (see the live-trading banner above) and is reported after
   the fact; otherwise it's surfaced as a recommendation awaiting approval.
 - `excellent_watch` — no fresh cross, but `|crossover_pct|` or
@@ -469,21 +472,22 @@ Each cycle's `classify()` call returns one of:
   connector available in agent sessions on this account.
 - **New-entry auto-execution is gated by signal type, not blanket "no
   approval ever":** only fresh crossover signals (`fresh_buy_cross` /
-  `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_usd"]`
-  (currently $100 - raised from $5 on 2026-09-23) execute without
-  approval; `excellent_watch` alerts still always require it, regardless
-  of size. **The threshold no longer meaningfully gates anything:** it
-  was raised to $100 to match `max_position_pct`'s 50% cap that same day,
-  but `max_position_pct` was subsequently brought down to 20% across two
-  more passes (see "Risk limits" above) while `auto_execute_max_usd` was
-  left at $100 - since a 20%-sized position at this portfolio's value
-  never reaches anywhere close to $100, essentially every properly-sized
-  confirmed entry now auto-executes unconditionally, not "at or under" a
-  real binding threshold. Revisit `auto_execute_max_usd` if the approval
-  gate is meant to matter again - it was left alone deliberately, not
-  by oversight (see `CHANGELOG.md`). Reconfirmed still true in the
-  2026-09-24 audit - `config.py` now carries a NOTE on this setting
-  directly, not just here.
+  `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_pct"]`
+  of current total portfolio value execute without approval;
+  `excellent_watch` alerts still always require it, regardless of size.
+  **2026-09-27, owner request:** this was a flat dollar cap
+  (`auto_execute_max_usd`) that drifted stale every time portfolio value
+  changed - raised once (2026-09-23) to match `max_position_pct`'s 50%
+  cap at the time, then left behind when `max_position_pct` was brought
+  back down to 20%, so it stopped meaningfully gating anything (every
+  properly-sized entry auto-executed regardless of the stated
+  threshold). Replaced with a percentage of current total portfolio
+  value (`RiskManager.can_auto_execute(order_value_usd, portfolio_value)`,
+  recomputed fresh every cycle from that cycle's `get_portfolio` call),
+  set equal to `max_position_pct` (20%) so the same design intent -
+  properly-sized confirmed entries auto-execute, approval is the
+  exception - now holds automatically as equity moves, with no manual
+  resync required. See `CHANGELOG.md`.
 - **Protective exits are not bounded the same way.** Stop-loss (10%) and
   take-profit (15%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
@@ -513,7 +517,8 @@ hands-off:
 
 - **Hourly trading cycle** — runs `PLAYBOOK.md` in full, including
   bounded auto-execution (fresh, strategy-confirmed signals at/under
-  `auto_execute_max_usd` execute with no approval step; protective exits
+  `auto_execute_max_pct` of current total portfolio value execute with
+  no approval step; protective exits
   always execute; everything else alerts or waits for approval). Also
   calls `CycleLogStore().record(...)` (see `cycle_log.py`) for every
   non-hold event, so the daily review below has real data to work from.
@@ -588,7 +593,7 @@ commit (twice), so the owner pushed the change to `main` themselves and
 had it pulled into this branch. The same applies to any further change:
 
 - To adjust the auto-execute threshold or scope, edit
-  `RISK_LIMITS["auto_execute_max_usd"]` directly — `0` disables new-entry
+  `RISK_LIMITS["auto_execute_max_pct"]` directly — `0` disables new-entry
   auto-execution while leaving recommendations active (protective exits
   are unaffected by this value).
 - To adjust the stop-loss/take-profit levels or the take-profit sell
