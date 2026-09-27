@@ -58,9 +58,15 @@ RISK_LIMITS = {
                                      # max_aggregate_position_pct below, not this value alone.
                                      # History: CHANGELOG.md.
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
-    "max_trades_per_day": 3,        # combined across all watchlist assets (crypto + stocks
-                                     # share this one counter). Backtest-validated at 3 - see
-                                     # backtest_2026-09-24_trade_cap.md and CHANGELOG.md.
+    "max_trades_per_day": 4,        # combined across all watchlist assets (crypto + stocks
+                                     # share this one counter). Raised from 3 (2026-09-27,
+                                     # owner request for more room) - the one value with a
+                                     # positive worst-case on both real test beds checked:
+                                     # STOCK_WATCHLIST's own 90-day data (worst +0.28%, vs 3's
+                                     # +2.70% - a modest give-up) and a real 3.7-year, more
+                                     # volatile 8-symbol universe (worst +5.82%, vs 3's +3.77% -
+                                     # better there). See backtest_2026-09-24_trade_cap.md and
+                                     # backtest_2026-09-27_trade_cap_recheck.md, and CHANGELOG.md.
     "auto_execute_max_pct": 0.20,    # fresh-crossover orders at/under this fraction of current
                                      # total portfolio value (RiskManager.can_auto_execute,
                                      # computed fresh each cycle from get_portfolio) execute

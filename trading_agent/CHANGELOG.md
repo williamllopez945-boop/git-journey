@@ -822,3 +822,36 @@ strategy-parameter change. Updated `config.py`, `risk_manager.py`,
 `PLAYBOOK.md`, `README.md`, `cycle_log.py`, `daily_review.py`,
 `exit_criteria.py` (comments only), and `tests/test_risk_manager.py`.
 Full suite green after the change (see verification below).
+
+## 2026-09-27 (later still) — max_trades_per_day: 3 -> 4
+
+Owner asked to raise the daily trade cap "to allow for more room."
+Unlike `auto_execute_max_pct` above, this genuinely is a strategy/risk
+parameter (it was backtest-validated at 3 on 2026-09-24), so re-tested
+before changing it rather than bumping the number directly.
+
+Re-ran the original stock-only cap sweep on the CURRENT
+`STOCK_WATCHLIST` (`CRDO`/`PYPL` replaced `CHKP`/`HUBS` since the
+original test) with fresh 90-day real hourly data - confirmed cap=3 is
+still split-window-robust and best worst-case on this watchlist
+(worst +2.70% vs. cap=4's +0.28%, cap=5's -1.35%).
+
+Cross-checked against a second, real, deeper dataset for extra
+robustness: Codex's Alpaca-sourced 5-minute data (archived
+`archive/orb-alpaca-data-2026-09-27`, 8 different symbols, 3.7 years
+common history, aggregated to hourly). Result **reversed direction**:
+on this more volatile, multi-year universe, worst-case return rises
+monotonically with the cap (cap=3 worst +3.77%, cap=4 +5.82%, saturating
+around 7+ at +7.66%) - a tight cap cuts off real winning signals on
+active days here, the opposite failure mode from the calm-large-cap
+result.
+
+**Raised to 4** - the one value with a positive worst-case on *both*
+real test beds (giving up +2.42pp vs. staying at 3 on the calm stock
+data, gaining +2.05pp vs. staying at 3 on the volatile data), not the
+peak on either individually. This is a judgment call between two
+disagreeing real results, not a clean win - the crypto side of the
+shared cap remains untested (no historicals tool for it), which is
+exactly why the disagreement matters. Full writeup, including why the
+two datasets disagree: `backtest_2026-09-27_trade_cap_recheck.md`.
+`config.py`, `README.md` updated. Full suite green.

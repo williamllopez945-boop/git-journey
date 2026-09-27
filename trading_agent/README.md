@@ -339,7 +339,7 @@ from the size cap and trade limits that apply to entries.
   their own.
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
-- Max 3 trades per day, combined across the whole watchlist
+- Max 4 trades per day, combined across the whole watchlist
 - Max 5 concurrent open positions across the whole watchlist (of 15
   assets) — see "Concurrent-positions cap" below
 
