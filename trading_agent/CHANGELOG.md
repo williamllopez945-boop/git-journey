@@ -694,3 +694,16 @@ to post. Updated both Routines' prompts (hourly trading, daily
 after-action review) and `PLAYBOOK.md`'s "Slack notifications" section
 to the new `channel_id`. No functional/strategy change — infrastructure
 correction only.
+
+## 2026-09-27 (later still, same day) — Slack narrowed to notable-only
+
+Owner asked to only send pertinent information to Slack, since Codex
+(connected to `#voltrap-agents-work`) may be used to build backend work
+off this repo and shouldn't have to wade through hourly noise to find
+real signal. Changed the hourly trading Routine's Slack post from
+"every cycle regardless" to the same trigger condition as
+`PushNotification` — executed trade, protective exit, recommendation
+awaiting approval, or a worth-noting blocked signal only, silent on a
+plain hold. The daily after-action review's Slack post is unchanged
+(already once-a-day and substantive, not noise). Updated
+`PLAYBOOK.md`'s "Slack notifications" section to match.

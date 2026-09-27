@@ -585,24 +585,32 @@ on both the polling and scanner paths, so the end-of-day review
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.
 
-## Slack notifications (added 2026-09-27, owner request; channel corrected same day)
+## Slack notifications (added 2026-09-27, owner request; channel corrected same day; narrowed to notable-only same day)
 
-In addition to `PushNotification` (mobile alert, noise-reduced — stays
-quiet on a plain hold), the hourly trading cycle and the daily
-after-action review both also post to Slack channel
-`#voltrap-agents-work` (`channel_id C0C49LR128P`) via
-`slack_send_message`, **every firing, regardless of whether anything
-notable happened**. (The original channel this was set up on,
+The hourly trading cycle and the daily after-action review both also
+post to Slack channel `#voltrap-agents-work` (`channel_id
+C0C49LR128P`) via `slack_send_message`, alongside `PushNotification`.
+(The original channel this was set up on,
 `#votrap-agent-collaboration`/`C0C4P136JFQ`, was archived the same day
 the owner set it up and replaced with this public channel — if
 `slack_send_message` ever fails against `C0C49LR128P`, re-check with
-`slack_list_user_channels` rather than assuming the old ID.) This
-channel is shared with the owner and the other connected agents
-(a Codex/ChatGPT Slack app, a Claude-for-Slack app), so it's a standing
-visibility/audit log, not a noise-reduced alert — a quiet cycle still
-gets a one-line "nothing notable" post rather than being skipped. The
-daily review posts the fuller executive-summary/observations content
-(Slack has no 200-char limit, unlike `PushNotification`).
+`slack_list_user_channels` rather than assuming the old ID.)
+
+**Hourly cycle:** posts **only when there's something pertinent** —
+the same trigger condition as `PushNotification` (an executed trade, a
+protective exit, a recommendation awaiting approval, or a blocked
+signal worth noting). No "all quiet" line on a plain hold cycle. This
+channel has Codex (a separate coding agent the owner may use for
+backend work on this same repo) connected to it — the goal is a clean,
+high-signal record Codex can pick up real context from, not an hourly
+noise stream (this replaced an earlier "post every cycle regardless"
+design from the same day, which the owner asked to narrow).
+
+**Daily after-action review:** posts every day regardless (same as its
+`PushNotification`) — a once-a-day substantive summary is inherently
+pertinent, not noise, so it keeps the original always-on behavior. It
+posts the fuller executive-summary/observations content (Slack has no
+200-char limit, unlike `PushNotification`).
 
 ## Weekly watchlist review
 
