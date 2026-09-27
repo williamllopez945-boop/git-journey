@@ -707,3 +707,22 @@ awaiting approval, or a worth-noting blocked signal only, silent on a
 plain hold. The daily after-action review's Slack post is unchanged
 (already once-a-day and substantive, not noise). Updated
 `PLAYBOOK.md`'s "Slack notifications" section to match.
+
+## 2026-09-27 (later still) — Relative-strength entry gate: tested deeper, not adopted
+
+Owner shared a "top 5 trading strategies" research summary (posted to
+Slack via Codex/ChatGPT) and asked whether relative-strength ranking -
+biasing entries toward the watchlist's current leaders - could improve
+the strategy. A first pass on the 90-day hourly 12-series test bed
+looked promising (+0.87pp worst-case, split-window, one config). Owner
+asked for deeper multi-regime validation before shipping anything.
+
+Tested against two real, longer-history crypto-ETF groups (interpolated
+placeholder bars excluded, bar-aligned by date): IBIT+ETHA (2.15 years
+real daily, forced to pick the relatively stronger of the two) lost
+-6.87% to -12.50% worst-case across every lookback tested - clearly
+negative, bigger than the original positive result. A shorter 4-way
+group (GBTC+VSOL+BSOL+GSOL, ~7 months real daily) was only marginally
+positive (+0.08% to +0.37%). The original finding was a narrow,
+single-period artifact. **Not adopted** - see
+`backtest_2026-09-27_relative_strength.md`.
