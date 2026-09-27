@@ -264,11 +264,19 @@ their history would very likely widen this further, not narrow it).
 - **Status**: closed. Re-open only with a materially different baseline
   design (a different entry trigger, stop, or target scheme) and new
   evidence - not a re-run of these exact rules on the same data.
-- **Raw data removed** (owner request, same day): the 48MB of
-  `research_agent/data/orb_5min/*.csv` was deleted after this verdict -
-  a one-off dataset for a rejected experiment, tied to the current
-  `VOLTRAP_WATCHLIST` (which is itself periodically revised), isn't worth
-  the repo weight with no approved follow-on use. Everything substantive
-  (coverage, hashes, per-symbol results) is preserved above and in
-  `docs/handoffs/orb-alpaca-data.review-claude.md`; re-fetching from
-  Alpaca would be needed if this exact data is wanted again.
+- **Raw data removed from the working tree** (owner request, same day):
+  the 48MB of `research_agent/data/orb_5min/*.csv` was deleted from this
+  branch's HEAD after this verdict - a one-off dataset for a rejected
+  experiment, tied to the current `VOLTRAP_WATCHLIST` (which is itself
+  periodically revised), isn't worth the repo weight with no approved
+  follow-on use. Everything substantive (coverage, hashes, per-symbol
+  results) is preserved above and in
+  `docs/handoffs/orb-alpaca-data.review-claude.md`.
+  **Archived, not lost**: the full dataset is kept on branch
+  `archive/orb-alpaca-data-2026-09-27` (pinned at commit `50b22d0`, the
+  last commit whose tree still has it), pushed to GitHub. Restore with
+  `git checkout archive/orb-alpaca-data-2026-09-27 --
+  research_agent/data/orb_5min/`, or pull one file with `git show
+  archive/orb-alpaca-data-2026-09-27:research_agent/data/orb_5min/SMCI.csv
+  > SMCI.csv` - no re-fetch from Alpaca needed if this exact data is
+  wanted again.
