@@ -855,3 +855,30 @@ shared cap remains untested (no historicals tool for it), which is
 exactly why the disagreement matters. Full writeup, including why the
 two datasets disagree: `backtest_2026-09-27_trade_cap_recheck.md`.
 `config.py`, `README.md` updated. Full suite green.
+
+## 2026-09-27 (later still) — Order-type policy gap closed: precision workaround was dropping to market orders
+
+Same-day after-action review (`daily_logs/2026-09-27.md`) cross-checked
+`trade_log` against real Robinhood order records and found 5 of that
+day's 6 crypto orders (CRV, DOGE, AVAX, SOL, LINK) executed as
+`type=market`, not the marketable-limit-order policy adopted
+2026-09-24. Only the day's DOT exit used a real `type=limit` order.
+
+Root cause: no code in this repo ever places an order (`run_cycle.py`
+only fetches data and classifies signals - see its own docstring);
+every live order this project places is a real MCP tool call made
+directly from `PLAYBOOK.md`'s instructions each cycle. Earlier this
+session, a `quantity`-based limit order was rejected for excess decimal
+precision ("Your order quantity has too much precision"), and the fix
+applied switched *both* the sizing input (`quantity` -> `dollar_amount`)
+*and* the order type (`limit` -> `market`) at once, when only the
+sizing input needed to change - `preview_crypto_order`'s own schema
+confirms `dollar_amount` is fully supported with `type=limit`.
+
+No trades were reversed (this is a policy-adherence gap, not a risk
+error - every fill that day happened to land favorably vs. its
+reference price, by luck, not because the missing collar protection
+didn't matter). Fixed by making `PLAYBOOK.md`'s order-type policy
+paragraph explicit that a precision rejection is only ever a reason to
+switch the sizing input, never the order type. No code changed (there
+was none to change); `PLAYBOOK.md` updated only.

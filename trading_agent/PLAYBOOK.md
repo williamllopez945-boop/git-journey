@@ -286,6 +286,21 @@ done by hand, exactly as described below.
      routine places: fresh-cross entries and exits here, and the
      protective stop-loss/take-profit exits in "Per-position exit
      rules" below - all of them switch from market to marketable limit.
+     **If placing by `quantity` is rejected for excess decimal
+     precision ("Your order quantity has too much precision"), switch
+     the sizing input to `dollar_amount` - never switch `type` to
+     `market` as part of that same fix.** `dollar_amount` is fully
+     supported with `type=limit` (`preview_crypto_order`'s own schema:
+     quantity is derived from `dollar_amount` at `limit_price` when the
+     order is placed), so a precision rejection is never a reason to
+     drop the limit-order policy. This exact confusion caused a real
+     deviation on 2026-09-27: a precision-rejection workaround swapped
+     both the sizing method *and* the order type at once, so 5 of that
+     day's 6 crypto orders (CRV, DOGE, AVAX, SOL, LINK) went out as
+     `type=market` with no collar protection, undetected until that
+     day's after-action review cross-checked against real Robinhood
+     order records. All fills happened to land favorably that day, but
+     that was luck, not the policy working - see `CHANGELOG.md`.
    - `excellent_watch`: not a strategy-confirmed signal, never
      auto-executed regardless of size. Alert the account
      owner with the asset, its crossover_pct/% change, and why it didn't
