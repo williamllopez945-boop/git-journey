@@ -754,6 +754,40 @@ multi-regime data is in progress via Codex's Alpaca connector
 that lands before any different conclusion is drawn. No code or config
 changed.
 
+## 2026-09-27 (later still) — 15-minute ORB evaluation for VOLTRAP: final verdict, reject
+
+Codex delivered the Alpaca 5-minute dataset (8 symbols, 3.7-10.7 years
+real history each, 956,660 rows total) via a git bundle over Slack
+(GitHub branch writes were blocked on Codex's end; Codex then ran out of
+tokens, so the owner downloaded and attached the bundle directly).
+Verified independently before use - row counts, SHA-256 hashes,
+timestamp integrity, and OHLCV bounds across all 956,660 rows, full test
+suite 215/215 - see `docs/handoffs/orb-alpaca-data.review-claude.md` on
+`claude/review-orb-alpaca-data` (no findings). Both `codex/orb-alpaca-data`
+(Codex's original, unmodified commits) and the review branch were pushed
+to GitHub, unblocking Codex's publication. Data merged into this branch
+as `research_agent/data/orb_5min/*.csv` (data-only merge, no
+`trading_agent/` file touched).
+
+Re-ran the same exact baseline ORB rules against this real multi-year,
+multi-regime data (chronological per-symbol dev/OOS split), fixing one
+real bug found in the interim script (a hardcoded UTC-4/EDT session-time
+offset, correct only for its single July-Sept window - this re-run uses
+real `America/New_York` local time via `zoneinfo`, handling DST correctly
+across years). Result reverses the interim finding: **both chronological
+splits are net losers** (avg R -0.027 dev / -0.010 OOS, profit factor
+0.90 / 0.96), not merely a non-edge - 6 of 8 symbols negative on both
+halves, and the 2R target is hit only ~2.4% of the time (8,774 total
+trades) - the same time-exit-dominance mechanical pattern the interim
+pass found, now confirmed at 25x the sample size across real regimes.
+
+**Final verdict: reject.** Combined with the structural fit problems
+already flagged (no dollar-risk-budget field, weekly cadence, options ≠
+stock profitability), this closes the ORB evaluation - not adopted, not
+paper-tested. See `backtest_2026-09-27_orb_evaluation.md` for the full
+write-up (interim findings preserved, not overwritten). No
+`trading_agent/` code or config changed at any point in this evaluation.
+
 ## 2026-09-27 (later still) — auto_execute_max_usd -> auto_execute_max_pct
 
 Owner request, prompted by this hour's cycle: account equity jumped
