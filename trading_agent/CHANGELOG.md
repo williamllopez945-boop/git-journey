@@ -650,3 +650,33 @@ fine in H2 alone - the exact overfitting shape this project's
 split-window check exists to catch). **No change made** -
 `max_trades_per_day` stays at 3. See
 `backtest_2026-09-26_trade_cap_recheck.md`.
+
+## 2026-09-27 — Slack connected: cycle notifications + Codex/Claude handoff channel
+
+Owner connected the Slack workspace and asked for two things: route
+trading-cycle notifications there, and use it for Codex/Claude Code
+collaboration handoffs. Both point at the same existing private
+channel, `#votrap-agent-collaboration` (`C0C4P136JFQ`), which Codex is
+also connected to.
+
+**Notifications:** the hourly trading Routine and the daily
+after-action review Routine both now also call `slack_send_message` to
+that channel every firing (see `PLAYBOOK.md`'s new "Slack
+notifications" section) — unlike `PushNotification`, which stays quiet
+on a plain hold, the Slack post always fires, since the point is a
+standing shared audit trail for the owner and Codex, not a
+noise-reduced phone alert. The weekly watchlist review and the
+research agent's daily scan were left on push-only for now (narrower
+scope, lower cadence) — can be extended the same way on request.
+
+**Codex/Claude handoff:** independently verified Codex's
+`codex/collaboration-setup` branch (`COLLABORATION.md`, `AGENTS.md`,
+`CLAUDE.md`, `docs/handoffs/`) this same day — 215/215 tests pass in a
+clean worktree, diff scoped to test files + docs only (no production
+code touched), and one genuinely valuable fix confirmed by hand
+(`test_run_cycle.py`'s missing-args test previously ran against this
+checkout's *real* `state.json` before hitting its intended CLI
+validation error — verified via hash comparison that no corruption
+occurred, but it was a real latent risk, not cosmetic). No blocking
+findings; awaiting the owner's go-ahead to merge into `main`. Posted a
+status message to the Slack channel so Codex has the same picture.

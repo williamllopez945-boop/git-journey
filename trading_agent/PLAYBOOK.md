@@ -585,6 +585,21 @@ on both the polling and scanner paths, so the end-of-day review
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.
 
+## Slack notifications (added 2026-09-27, owner request)
+
+In addition to `PushNotification` (mobile alert, noise-reduced — stays
+quiet on a plain hold), the hourly trading cycle and the daily
+after-action review both also post to Slack channel
+`#votrap-agent-collaboration` (`channel_id C0C4P136JFQ`) via
+`slack_send_message`, **every firing, regardless of whether anything
+notable happened**. This channel is shared with Codex (the other
+coding agent working on this project's backend, per `COLLABORATION.md`)
+and the owner, so it's a standing visibility/audit log, not a
+noise-reduced alert — a quiet cycle still gets a one-line "nothing
+notable" post rather than being skipped. The daily review posts the
+fuller executive-summary/observations content (Slack has no 200-char
+limit, unlike `PushNotification`).
+
 ## Weekly watchlist review
 
 Runs once a week (owner request, 2026-09-25: "remove stocks and crypto
