@@ -1,3 +1,4 @@
+import os
 import json
 import sys
 import tempfile
@@ -16,7 +17,9 @@ LIMITS = {
 
 
 def _new_manager():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()  # start with no existing state file
     return RiskManager(LIMITS, state_path=tmp)
 
@@ -62,7 +65,9 @@ def test_can_auto_execute_over_threshold():
 
 
 def test_can_auto_execute_defaults_to_false_without_configured_limit():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     rm = RiskManager({"max_position_pct": 0.05, "daily_loss_limit_pct": 0.03, "max_trades_per_day": 3}, state_path=tmp)
     assert rm.can_auto_execute(0.01) is False
@@ -85,7 +90,9 @@ def test_can_open_new_position_uncapped_when_not_configured():
 
 
 def test_can_open_new_position_respects_configured_cap():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     limits = dict(LIMITS, max_concurrent_positions=5)
     rm = RiskManager(limits, state_path=tmp)
@@ -95,7 +102,9 @@ def test_can_open_new_position_respects_configured_cap():
 
 
 def test_can_open_new_position_none_value_means_uncapped():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     limits = dict(LIMITS, max_concurrent_positions=None)
     rm = RiskManager(limits, state_path=tmp)
@@ -109,7 +118,9 @@ def test_position_size_ignores_aggregate_cap_when_not_configured():
 
 
 def test_position_size_clamped_by_aggregate_cap():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
     rm = RiskManager(limits, state_path=tmp)
@@ -120,7 +131,9 @@ def test_position_size_clamped_by_aggregate_cap():
 
 
 def test_position_size_zero_when_aggregate_cap_already_reached():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
     rm = RiskManager(limits, state_path=tmp)
@@ -130,7 +143,9 @@ def test_position_size_zero_when_aggregate_cap_already_reached():
 
 def test_day_rollover_resets_daily_counters_but_keeps_trade_log():
     # Simulate yesterday's state on disk, including a real trade.
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     stale_state = {
         "date": "2000-01-01",  # guaranteed not today
         "starting_equity": 10_000.0,
@@ -155,7 +170,9 @@ def test_day_rollover_resets_daily_counters_but_keeps_trade_log():
 
 
 def test_position_size_aggregate_override_replaces_configured_value():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     limits = dict(LIMITS, max_position_pct=0.50, max_aggregate_position_pct=0.50)
     rm = RiskManager(limits, state_path=tmp)
