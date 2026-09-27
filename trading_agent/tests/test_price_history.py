@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -8,7 +9,9 @@ from trading_agent.price_history import PriceHistoryStore
 
 
 def _new_store(max_bars=500):
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     return PriceHistoryStore(path=tmp, max_bars=max_bars)
 
@@ -41,7 +44,9 @@ def test_record_trims_to_max_bars():
 
 
 def test_persists_across_instances():
-    tmp = Path(tempfile.mkstemp(suffix=".json")[1])
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
     tmp.unlink()
     store1 = PriceHistoryStore(path=tmp)
     store1.record("SOL", 50.0, "t1")
