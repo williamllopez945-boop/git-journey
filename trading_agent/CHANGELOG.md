@@ -726,3 +726,30 @@ group (GBTC+VSOL+BSOL+GSOL, ~7 months real daily) was only marginally
 positive (+0.08% to +0.37%). The original finding was a narrow,
 single-period artifact. **Not adopted** - see
 `backtest_2026-09-27_relative_strength.md`.
+
+## 2026-09-27 (later still) — 15-minute ORB evaluation for VOLTRAP: interim, not adopted
+
+Owner asked to run the detailed 15-minute Opening Range Breakout (ORB)
+evaluation brief posted to Slack (attributed to ChatGPT/Codex). Read
+`config.py`/`PLAYBOOK.md` fresh: VOLTRAP has no dollar-risk-per-trade
+sizing field (its entire model is percent-of-portfolio options
+collateral), runs weekly rather than intraday, and trades premium, not
+shares - three structural fit problems independent of any backtest
+result. Confirmed Robinhood's pre-listing history for these symbols is
+synthetic placeholder data (`interpolated: true`, flat price, zero
+volume), and `interval=5minute` requests cap at ~5000 bars (~3 months) -
+too thin for the brief's required trending/sideways/volatile regime
+split on its own.
+
+Implemented the exact baseline rules against the ~3 months of real
+5-minute data Robinhood does have (all 8 `VOLTRAP_WATCHLIST` names,
+July vs. Aug-Sep split): combined worst-case-first result is
+breakeven-to-marginally-positive (avg R 0.00 to +0.03, profit factor
+1.01-1.12) - not a demonstrated edge, and driven almost entirely by the
+11:00 ET time-exit rather than the designed stop/target (2R target hit
+only 5 times out of 352 total trades). **Interim verdict: reject / do
+not implement** - see `backtest_2026-09-27_orb_evaluation.md`. Deeper
+multi-regime data is in progress via Codex's Alpaca connector
+(`codex/orb-alpaca-data` handoff); this evaluation will be re-run once
+that lands before any different conclusion is drawn. No code or config
+changed.
