@@ -59,6 +59,7 @@
 ## Outstanding issues and risks
 
 - Data gathering is complete for the successful provider query window; no implementation work remains for this task.
+- Publication is blocked: terminal `git push -u origin codex/orb-alpaca-data` failed because no GitHub credentials are available, and the connected GitHub app's create-blob request returned HTTP 403 `Resource not accessible by integration`. No remote branch was created or updated. Local commits are ready for review; an incremental Git bundle preserves them for transfer to a repository containing the original base commit. Publishing the requested branch still requires an authorized GitHub write connection or an authenticated local environment.
 - Missing opening bars and entirely missing sessions are documented per symbol. Do not silently fill them or treat incomplete opening ranges as valid ORB setups.
 - Alpaca's documented default is unadjusted bars; the connector does not expose adjustment control. Corporate actions require separate reconciliation for cross-date returns.
 - Default symbol mapping includes predecessor histories: OKLO before 2024-05-10 and RGTI before 2022-03-02 must be separated from the current operating businesses. NVDL has a leverage-objective change and splits. See README's primary-source links.
