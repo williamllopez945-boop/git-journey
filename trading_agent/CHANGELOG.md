@@ -680,3 +680,17 @@ validation error — verified via hash comparison that no corruption
 occurred, but it was a real latent risk, not cosmetic). No blocking
 findings; awaiting the owner's go-ahead to merge into `main`. Posted a
 status message to the Slack channel so Codex has the same picture.
+
+## 2026-09-27 (later, same day) — Slack channel corrected: `#votrap-agent-collaboration` -> `#voltrap-agents-work`
+
+The private channel this was wired up on that morning
+(`#votrap-agent-collaboration`, `C0C4P136JFQ`) was archived by the
+owner later the same day and replaced with a new public channel,
+`#voltrap-agents-work` (`C0C49LR128P`), which already had both a
+Codex/ChatGPT Slack app and a Claude-for-Slack app added. Caught this
+independently (checked `slack_list_user_channels` rather than assuming
+the earlier setup still held) before it caused a cycle to silently fail
+to post. Updated both Routines' prompts (hourly trading, daily
+after-action review) and `PLAYBOOK.md`'s "Slack notifications" section
+to the new `channel_id`. No functional/strategy change — infrastructure
+correction only.

@@ -585,20 +585,24 @@ on both the polling and scanner paths, so the end-of-day review
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.
 
-## Slack notifications (added 2026-09-27, owner request)
+## Slack notifications (added 2026-09-27, owner request; channel corrected same day)
 
 In addition to `PushNotification` (mobile alert, noise-reduced — stays
 quiet on a plain hold), the hourly trading cycle and the daily
 after-action review both also post to Slack channel
-`#votrap-agent-collaboration` (`channel_id C0C4P136JFQ`) via
+`#voltrap-agents-work` (`channel_id C0C49LR128P`) via
 `slack_send_message`, **every firing, regardless of whether anything
-notable happened**. This channel is shared with Codex (the other
-coding agent working on this project's backend, per `COLLABORATION.md`)
-and the owner, so it's a standing visibility/audit log, not a
-noise-reduced alert — a quiet cycle still gets a one-line "nothing
-notable" post rather than being skipped. The daily review posts the
-fuller executive-summary/observations content (Slack has no 200-char
-limit, unlike `PushNotification`).
+notable happened**. (The original channel this was set up on,
+`#votrap-agent-collaboration`/`C0C4P136JFQ`, was archived the same day
+the owner set it up and replaced with this public channel — if
+`slack_send_message` ever fails against `C0C49LR128P`, re-check with
+`slack_list_user_channels` rather than assuming the old ID.) This
+channel is shared with the owner and the other connected agents
+(a Codex/ChatGPT Slack app, a Claude-for-Slack app), so it's a standing
+visibility/audit log, not a noise-reduced alert — a quiet cycle still
+gets a one-line "nothing notable" post rather than being skipped. The
+daily review posts the fuller executive-summary/observations content
+(Slack has no 200-char limit, unlike `PushNotification`).
 
 ## Weekly watchlist review
 
