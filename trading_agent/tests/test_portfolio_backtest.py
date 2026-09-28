@@ -216,23 +216,25 @@ _DEATH_CROSS_AT_A_LOSS = (
    # -3.33% from entry) - underwater but well above the -10% stop-loss floor.
 
 
-def test_death_cross_sells_at_a_loss_when_gate_disabled():
+def test_death_cross_sells_at_a_loss_when_gate_explicitly_disabled():
     series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
     trades, equity_curve, final_state = portfolio_backtest(
         series, short_window=2, long_window=4, starting_cash=1000.0,
         max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=None,
     )
     death_crosses = [t for t in trades if t["reason"] == "death_cross"]
     assert len(death_crosses) == 1
     assert death_crosses[0]["price"] == 8.7
 
 
-def test_death_cross_held_at_a_loss_when_gate_requires_breakeven():
+def test_death_cross_held_by_default_now_that_gate_is_adopted():
+    # No min_sell_profit_pct passed - the adopted 2026-09-28 default
+    # (0.0, breakeven) now applies automatically.
     series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
     trades, equity_curve, final_state = portfolio_backtest(
         series, short_window=2, long_window=4, starting_cash=1000.0,
         max_position_pct=1.0, max_concurrent_positions=None,
-        min_sell_profit_pct=0.0,
     )
     assert not any(t["reason"] == "death_cross" for t in trades)
     assert final_state["A"]["qty"] > 0  # position stayed open

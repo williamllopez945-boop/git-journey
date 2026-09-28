@@ -9,13 +9,23 @@ and still run first every bar, so a position held back by this gate is
 still fully protected from an unbounded further decline - it can still
 exit via stop-loss, just not via the death-cross alone while underwater.
 
-Proposal only as of 2026-09-28 - see backtest_2026-09-28_sell_cross_profit_gate.md
-for the real backtest evidence and recommendation. Not wired into
-PLAYBOOK.md's live cycle procedure; exists here (and in backtest.py/
-portfolio_backtest.py, both default-disabled via None) purely to let that
-backtest run against the same production-shaped logic other parameter
-changes in this project are tested with, not a reimplementation.
+Backtested 2026-09-28 against real 90-day hourly data (STOCK_WATCHLIST +
+IBIT/ETHA proxies), worst-case first, both in isolation and combined at
+the portfolio level (an isolated single-asset test already reversed once
+this same week on RVMD vs. MAIR, so the combined result is the binding
+one - see backtest_2026-09-28_sell_cross_profit_gate.md for the full
+evidence). 0% (breakeven-or-better) was the one value that helped or was
+flat everywhere it mattered; -2% was rejected as a non-monotonic
+underperformer. **Adopted 2026-09-28** (owner approval) - live via
+PLAYBOOK.md's "fresh_sell_cross" procedure, both crypto and stocks.
 """
+
+MIN_SELL_PROFIT_PCT = 0.0  # breakeven or better required for a plain
+                            # death-cross/fresh_sell_cross exit to
+                            # execute; None disables the gate entirely
+                            # (pre-2026-09-28 behavior: every death-cross
+                            # sells immediately regardless of P&L). See
+                            # backtest_2026-09-28_sell_cross_profit_gate.md.
 
 
 def blocks_sell_cross(current_price, avg_cost_basis, min_sell_profit_pct):

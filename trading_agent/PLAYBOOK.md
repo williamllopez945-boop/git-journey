@@ -249,9 +249,28 @@ done by hand, exactly as described below.
      `excellent_watch`'s "worth discussing" framing — it needs no
      notification, since there's no decision for the owner to make about
      a position that doesn't exist. If `quantity_transferable > 0`, this
-     is a real exit: no cooldown check (cooldown only blocks new
-     entries, never exits). The order quantity is the **full held
-     `quantity_transferable`** — not `RiskManager.position_size(...)`,
+     is a real exit candidate: no cooldown check (cooldown only blocks
+     new entries, never exits). **Profitability gate (added 2026-09-28,
+     owner-approved after a real DOGE/SOL exit both closed at a loss
+     this check would have caught — see
+     `backtest_2026-09-28_sell_cross_profit_gate.md`):** before doing
+     anything else, get the position's average cost basis (same
+     `cost_basis_fallback.average_cost_basis_from_trade_log` fallback
+     used in "Per-position exit rules" whenever `get_crypto_positions`
+     reports a zero cost basis) and the current mark price
+     (`get_crypto_quotes`), then call
+     `profit_gate.blocks_sell_cross(current_price, avg_cost_basis, profit_gate.MIN_SELL_PROFIT_PCT)`.
+     If `True` (the position is below breakeven — `MIN_SELL_PROFIT_PCT`
+     is `0.0`), **hold**: log
+     `CycleLogStore().record(asset, "fresh_sell_cross", crossover_pct,
+     "blocked_unprofitable", price=current_price, avg_cost_basis=avg_cost_basis)`
+     and move on to the next asset — do not preview or place any order.
+     This never overrides stop-loss: "Per-position exit rules" below
+     still runs every cycle regardless of this gate, so a position held
+     back here remains fully protected from a further decline. Only when
+     the gate does *not* block (position at or above breakeven) does
+     this become a real exit to act on. The order quantity is the
+     **full held `quantity_transferable`** — not `RiskManager.position_size(...)`,
      which sizes a *buy* against `max_position_pct` and has no meaning
      for a sell; compute notional as quantity × current price instead.
      **Auto-execution policy (owner-authorized 2026-09-22, see
@@ -372,6 +391,12 @@ scope: extended-hours trading is not implemented.
    - Cooldown and concurrent-cap checks (`PositionStateStore`,
      `RiskManager.can_open_new_position`) work identically - both are
      keyed by asset symbol / a shared counter, neither assumes crypto.
+   - Profitability gate on `fresh_sell_cross` (see the crypto cycle's
+     step 3 above): identical `profit_gate.blocks_sell_cross` check, but
+     the average cost basis comes directly from `get_equity_positions`'s
+     `average_cost` field — no `cost_basis_fallback` needed on the
+     equity side, same as "Per-position exit rules" below already notes
+     (none has been observed there either).
    - Auto-execution policy is identical: `RiskManager.can_auto_execute`
      doesn't distinguish asset class, so a confirmed stock signal at/under
      `auto_execute_max_pct` of current total portfolio value auto-executes
@@ -547,6 +572,14 @@ positions.
   still gates them same as everything else.
 - This agent is long-only: it buys and exits, it never shorts or uses
   margin/leverage.
+- The profitability gate (`profit_gate.blocks_sell_cross`, added
+  2026-09-28) only ever holds a `fresh_sell_cross` exit — it never holds
+  back a stop-loss or take-profit, and it never applies to anything
+  other than a plain `fresh_sell_cross`/death-cross signal. Always run
+  "Per-position exit rules" (stop-loss/take-profit) for every open
+  position every cycle regardless of whether this gate blocked a
+  death-cross the same cycle — the two checks are independent, and a
+  position held back here remains fully exposed to a real stop-loss.
 - Never skip the cooldown check on a new-entry signal (`fresh_buy_cross`,
   either detection path). `PositionStateStore().in_cooldown(asset)` must
   be checked before computing order size or presenting a recommendation —
@@ -601,6 +634,7 @@ on both the polling and scanner paths, so the end-of-day review
 | Confirmed cross downgraded to `"hold"` inside `classify()` by the volume gate | `"blocked_volume"` | log this even though `classify()` itself returned `"hold"`, not `fresh_buy_cross` — the whole point is capturing what got filtered out |
 | `excellent_watch` | `"excellent_watch"` | |
 | `fresh_sell_cross` on an asset with no open position (nothing to sell — see the hard rule above) | `"blocked_no_position"` | no owner notification needed, nothing for them to decide |
+| `fresh_sell_cross` on a real held position, but the profitability gate held it (position below breakeven — added 2026-09-28) | `"blocked_unprofitable"` | include `price`, `avg_cost_basis` — the exit is only deferred, not skipped for good: stop-loss still protects the position every cycle, and a later cycle may see it clear the gate or hit stop-loss/take-profit instead |
 | Stop-loss or take-profit fired | `"protective_exit"` | include `reason` (`"stop_loss"`/`"take_profit"`), `price`, `avg_cost_basis`, resulting P/L |
 
 A plain `"hold"` with nothing else notable is not logged — this is an

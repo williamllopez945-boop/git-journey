@@ -922,3 +922,28 @@ tested (-4.09% vs +0.17%), confirmed non-monotonic in both passes.
 `fresh_sell_cross` procedure is unchanged. Full writeup:
 `backtest_2026-09-28_sell_cross_profit_gate.md`. `README.md` updated
 (new module row). Full suite green (216/216, 11 new tests).
+
+## 2026-09-28 (later) — Profitability gate on death-cross exits: adopted
+
+Owner approved the proposal above at the recommended 0% (breakeven)
+threshold. `profit_gate.py` now defines `MIN_SELL_PROFIT_PCT = 0.0` as
+the tuned live value; `backtest.py`/`portfolio_backtest.py`'s
+`min_sell_profit_pct` parameter defaults to it (pass `None` explicitly
+to get the old, ungated behavior for comparison). No `RISK_LIMITS`/
+`config.py` change - this tunable lives in `profit_gate.py`, matching
+`exit_criteria.py`'s own pattern for `STOP_LOSS_PCT`/`TAKE_PROFIT_PCT`.
+
+`PLAYBOOK.md` updated: the crypto and stock `fresh_sell_cross`
+procedures now call `profit_gate.blocks_sell_cross` before treating a
+real held position's death-cross as an exit to act on - blocked, it
+logs `"blocked_unprofitable"` (new row in the Cycle logging table) and
+moves on; not blocked, the exit proceeds exactly as before. A new hard
+rule makes explicit that this gate never holds back stop-loss/
+take-profit, which still run independently every cycle regardless.
+`README.md`'s exit-triggers list and module table updated to match.
+
+Two pre-existing tests (`test_backtest.py`/`test_portfolio_backtest.py`)
+that relied on the previous implicit "no gate" default now pass
+`min_sell_profit_pct=None` explicitly to keep testing that path; one new
+test per file confirms the new default (no argument passed) now gates.
+Full suite green (217/217).

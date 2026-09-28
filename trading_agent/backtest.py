@@ -20,7 +20,7 @@ from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROF
 from .entry_filter import confirmed_signal
 from .rsi_filter import passes_rsi_filter, DEFAULT_RSI_PERIOD, DEFAULT_RSI_OVERBOUGHT_PCT
 from .volume_filter import passes_volume_filter, DEFAULT_VOLUME_PERIOD, DEFAULT_VOLUME_MIN_RATIO
-from .profit_gate import blocks_sell_cross
+from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT
 
 
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
@@ -29,7 +29,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
              profit_lock_trigger_pct=None, profit_lock_stop_pct=None,
              rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
              volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO,
-             min_sell_profit_pct=None):
+             min_sell_profit_pct=MIN_SELL_PROFIT_PCT):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -74,8 +74,9 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     death-cross sell signal instead of executing it while the position's
     unrealized P&L is below this threshold (a fraction: 0.0 = requires
     breakeven or better) - stop-loss/take-profit are unaffected and still
-    protect the held position every bar. None (default) disables the gate
-    entirely, unchanged pre-2026-09-28 behavior (every death-cross sells
+    protect the held position every bar. Defaults to profit_gate.py's
+    tuned live value (0.0, adopted 2026-09-28); pass None to disable the
+    gate entirely (pre-2026-09-28 behavior: every death-cross sells
     immediately regardless of P&L). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 

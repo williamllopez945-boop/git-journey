@@ -35,16 +35,26 @@ def test_stop_loss_exits_full_position():
     assert equity_curve[-1] == stop_loss_trade["cash_after"] or trades[-1]["action"] == "buy"
 
 
-def test_death_cross_sells_at_a_loss_when_gate_disabled():
+def test_death_cross_sells_at_a_loss_when_gate_explicitly_disabled():
     # Buy at 9, decline to 8.6 (-4.44%, above the -10% stop-loss floor)
-    # triggers a death-cross sell while still underwater - the gate is
-    # None (default) here, so it sells immediately, same as production
-    # today.
+    # triggers a death-cross sell while still underwater - explicitly
+    # passing None disables the gate, so it sells immediately, the
+    # pre-2026-09-28 behavior (still available for comparison/backtests
+    # that want it, just no longer the default).
     closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6, 8.6]
-    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0)
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=None)
     death_crosses = [t for t in trades if t["reason"] == "death_cross"]
     assert len(death_crosses) == 1
     assert death_crosses[0]["price"] == 8.6
+
+
+def test_death_cross_held_by_default_now_that_gate_is_adopted():
+    # Same series, no min_sell_profit_pct passed at all - the adopted
+    # 2026-09-28 default (0.0, breakeven) now applies automatically.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6, 8.6]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0)
+    assert not any(t["reason"] == "death_cross" for t in trades)
 
 
 def test_death_cross_held_at_a_loss_when_gate_requires_breakeven():

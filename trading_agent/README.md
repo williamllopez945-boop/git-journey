@@ -222,7 +222,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
 | `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
-| `profit_gate.py` | Optional profitability gate for the death-cross/`fresh_sell_cross` exit (`blocks_sell_cross`) — built and backtested (2026-09-28) but **not** wired into live entries: `min_sell_profit_pct` defaults to `None` (disabled) everywhere it's plumbed in. See `backtest_2026-09-28_sell_cross_profit_gate.md` for the real evidence and recommendation — a proposal awaiting owner approval, not yet part of `PLAYBOOK.md`'s live procedure |
+| `profit_gate.py` | Profitability gate for the death-cross/`fresh_sell_cross` exit (`blocks_sell_cross`) — holds the exit instead of executing it while the position is below `MIN_SELL_PROFIT_PCT` (0%, breakeven or better). Backtested 2026-09-28 (see `backtest_2026-09-28_sell_cross_profit_gate.md`) and **adopted the same day** (owner approval) — live in `PLAYBOOK.md`'s `fresh_sell_cross` procedure for both crypto and stocks, logged as `"blocked_unprofitable"` when it holds. Never overrides stop-loss/take-profit, which run independently every cycle |
 | `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing (flat or volatility-scaled, plus a hard aggregate cap across all open positions), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
@@ -307,7 +307,12 @@ which is inherent to the approach, not something tuning fixes.
 
 **Exit — three independent triggers, whichever fires first (or both):**
 1. **SMA death cross** — short SMA crosses below the long SMA. Exits the
-   full position (`strategy.py`).
+   full position (`strategy.py`), **unless the profitability gate holds
+   it** (`profit_gate.py`, adopted 2026-09-28): a death cross while the
+   position is below breakeven is deferred, not executed, logged
+   `"blocked_unprofitable"` — see `backtest_2026-09-28_sell_cross_profit_gate.md`.
+   Deferred only, never skipped for good: triggers 2 and 3 below still
+   run every cycle regardless.
 2. **Stop-loss (10%)** — current price is 10% or more below the position's
    average cost basis. Exits the full position, regardless of the SMA
    state (`exit_criteria.py`).

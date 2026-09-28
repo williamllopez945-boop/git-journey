@@ -14,7 +14,7 @@ asset's price at index i.
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import _sma, confirmed_signal, crossover_strength_pct
-from .profit_gate import blocks_sell_cross
+from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT
 
 
 def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
@@ -24,7 +24,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
                         max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
                         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
-                        min_sell_profit_pct=None):
+                        min_sell_profit_pct=MIN_SELL_PROFIT_PCT):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -87,8 +87,9 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     this threshold; stop-loss/take-profit are unaffected. A blocked
     death-cross does not increment trades_today (nothing happened) and
     does not free up open_count for a new entry this same bar - the
-    position is still open. None (default) disables the gate entirely,
-    unchanged pre-2026-09-28 behavior. See profit_gate.py and
+    position is still open. Defaults to profit_gate.py's tuned live
+    value (0.0, adopted 2026-09-28); pass None to disable the gate
+    entirely (pre-2026-09-28 behavior). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 
     Returns (trades, equity_curve, per_asset_final_state):
