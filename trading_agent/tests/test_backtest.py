@@ -35,6 +35,39 @@ def test_stop_loss_exits_full_position():
     assert equity_curve[-1] == stop_loss_trade["cash_after"] or trades[-1]["action"] == "buy"
 
 
+def test_death_cross_sells_at_a_loss_when_gate_disabled():
+    # Buy at 9, decline to 8.6 (-4.44%, above the -10% stop-loss floor)
+    # triggers a death-cross sell while still underwater - the gate is
+    # None (default) here, so it sells immediately, same as production
+    # today.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6, 8.6]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0)
+    death_crosses = [t for t in trades if t["reason"] == "death_cross"]
+    assert len(death_crosses) == 1
+    assert death_crosses[0]["price"] == 8.6
+
+
+def test_death_cross_held_at_a_loss_when_gate_requires_breakeven():
+    # Identical series - with min_sell_profit_pct=0.0, the same
+    # death-cross signal is held instead of executed because the
+    # position is at -4.44%, below the breakeven threshold.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6, 8.6]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=0.0)
+    assert not any(t["reason"] == "death_cross" for t in trades)
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert len(buys) == 1  # position never closed, so no re-entry either
+
+
+def test_death_cross_still_executes_when_gate_cleared():
+    # Same setup, but decline stays small enough that a milder gate
+    # (allowing up to a 5% loss) does not block the exit.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6, 8.6]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=-0.05)
+    assert any(t["reason"] == "death_cross" for t in trades)
+
+
 def test_summarize_computes_return_and_drawdown():
     closes = [100.0] * 40
     trades, equity_curve = backtest(closes, short_window=10, long_window=30, starting_cash=100.0)

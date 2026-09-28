@@ -208,3 +208,44 @@ def test_awesome_trade_params_none_behaves_like_before_the_parameter_existed():
         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
     )
     assert eq_a == eq_b
+
+
+_DEATH_CROSS_AT_A_LOSS = (
+    [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.8, 8.7, 8.6, 8.6, 8.6]
+)  # buy confirms at 9 (index 37), death-cross confirms at 8.7 (index 40,
+   # -3.33% from entry) - underwater but well above the -10% stop-loss floor.
+
+
+def test_death_cross_sells_at_a_loss_when_gate_disabled():
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+    )
+    death_crosses = [t for t in trades if t["reason"] == "death_cross"]
+    assert len(death_crosses) == 1
+    assert death_crosses[0]["price"] == 8.7
+
+
+def test_death_cross_held_at_a_loss_when_gate_requires_breakeven():
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0,
+    )
+    assert not any(t["reason"] == "death_cross" for t in trades)
+    assert final_state["A"]["qty"] > 0  # position stayed open
+
+
+def test_gated_death_cross_does_not_consume_a_daily_trade_slot():
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    timestamps = ["2026-01-01"] * len(_DEATH_CROSS_AT_A_LOSS)
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0, timestamps=timestamps, max_trades_per_day=1,
+    )
+    # the one daily slot went to the buy; the blocked death-cross took none
+    assert len([t for t in trades if t["action"] == "buy"]) == 1
+    assert not any(t["reason"] == "death_cross" for t in trades)

@@ -882,3 +882,43 @@ didn't matter). Fixed by making `PLAYBOOK.md`'s order-type policy
 paragraph explicit that a precision rejection is only ever a reason to
 switch the sizing input, never the order type. No code changed (there
 was none to change); `PLAYBOOK.md` updated only.
+
+## 2026-09-28 — Profitability gate on death-cross exits: built, backtested, not adopted (owner proposal)
+
+Owner request, after a real DOGE and SOL exit both closed at a loss the
+strategy never checked for (-$95.71 and -$78.23 realized, confirmed
+against Robinhood's own P&L records - both losses were larger than what
+this project's own records showed at the time, because the DOGE/SOL
+positions' reconciled cost bases from the 2026-09-26 transfer-in were
+themselves wrong, a separate finding surfaced the same day).
+
+Built `profit_gate.py` (new, `blocks_sell_cross`) and wired it into
+`backtest.py`/`portfolio_backtest.py` as a new `min_sell_profit_pct`
+parameter, default `None` (disabled, unchanged current behavior) -
+holds a death-cross/`fresh_sell_cross` exit instead of executing it
+while the position's unrealized P&L is below the threshold.
+Stop-loss/take-profit (`exit_criteria.py`) are completely unaffected -
+they still run first, every bar, regardless of this gate.
+
+Backtested against the same real 90-day hourly data (`STOCK_WATCHLIST`
++ IBIT/ETHA proxies) and production risk settings used throughout this
+project, worst-case first, multiple gate values (0%/-2%/+2%) to rule
+out a single lucky point, both in isolation and combined
+(`portfolio_backtest.py`, since an isolated single-asset test already
+reversed once this week on RVMD vs. MAIR). **Isolated result: mixed**
+(7/12 series helped, 3 hurt, 2 flat on worst-case; MAIR's worst case
+got meaningfully worse, -9.45% -> -16.44%, a real mechanistic cost on a
+persistently declining asset that keeps re-entering and re-stopping-out
+instead of exiting once, earlier, smaller). **Combined portfolio
+result: clearly favorable** at the 0% threshold - the concurrent-
+position/aggregate-cap dynamics dilute MAIR's isolated damage the same
+way they reversed RVMD/MAIR two days ago: worst-case give-up is 0.11pp
+on stocks, and every crypto-proxy window improves. `-2%` is rejected -
+it underperforms `0%` at the portfolio level in the worst window
+tested (-4.09% vs +0.17%), confirmed non-monotonic in both passes.
+
+**Not adopted - proposal only, awaiting owner approval.**
+`min_sell_profit_pct` stays `None` everywhere; `PLAYBOOK.md`'s live
+`fresh_sell_cross` procedure is unchanged. Full writeup:
+`backtest_2026-09-28_sell_cross_profit_gate.md`. `README.md` updated
+(new module row). Full suite green (216/216, 11 new tests).

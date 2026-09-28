@@ -14,6 +14,7 @@ asset's price at index i.
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import _sma, confirmed_signal, crossover_strength_pct
+from .profit_gate import blocks_sell_cross
 
 
 def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
@@ -22,7 +23,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
                         take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
                         max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
-                        awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None):
+                        awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
+                        min_sell_profit_pct=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -78,6 +80,16 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     min_strength_pct/cooldown_bars/stop_loss_pct/take_profit_pct/
     take_profit_sell_fraction: same meaning as backtest.py's single-asset
     version, applied per-asset.
+
+    min_sell_profit_pct: same meaning as backtest.py's single-asset
+    version (profit_gate.blocks_sell_cross) - holds a death-cross sell
+    instead of executing it while that asset's unrealized P&L is below
+    this threshold; stop-loss/take-profit are unaffected. A blocked
+    death-cross does not increment trades_today (nothing happened) and
+    does not free up open_count for a new entry this same bar - the
+    position is still open. None (default) disables the gate entirely,
+    unchanged pre-2026-09-28 behavior. See profit_gate.py and
+    backtest_2026-09-28_sell_cross_profit_gate.md.
 
     Returns (trades, equity_curve, per_asset_final_state):
       trades - list of dicts: {index, asset, action, reason, qty, price, cash_after}
@@ -157,6 +169,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
             )
             if st["qty"] > 0 and signal == "sell":
                 if day_cap_blocked:
+                    continue
+                if blocks_sell_cross(price, st["avg_cost"], min_sell_profit_pct):
                     continue
                 proceeds = st["qty"] * price
                 cash += proceeds
