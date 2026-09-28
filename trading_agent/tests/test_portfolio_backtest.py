@@ -289,6 +289,25 @@ def test_gate_price_floor_forces_exit_before_the_real_stop_loss():
     assert not any(t["reason"] == "stop_loss" for t in trades)
 
 
+def test_protective_exit_does_not_consume_a_daily_trade_slot():
+    # A buys (uses the day's 1st of 2 slots), then stop-losses out shortly
+    # after - with the 2026-09-28 owner-requested exemption, that exit
+    # doesn't consume the 2nd slot, so B's later fresh_buy_cross the same
+    # day still goes through. Before that exemption, A's buy+stop_loss
+    # alone would have hit the cap=2 ceiling and blocked B's buy.
+    A = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.0] * 10
+    B = [5.0] * 30 + [5, 5, 5, 5, 5, 5, 5, 5] + [5.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    series = {"A": A, "B": B}
+    timestamps = ["2026-01-01T00:00:00Z"] * len(A)
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+        timestamps=timestamps, max_trades_per_day=2,
+    )
+    assert any(t["asset"] == "A" and t["reason"] == "stop_loss" for t in trades)
+    assert any(t["asset"] == "B" and t["action"] == "buy" for t in trades)
+
+
 def test_gate_floor_does_not_fire_on_a_position_never_blocked():
     series = {"A": list(_DEATH_CROSS_LONG_HOLD)}
     trades, equity_curve, final_state = portfolio_backtest(

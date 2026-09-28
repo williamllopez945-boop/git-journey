@@ -44,6 +44,28 @@ def test_can_trade_respects_daily_trade_cap():
     assert not rm.can_trade()
 
 
+def test_protective_trade_does_not_consume_a_daily_slot():
+    # 2026-09-28 owner request: stop-loss/take-profit exits are
+    # "non-negotiable trades that will execute and does not count
+    # towards our daily trades."
+    rm = _new_manager()
+    for _ in range(LIMITS["max_trades_per_day"]):
+        rm.record_trade("BTC", "sell", 1, 100, protective=True)
+    # every slot is still open - none of those protective exits counted
+    assert rm.can_trade()
+    assert rm.state["trades_today"] == 0
+    # trade_log still records them, for cost-basis/daily-review purposes
+    assert len(rm.state["trade_log"]) == LIMITS["max_trades_per_day"]
+
+
+def test_protective_trade_still_logs_alongside_ordinary_trades():
+    rm = _new_manager()
+    rm.record_trade("BTC", "buy", 1, 100)  # ordinary - counts
+    rm.record_trade("BTC", "sell", 1, 90, protective=True)  # protective - doesn't
+    assert rm.state["trades_today"] == 1
+    assert len(rm.state["trade_log"]) == 2
+
+
 def test_circuit_breaker_halts_past_daily_loss_limit():
     rm = _new_manager()
     rm.start_of_day(equity=10_000)

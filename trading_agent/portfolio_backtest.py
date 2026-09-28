@@ -59,12 +59,12 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
 
     max_trades_per_day: mirrors RiskManager.can_trade()/record_trade() -
     a shared counter across every asset, reset each time the date in
-    timestamps changes, incremented by every trade (buy or sell alike),
-    same as the live can_trade()/record_trade() pairing. Protective exits
-    (stop-loss/take-profit) are never blocked by this cap, matching
-    PLAYBOOK.md's "Per-position exit rules" (they still increment the
-    counter, they're just never gated by it) - only a death-cross sell or
-    a fresh buy can be skipped for being at the cap. None (default)
+    timestamps changes. Protective exits (stop-loss/take-profit) are
+    never blocked by this cap AND never increment it (2026-09-28, owner
+    request - "non-negotiable trades... does not count towards our daily
+    trades"), matching RiskManager.record_trade(protective=True); a
+    death-cross sell, a gate-floor-forced sell, or a fresh buy all still
+    increment it and can be skipped for being at the cap. None (default)
     disables the cap entirely, unchanged from before this parameter
     existed.
 
@@ -151,8 +151,11 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["took_profit"] = False
                 st["last_exit_index"] = i
                 st["blocked_since_index"] = None
-                if max_trades_per_day is not None:
-                    trades_today += 1
+                # Protective exits never consume a daily trade slot (2026-09-28,
+                # owner request) - they already bypass max_trades_per_day's
+                # blocking entirely, matching risk_manager.RiskManager.record_trade's
+                # protective=True. Unlike death_cross/gate_floor below, no
+                # trades_today increment here.
             elif reason == "take_profit":
                 sell_qty = st["qty"] * fraction
                 proceeds = sell_qty * price
@@ -161,8 +164,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["took_profit"] = True
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "take_profit",
                                 "qty": sell_qty, "price": price, "cash_after": cash})
-                if max_trades_per_day is not None:
-                    trades_today += 1
+                # Same protective exemption as stop_loss above.
 
         # Gate floor: a position stuck since a death-cross was blocked by
         # the gate (see profit_gate.gate_floor_should_force_exit) gets

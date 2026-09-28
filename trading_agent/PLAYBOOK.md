@@ -491,15 +491,25 @@ positions.
      death-cross check above still applies independently.
 4. **These exits bypass `can_trade()`, the daily trade cap, the circuit
    breaker, and `auto_execute_max_pct`** — protective exits are never
-   blocked by the gates that limit new risk-taking. The only gate that
-   still applies is `DRY_RUN`: while `True`, log what would have been
-   sold and take no action; while `False`, place the sell immediately -
-   **`place_crypto_order`, `side=sell`, `type=limit`, `limit_price` at
-   or slightly below the current bid (same marketable-limit reasoning
-   as the scanner-cycle order type note above - not `type=market`,
-   changed 2026-09-24)** - call `RiskManager.record_trade(...)`, and
-   notify the account owner immediately with the reason (stop_loss/
-   take_profit), quantity, price, and resulting P/L.
+   blocked by the gates that limit new risk-taking, and (2026-09-28,
+   owner request — "non-negotiable trades... does not count towards our
+   daily trades") never **consume** the daily trade cap either, so a
+   stop-loss/take-profit firing earlier in the day can never crowd out a
+   later real signal. The only gate that still applies is `DRY_RUN`:
+   while `True`, log what would have been sold and take no action; while
+   `False`, place the sell immediately - **`place_crypto_order`,
+   `side=sell`, `type=limit`, `limit_price` at or slightly below the
+   current bid (same marketable-limit reasoning as the scanner-cycle
+   order type note above - not `type=market`, changed 2026-09-24)** -
+   call `RiskManager.record_trade(..., protective=True)` (still fully
+   logged to `trade_log` for cost-basis/daily-review purposes, just
+   exempt from `trades_today`), and notify the account owner immediately
+   with the reason (stop_loss/take_profit), quantity, price, and
+   resulting P/L. The `fresh_sell_cross` death-cross exit and a
+   gate-floor-forced exit (see the profitability gate section) are NOT
+   protective in this sense — both still call `RiskManager.record_trade(...)`
+   without `protective=True` and still count toward `trades_today`, same
+   as before; only the two safety-net exits above are exempt.
 5. When a position's `quantity_transferable` reaches 0 (fully closed, by
    any combination of SMA exits and these protective exits), call both
    `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
@@ -579,7 +589,13 @@ positions.
   immediately regardless of order size, `can_trade()`, or the circuit
   breaker, per the "Per-position exit rules" section — reducing existing
   risk is never held back the way taking on new risk is. `DRY_RUN` itself
-  still gates them same as everything else.
+  still gates them same as everything else. They're also exempt from
+  **consuming** `max_trades_per_day` (2026-09-28, owner request —
+  `RiskManager.record_trade(..., protective=True)`): a stop-loss/take-profit
+  firing earlier in the day never crowds out a later real signal's slot.
+  A `fresh_sell_cross` death-cross exit and a gate-floor-forced exit are
+  ordinary trades for this purpose — both still consume a slot, only the
+  two safety-net exits above are exempt.
 - This agent is long-only: it buys and exits, it never shorts or uses
   margin/leverage.
 - The profitability gate (`profit_gate.blocks_sell_cross`, added

@@ -1064,3 +1064,40 @@ overrides earlier today) and in `cycle_log.json`. `can_trade()` confirmed
 unchanged (still 4) - this resets today's counter only, not the limit,
 and the cap will apply normally to whatever trades happen for the rest
 of today.
+
+## 2026-09-28 (later still) — Protective exits no longer consume a daily trade slot
+
+Owner request: "The TP and SL are non negotiable trades that will
+execute and does not count towards our daily trades." Stop-loss/
+take-profit exits already bypassed `can_trade()`/the circuit breaker
+entirely (never blockable) - this closes the other half of that gap:
+they previously still incremented `trades_today` once executed, so a
+protective exit earlier in the day could still burn a slot a later,
+real signal needed that same day, even though the exit itself was never
+blockable.
+
+`RiskManager.record_trade(...)` gets a new `protective=False` parameter
+- `True` still appends to `trade_log` (needed for cost-basis tracking/
+daily review) but skips the `trades_today` increment.
+`portfolio_backtest.py`'s `max_trades_per_day` modeling updated to
+match (stop-loss/take-profit no longer increment its internal
+`trades_today`; `backtest.py` has no `max_trades_per_day` concept to
+begin with, so nothing to change there). `PLAYBOOK.md`'s "Per-position
+exit rules" and Hard Rules sections updated, and the live hourly
+Routine's own scheduled prompt updated to match (steps 2 and 6 now call
+`record_trade(..., protective=True)`).
+
+Scope: this covers stop-loss and take-profit only, per the owner's own
+wording ("TP and SL"). A `fresh_sell_cross` death-cross exit and a
+gate-floor-forced exit (`backtest_2026-09-28_gate_floor_and_tighter_stops.md`,
+not yet adopted) are unaffected - both are SMA-signal-driven exits, not
+the stop-loss/take-profit safety net this covers, and both still count
+toward `trades_today` as before.
+
+3 new tests (2 in `test_risk_manager.py`, 1 in `test_portfolio_backtest.py`
+- the latter proves the exemption end-to-end: asset A buys then
+stop-losses out, and a same-day `max_trades_per_day=2` cap still lets
+asset B's later fresh_buy_cross through, which it would not have before
+this change). Full suite green (242/242). No `RISK_LIMITS`/`config.py`
+change - `max_trades_per_day` itself is unchanged, this only changes
+what counts against it.

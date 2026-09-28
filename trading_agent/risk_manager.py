@@ -145,8 +145,25 @@ class RiskManager:
         max_pct = self.limits.get("auto_execute_max_pct", 0.0)
         return order_value_usd <= portfolio_value * max_pct
 
-    def record_trade(self, asset, side, quantity, price):
-        self.state["trades_today"] += 1
+    def record_trade(self, asset, side, quantity, price, protective=False):
+        """Log a real trade to trade_log (always) and count it toward
+        today's trades_today cap (unless protective=True).
+
+        protective=True is for stop-loss/take-profit exits only (2026-09-28,
+        owner request) - "non-negotiable trades that will execute and does
+        not count towards our daily trades." They already bypass can_trade()/
+        the circuit breaker entirely (see exit_criteria.py) since reducing
+        existing risk should never be held back the way taking on new risk
+        is; this closes the other half of that gap - a protective exit
+        could previously still burn a trade slot a later, real signal
+        needed that same day, even though the exit itself was never
+        blockable. death_cross and the profit-gate floor forcing a
+        stuck sell through both still count normally (they're SMA-signal
+        exits, not the stop-loss/take-profit safety net this covers) -
+        unchanged, matches PLAYBOOK.md's existing can_trade() gate on a
+        plain fresh_sell_cross."""
+        if not protective:
+            self.state["trades_today"] += 1
         self.state["trade_log"].append({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "asset": asset,
