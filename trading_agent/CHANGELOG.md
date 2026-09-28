@@ -1019,3 +1019,33 @@ would immediately re-trip against the unchanged, still-breached original
 equity (463.775001544724) as the day's new baseline, matching the
 mechanism used for the morning's transfer-caused override. `can_trade()`
 confirmed `True` afterward. No `RISK_LIMITS`/`config.py` change.
+
+## 2026-09-28 (later still) — Owner-directed manual sell: XLM/CRV/AVAX, overriding the profit gate
+
+Same session. XLM, CRV, and AVAX (all three positions from the sell-off
+review above) were still in a confirmed death-cross (SMA10 below SMA30)
+when re-checked via `scanner_signals.classify` against a fresh production
+scan - `classify()` itself won't re-emit the literal `"fresh_sell_cross"`
+string a second time for a signal that already fired and was handled
+(it's a one-time transition event, tracked via `scanner_state.json`'s
+persisted bullish/pending flags, not a recurring state), but the
+underlying condition it fired on (still bearish, still below the SMA) was
+unchanged. Owner explicitly directed selling all three given this, a
+one-time manual override of `profit_gate.blocks_sell_cross` for these
+specific positions - not a change to `MIN_SELL_PROFIT_PCT` or
+`PLAYBOOK.md` policy, same category of override as the CRV trade-cap
+override earlier this week.
+
+Sold via marketable limit orders (real fill `average_price`, not the
+entered price, learned from the trade_log bug above): XLM 438.33 @
+0.210026 (-$2.80, -2.95%), CRV 213.28 @ 0.326275975 (-$5.21, -6.97%),
+AVAX 10.3848 @ 10.44489346 (-$6.52, -5.67%) - total realized -$14.53.
+All three positions fully closed (`get_crypto_positions` confirmed
+empty). Logged to `state.json`'s `trade_log` (via `RiskManager.record_trade`),
+`position_state.json` (`reset` + `record_exit`, starting the whipsaw
+cooldown), and `cycle_log.json` (`"executed"`, with the override reason).
+
+This is trade 5 of the day against `max_trades_per_day` (4) -
+`can_trade()` now returns `False`, so automated trading is paused for
+the rest of today's UTC day, same as any other day the cap is hit.
+Owner notified via push and Slack. No `RISK_LIMITS`/`config.py` change.
