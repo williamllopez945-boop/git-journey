@@ -947,3 +947,34 @@ that relied on the previous implicit "no gate" default now pass
 `min_sell_profit_pct=None` explicitly to keep testing that path; one new
 test per file confirms the new default (no argument passed) now gates.
 Full suite green (217/217).
+
+## 2026-09-28 — Audit finding: circuit breaker halt was skipping protective exits
+
+Owner-requested audit of the live system. The 09:09 UTC cycle today
+correctly tripped the circuit breaker (a real 3.12% trading drawdown
+from the CRV/AVAX/XLM sell-off, distinct from the earlier same-day
+transfer-caused halt) and, per the hourly Routine's own scheduled
+prompt at the time, stopped "the entire cycle - no crypto or stock
+evaluation" with no carve-out. That contradicts this file's own Hard
+Rules section, which has always stated protective exits (stop-loss/
+take-profit) bypass `can_trade()`, the daily trade cap, AND the circuit
+breaker - "reducing existing risk is never held back the way taking on
+new risk is." The Routine's prompt was the more permissive/dangerous of
+the two documents and is what actually executed, so the stop-loss check
+was genuinely skipped that cycle.
+
+Checked immediately: no position had actually crossed `STOP_LOSS_PCT`
+(-10%) at the time (CRV closest, -8.20%) - the gap did not cause a real
+missed exit, but it was a live, uncontrolled risk, not a theoretical
+one. See `backtest_2026-09-28_sell_off_gate_review.md` for the same
+positions' broader context.
+
+**Fixed same day:** the hourly Routine's prompt (step -1) now explicitly
+carves out protective exits - a circuit-breaker halt still runs the
+per-position stop-loss/take-profit check on both asset classes every
+cycle, only new-signal evaluation and new orders are skipped. This
+`PLAYBOOK.md` section's own wording (step 3) was clarified with the same
+explicit carve-out and a note explaining why, to prevent the Routine's
+prompt and this doc from drifting apart again. No `RISK_LIMITS`/
+`config.py`/strategy-parameter change - this is a runbook/automation
+correctness fix, not a new backtested behavior.

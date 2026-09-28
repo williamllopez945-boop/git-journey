@@ -66,8 +66,18 @@ not the whole watchlist) if one is ever added.
    `trading_agent/risk_manager.py` with `RISK_LIMITS`. Call
    `start_of_day(equity)` with the portfolio equity from step 2 (no-op if
    already recorded today). Call `check_circuit_breaker(equity)` — if it
-   returns `True`, stop here for the rest of the cycle. Do not place any
-   orders. Log that trading is halted for the day and why.
+   returns `True`, stop here for the rest of the cycle: skip all new-signal
+   evaluation and do not place any new-entry orders. **This does NOT skip
+   "Per-position exit rules" (stop-loss/take-profit)** — those still run
+   for every open position this cycle regardless (see the Hard rules
+   section: protective exits bypass the circuit breaker by design). Log
+   that trading is halted for the day and why. (2026-09-28 audit: the
+   live hourly Routine's own scheduled prompt previously said a halt
+   means "no crypto or stock evaluation" with no carve-out, contradicting
+   this section's Hard Rule below — a real cycle skipped the stop-loss
+   check while halted as a result, luck rather than correctness kept the
+   position safe. Routine prompt corrected the same day; this note stays
+   as a reminder of why the carve-out above is explicit.)
 
 4. **Check the daily trade cap.** Call `can_trade()`. If `False` (cap
    already hit, or the circuit breaker just tripped), stop — do not place
