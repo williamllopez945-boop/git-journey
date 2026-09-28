@@ -978,3 +978,44 @@ explicit carve-out and a note explaining why, to prevent the Routine's
 prompt and this doc from drifting apart again. No `RISK_LIMITS`/
 `config.py`/strategy-parameter change - this is a runbook/automation
 correctness fix, not a new backtested behavior.
+
+## 2026-09-28 (later) — Audit finding: 5 trade_log entries had the wrong fill price; circuit breaker overridden again
+
+Same audit as above. Cross-checked real order fills (`get_crypto_orders`,
+`average_price`) against `state.json`'s `trade_log` and found 5 trades -
+all market orders placed 2026-09-27, the same batch already flagged for
+the order-type policy gap - were logged with the order's entered/
+reference price instead of the real fill VWAP:
+
+| Trade | Recorded | Real fill (`average_price`) |
+|---|---|---|
+| CRV buy | 0.3543 | 0.3507059 |
+| AVAX buy (8.6006 units) | 11.28 | 11.17084012 |
+| DOGE buy 49.64 (already closed) | 0.099893 | 0.09873026 |
+| SOL sell (already closed) | 113.47 | 119.45380832 |
+| LINK sell (already closed) | 13.27 | 13.97131531 |
+
+Every limit order that same day, and one market order (HBAR sell), were
+recorded correctly - the exact cause of the split wasn't confirmed,
+plausibly related to the same market-order handling gap behind the
+order-type policy fix. This matters live: `get_crypto_positions` reports
+0/0 direct cost basis for CRV/AVAX, so `cost_basis_fallback.py` derives
+their `avg_cost_basis` straight from `trade_log`'s price field - the
+wrong price fed directly into the live protective-exit/profit-gate
+checks. Owner approved the fix; `state.json`'s 5 entries corrected to
+`average_price`, each with an explanatory note. Corrected cost bases
+make both currently-held positions look *better* than previously
+recorded (CRV -7.26% vs the earlier-reported -8.05%/-8.20%; AVAX -6.21%
+vs -6.89%/-6.97%) - no gate/stop-loss decision changes as a result, but
+`backtest_2026-09-28_sell_off_gate_review.md` got a correction note since
+its percentage figures (not its dollar figures - those were unaffected)
+were built on the wrong basis.
+
+Same session, owner also explicitly authorized overriding today's
+circuit-breaker halt (see the entry above - this one a REAL trading
+drawdown, not the earlier transfer). Unlike a bare "clear `halted`" (which
+would immediately re-trip against the unchanged, still-breached original
+`starting_equity`), `starting_equity` was reset to the current live
+equity (463.775001544724) as the day's new baseline, matching the
+mechanism used for the morning's transfer-caused override. `can_trade()`
+confirmed `True` afterward. No `RISK_LIMITS`/`config.py` change.

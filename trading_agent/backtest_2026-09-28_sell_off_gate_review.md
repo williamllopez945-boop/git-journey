@@ -96,6 +96,19 @@ bounded at -10%).
   the broader backtest and revert anyway - a legitimate call for the
   owner to make, just not one this review concludes on its own.
 
+## Correction (2026-09-28, later, owner-approved)
+
+A follow-up audit found `trade_log`'s CRV and AVAX buy prices were wrong -
+recorded as the order's entered/reference price instead of the real fill
+`average_price` (5 trades affected total, see `CHANGELOG.md`). Corrected:
+CRV cost basis 0.3543 -> 0.3507059, AVAX blended cost basis 11.163519 ->
+11.073113. This changes the **percentage** loss figures in the table
+above (CRV is actually -7.26%, not -8.05%/-8.20%; AVAX is -6.21%, not
+-6.89%/-6.97%) but **not** the dollar "extra loss from holding" figures -
+those depend only on the price difference between block-time and now,
+which is unaffected by cost basis. The ~$5.6 total and the conclusion
+(hold the gate, don't revert on this episode) both stand.
+
 ## Tooling note
 
 Both `RobinHood` (MCP proxy tunnel refused, 403) and `Bash` (server-side
