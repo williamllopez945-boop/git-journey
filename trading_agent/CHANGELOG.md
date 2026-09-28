@@ -1049,3 +1049,18 @@ This is trade 5 of the day against `max_trades_per_day` (4) -
 `can_trade()` now returns `False`, so automated trading is paused for
 the rest of today's UTC day, same as any other day the cap is hit.
 Owner notified via push and Slack. No `RISK_LIMITS`/`config.py` change.
+
+## 2026-09-28 (later still) — Owner-directed trade cap reset for today's market session
+
+Same session. `trades_today` was 5 against `max_trades_per_day` (4),
+hit earlier today from the manual XLM/CRV/AVAX sell before market open,
+which left `can_trade()` `False` and blocked the automated system from
+acting on any real stock signal during today's 9:30-16:00 ET session.
+Owner explicitly directed resetting the counter for today's trading
+time. `trades_today` reset to 0 in `state.json`, logged as an explicit
+override (`overrides` list, same pattern as the two circuit-breaker
+overrides earlier today) and in `cycle_log.json`. `can_trade()` confirmed
+`True` afterward. `RISK_LIMITS["max_trades_per_day"]` itself is
+unchanged (still 4) - this resets today's counter only, not the limit,
+and the cap will apply normally to whatever trades happen for the rest
+of today.
