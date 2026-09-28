@@ -42,7 +42,7 @@ def test_floor_disabled_by_default_never_forces_exit():
 
 def test_floor_no_cost_basis_never_forces_exit():
     assert gate_floor_should_force_exit(90.0, 0.0, bars_since_blocked=100,
-                                         max_hold_bars=1, price_floor_pct=0.01) is False
+                                         max_hold_bars=1) is False
 
 
 def test_time_floor_forces_exit_once_bars_reached():
@@ -52,24 +52,3 @@ def test_time_floor_forces_exit_once_bars_reached():
     assert gate_floor_should_force_exit(95.0, 100.0, bars_since_blocked=9, max_hold_bars=10) is False
     # exactly at the threshold - forced (>=, not >).
     assert gate_floor_should_force_exit(95.0, 100.0, bars_since_blocked=10, max_hold_bars=10) is True
-
-
-def test_price_floor_forces_exit_before_the_real_stop_loss():
-    # -6% loss, price_floor_pct=0.05 (tighter than the real 10% stop-loss) - forced.
-    assert gate_floor_should_force_exit(94.0, 100.0, bars_since_blocked=1, price_floor_pct=0.05) is True
-    # -4% loss - within the 5% floor, not forced.
-    assert gate_floor_should_force_exit(96.0, 100.0, bars_since_blocked=1, price_floor_pct=0.05) is False
-    # exactly at the floor - forced (<=, not <).
-    assert gate_floor_should_force_exit(95.0, 100.0, bars_since_blocked=1, price_floor_pct=0.05) is True
-
-
-def test_either_floor_independently_can_force_exit():
-    # Price floor not yet hit, but time floor is - forced.
-    assert gate_floor_should_force_exit(99.0, 100.0, bars_since_blocked=5,
-                                         max_hold_bars=5, price_floor_pct=0.20) is True
-    # Time floor not yet hit, but price floor is - forced.
-    assert gate_floor_should_force_exit(70.0, 100.0, bars_since_blocked=1,
-                                         max_hold_bars=1000, price_floor_pct=0.20) is True
-    # Neither hit - not forced.
-    assert gate_floor_should_force_exit(99.0, 100.0, bars_since_blocked=1,
-                                         max_hold_bars=1000, price_floor_pct=0.20) is False

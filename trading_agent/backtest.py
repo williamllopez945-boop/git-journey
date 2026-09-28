@@ -25,12 +25,11 @@ from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT, gate_floor_shou
 
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
              stop_loss_pct=STOP_LOSS_PCT, take_profit_pct=TAKE_PROFIT_PCT,
-             take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION, trailing_stop_pct=None,
-             profit_lock_trigger_pct=None, profit_lock_stop_pct=None,
+             take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
              rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
              volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO,
              min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
-             gate_max_hold_bars=None, gate_price_floor_pct=None):
+             gate_max_hold_bars=None):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -44,20 +43,9 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     market immediately after being stopped out. None (default) disables
     the cooldown.
 
-    stop_loss_pct/take_profit_pct/take_profit_sell_fraction/trailing_stop_pct:
-    override exit_criteria.py's module defaults - lets this sweep those
-    values instead of only ever testing the hardcoded defaults.
-    trailing_stop_pct=None (the default) disables the trailing-stop check
-    on the post-take-profit remainder entirely, same as exit_criteria.py's
-    own default.
-
-    profit_lock_trigger_pct/profit_lock_stop_pct: override
-    exit_criteria.py's PROFIT_LOCK_TRIGGER_PCT/PROFIT_LOCK_STOP_PCT
-    (both None disables the check entirely, same as exit_criteria.py's
-    own default) - once the position's peak unrealized gain since entry
-    clears profit_lock_trigger_pct, the stop floor tightens from
-    -stop_loss_pct to profit_lock_stop_pct for the remainder of the hold
-    (pre-take-profit only; see exit_criteria.check_exit).
+    stop_loss_pct/take_profit_pct/take_profit_sell_fraction: override
+    exit_criteria.py's module defaults - lets this sweep those values
+    instead of only ever testing the hardcoded defaults.
 
     rsi_period/rsi_overbought_pct: when rsi_period is set, a fresh buy
     entry additionally requires rsi_filter.passes_rsi_filter (RSI below
@@ -81,13 +69,11 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     immediately regardless of P&L). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 
-    gate_max_hold_bars/gate_price_floor_pct: profit_gate.gate_floor_should_force_exit's
-    two floor types - force a gate-blocked position out after this many
-    bars (gate_max_hold_bars) or once its loss reaches this threshold
-    (gate_price_floor_pct, typically tighter than stop_loss_pct), even
-    though blocks_sell_cross would otherwise keep holding it. Both None
-    (default) disables both floors - unchanged pre-floor behavior. See
-    profit_gate.py.
+    gate_max_hold_bars: profit_gate.gate_floor_should_force_exit's time
+    floor - force a gate-blocked position out after this many bars,
+    regardless of P&L, even though blocks_sell_cross would otherwise keep
+    holding it. None (default) disables the floor - unchanged pre-floor
+    behavior. See profit_gate.py.
 
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
@@ -98,8 +84,6 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     position_qty = 0.0
     avg_cost_basis = 0.0
     took_profit = False
-    peak_since_take_profit = None
-    peak_since_entry = None
     blocked_since_index = None
     trades = []
     equity_curve = []
@@ -109,18 +93,10 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
         window = closes[: i + 1]
 
         if position_qty > 0:
-            if took_profit:
-                peak_since_take_profit = max(peak_since_take_profit, price)
-            peak_since_entry = max(peak_since_entry, price)
             reason, fraction = check_exit(price, avg_cost_basis, took_profit,
-                                           peak_price_since_take_profit=peak_since_take_profit,
-                                           peak_price_since_entry=peak_since_entry,
                                            stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
-                                           take_profit_sell_fraction=take_profit_sell_fraction,
-                                           trailing_stop_pct=trailing_stop_pct,
-                                           profit_lock_trigger_pct=profit_lock_trigger_pct,
-                                           profit_lock_stop_pct=profit_lock_stop_pct)
-            if reason in ("stop_loss", "profit_lock_stop"):
+                                           take_profit_sell_fraction=take_profit_sell_fraction)
+            if reason == "stop_loss":
                 proceeds = position_qty * price
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": reason,
@@ -128,8 +104,6 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 position_qty = 0.0
                 avg_cost_basis = 0.0
                 took_profit = False
-                peak_since_take_profit = None
-                peak_since_entry = None
                 blocked_since_index = None
                 last_exit_index = i
             elif reason == "take_profit":
@@ -138,29 +112,15 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 cash += proceeds
                 position_qty -= sell_qty
                 took_profit = True
-                peak_since_take_profit = price
                 trades.append({"index": i, "action": "sell", "reason": "take_profit",
                                 "qty": sell_qty, "price": price, "cash_after": cash})
-            elif reason == "trailing_stop":
-                proceeds = position_qty * price
-                cash += proceeds
-                trades.append({"index": i, "action": "sell", "reason": "trailing_stop",
-                                "qty": position_qty, "price": price, "cash_after": cash})
-                position_qty = 0.0
-                avg_cost_basis = 0.0
-                took_profit = False
-                peak_since_take_profit = None
-                peak_since_entry = None
-                blocked_since_index = None
-                last_exit_index = i
 
         if position_qty > 0 and blocked_since_index is not None:
             pct_change = (price - avg_cost_basis) / avg_cost_basis if avg_cost_basis > 0 else 0.0
             if min_sell_profit_pct is not None and pct_change >= min_sell_profit_pct:
                 blocked_since_index = None
             elif gate_floor_should_force_exit(price, avg_cost_basis, i - blocked_since_index,
-                                               max_hold_bars=gate_max_hold_bars,
-                                               price_floor_pct=gate_price_floor_pct):
+                                               max_hold_bars=gate_max_hold_bars):
                 proceeds = position_qty * price
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": "gate_floor",
@@ -168,8 +128,6 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 position_qty = 0.0
                 avg_cost_basis = 0.0
                 took_profit = False
-                peak_since_take_profit = None
-                peak_since_entry = None
                 blocked_since_index = None
                 last_exit_index = i
 
@@ -190,8 +148,6 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 position_qty = 0.0
                 avg_cost_basis = 0.0
                 took_profit = False
-                peak_since_take_profit = None
-                peak_since_entry = None
                 blocked_since_index = None
                 last_exit_index = i
         elif position_qty == 0 and cash > 0 and signal == "buy":
@@ -212,7 +168,6 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 qty = cash / price
                 position_qty = qty
                 avg_cost_basis = price
-                peak_since_entry = price
                 trades.append({"index": i, "action": "buy", "reason": "fresh_buy_cross",
                                 "qty": qty, "price": price, "cash_after": 0.0})
                 cash = 0.0

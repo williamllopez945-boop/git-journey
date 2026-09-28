@@ -471,20 +471,19 @@ positions.
    `PositionStateStore().took_profit(asset)` from
    `trading_agent/position_state.py`.
 3. Call `exit_criteria.check_exit(current_price, avg_cost_basis, took_profit)`
-   from `trading_agent/exit_criteria.py` (no `peak_price_since_take_profit`/
-   `trailing_stop_pct` or `peak_price_since_entry`/`profit_lock_trigger_pct`/
-   `profit_lock_stop_pct` arguments live - both the trailing-stop and
-   profit-lock mechanisms exist and are tested, but `TRAILING_STOP_PCT`
-   and `PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` default to `None`
-   (disabled); see `backtest_2026-09-24_trailing_stop.md` and
-   `backtest_2026-09-25_profit_lock.md` for why neither was turned on -
-   both consistently hurt returns, sometimes severely, across real-series
-   backtests, for the same underlying reason: clipping a position before
-   a strong trend fully plays out costs more than it protects). It
-   returns one of:
-   - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
+   from `trading_agent/exit_criteria.py`. (A trailing-stop and a
+   profit-lock mechanism were both built and backtested in earlier
+   sessions - see `backtest_2026-09-24_trailing_stop.md` and
+   `backtest_2026-09-25_profit_lock.md` - but consistently hurt returns,
+   sometimes severely, across real-series backtests, for the same
+   underlying reason: clipping a position before a strong trend fully
+   plays out costs more than it protects. Never adopted, and removed
+   entirely 2026-09-28 - owner request, "keep it simple" - rather than
+   kept as disabled dead code; see those docs and `exit_criteria.py`'s
+   git history if either is revisited.) It returns one of:
+   - `("stop_loss", 1.0)` — price is 4%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
-   - `("take_profit", 0.70)` — price is 20%+ above cost basis and profit
+   - `("take_profit", 0.70)` — price is 8%+ above cost basis and profit
      hasn't been taken yet. Sell **70%** of `quantity_transferable`
      (round down to the pair's `min_order_quantity_increment` from
      `get_currency_pairs`), then call
@@ -516,11 +515,11 @@ positions.
      `fresh_sell_cross` will re-evaluate the gate fresh next time one fires).
    - Otherwise call
      `profit_gate.gate_floor_should_force_exit(current_price, avg_cost_basis,
-     bars_since_blocked=hours_since_gate_blocked, max_hold_bars=profit_gate.GATE_MAX_HOLD_HOURS,
-     price_floor_pct=profit_gate.GATE_PRICE_FLOOR_PCT)` (`GATE_PRICE_FLOOR_PCT`
-     is `None` — only the 24h time floor is adopted, a price floor was
-     backtested and found redundant once `STOP_LOSS_PCT` is this tight).
-     If `True`, sell the **entire** position (`quantity_transferable`) the
+     bars_since_blocked=hours_since_gate_blocked, max_hold_bars=profit_gate.GATE_MAX_HOLD_HOURS)`
+     (a companion price floor was backtested the same day, found
+     redundant once `STOP_LOSS_PCT` is this tight, and removed entirely
+     2026-09-28 rather than kept disabled — only the 24h time floor
+     exists). If `True`, sell the **entire** position (`quantity_transferable`) the
      same way as a `stop_loss` exit in step 5 below, logging
      `reason="gate_floor"` instead. **This is NOT a protective exit** —
      unlike stop-loss/take-profit, it still calls

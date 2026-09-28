@@ -35,16 +35,20 @@ GATE_MAX_HOLD_HOURS = 24   # gate_floor_should_force_exit's max_hold_bars
                             # hold forever. None would disable this time
                             # floor entirely. Backtested alongside the
                             # tightened stop-loss/take-profit in
-                            # exit_criteria.py; a price floor was tested
-                            # too but found inert once the stop-loss is
-                            # this tight, so only the time floor is
-                            # adopted - GATE_PRICE_FLOOR_PCT stays None.
-                            # **Adopted 2026-09-28** (owner approval). See
-                            # backtest_2026-09-28_gate_floor_and_tighter_stops.md.
-GATE_PRICE_FLOOR_PCT = None  # see GATE_MAX_HOLD_HOURS above; not adopted -
-                              # redundant once stop_loss_pct is this tight
-                              # (confirmed byte-identical output in the
-                              # backtest with either value here).
+                            # exit_criteria.py. **Adopted 2026-09-28**
+                            # (owner approval). See backtest_2026-09-28_
+                            # gate_floor_and_tighter_stops.md.
+                            #
+                            # A companion price floor (force the exit once
+                            # a gated position's loss reaches a threshold
+                            # tighter than stop_loss_pct) was also built
+                            # and backtested the same day, but found inert
+                            # once stop_loss_pct is this tight (confirmed
+                            # byte-identical backtest output with or
+                            # without it) - removed 2026-09-28 (owner
+                            # request, "keep it simple") rather than kept
+                            # as dead code. See that backtest doc if this
+                            # is revisited at a looser stop-loss.
 
 
 def blocks_sell_cross(current_price, avg_cost_basis, min_sell_profit_pct):
@@ -70,7 +74,7 @@ def blocks_sell_cross(current_price, avg_cost_basis, min_sell_profit_pct):
 
 
 def gate_floor_should_force_exit(current_price, avg_cost_basis, bars_since_blocked,
-                                  max_hold_bars=None, price_floor_pct=None):
+                                  max_hold_bars=None):
     """True if a position that's been held under the gate should be forced
     out anyway, overriding blocks_sell_cross's "no" for this bar.
 
@@ -90,24 +94,13 @@ def gate_floor_should_force_exit(current_price, avg_cost_basis, bars_since_block
 
     max_hold_bars: force the exit once bars_since_blocked reaches this
     many bars, regardless of P&L - a time-based backstop against the gate
-    holding indefinitely.
-
-    price_floor_pct: force the exit once the position's loss reaches this
-    threshold (typically smaller than stop_loss_pct), even though it
-    hasn't hit the real stop-loss yet - a tighter secondary stop that only
-    applies to a position already stuck under the gate, not to a position
-    that hasn't triggered the gate at all.
-
-    Both None (default) disables both floors - the gate can hold
-    indefinitely, the pre-floor behavior. avg_cost_basis<=0 never forces
-    an exit (same "nothing to check" convention as blocks_sell_cross).
+    holding indefinitely. None (default) disables the floor - the gate
+    can hold indefinitely, the pre-floor behavior. avg_cost_basis<=0
+    never forces an exit (same "nothing to check" convention as
+    blocks_sell_cross).
     """
     if avg_cost_basis <= 0:
         return False
-    if price_floor_pct is not None:
-        pct_change = (current_price - avg_cost_basis) / avg_cost_basis
-        if pct_change <= -price_floor_pct:
-            return True
     if max_hold_bars is not None and bars_since_blocked >= max_hold_bars:
         return True
     return False

@@ -25,7 +25,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
                         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
                         min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
-                        gate_max_hold_bars=None, gate_price_floor_pct=None):
+                        gate_max_hold_bars=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -93,13 +93,12 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     entirely (pre-2026-09-28 behavior). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 
-    gate_max_hold_bars/gate_price_floor_pct: profit_gate.gate_floor_should_force_exit's
-    two floor types, applied per-asset - force a gate-blocked position out
-    after this many bars (gate_max_hold_bars) or once its loss reaches this
-    threshold (gate_price_floor_pct, typically tighter than stop_loss_pct),
-    even though blocks_sell_cross would otherwise keep holding it. Both
-    None (default) disables both floors. A forced floor exit counts toward
-    max_trades_per_day like any other sell. See profit_gate.py.
+    gate_max_hold_bars: profit_gate.gate_floor_should_force_exit's time
+    floor, applied per-asset - force a gate-blocked position out after
+    this many bars, regardless of P&L, even though blocks_sell_cross
+    would otherwise keep holding it. None (default) disables the floor.
+    A forced floor exit counts toward max_trades_per_day like any other
+    sell. See profit_gate.py.
 
     Returns (trades, equity_curve, per_asset_final_state):
       trades - list of dicts: {index, asset, action, reason, qty, price, cash_after}
@@ -181,8 +180,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["blocked_since_index"] = None
                 continue
             if gate_floor_should_force_exit(price, st["avg_cost"], i - st["blocked_since_index"],
-                                             max_hold_bars=gate_max_hold_bars,
-                                             price_floor_pct=gate_price_floor_pct):
+                                             max_hold_bars=gate_max_hold_bars):
                 proceeds = st["qty"] * price
                 cash += proceeds
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "gate_floor",

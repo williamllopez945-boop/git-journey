@@ -1160,3 +1160,41 @@ table) to match the new live values.
 No `RISK_LIMITS`/`config.py` change - this only touches `exit_criteria.py`
 and `profit_gate.py`'s own module-level constants, per this project's
 existing convention for strategy-parameter tuning.
+
+## 2026-09-28 (later still) — Removed trailing-stop, profit-lock, and the gate price floor
+
+Owner request: "I may be over complicating everything, keep it simple" ->
+"reduce the number of exit/entry gates" -> asked to identify what's
+pulling its weight. Inventory: three mechanisms existed purely as
+disabled code paths, never firing in production because they were built,
+backtested, and explicitly rejected in earlier sessions:
+
+- **Trailing stop** on the post-take-profit remainder (`TRAILING_STOP_PCT`,
+  2026-09-24 request) - every variant tested hurt more than it helped
+  (`backtest_2026-09-24_trailing_stop.md`).
+- **Profit-lock stop** tightening the pre-take-profit floor once a
+  position's peak gain cleared a trigger (`PROFIT_LOCK_TRIGGER_PCT`/
+  `PROFIT_LOCK_STOP_PCT`, 2026-09-25 request) - same result at the
+  requested level plus two neighbors (`backtest_2026-09-25_profit_lock.md`).
+- **Gate price floor** (`GATE_PRICE_FLOOR_PCT`, built earlier today) -
+  confirmed redundant once `STOP_LOSS_PCT` tightened to 4%.
+
+All three stayed `None` (disabled) since adoption - dead code paths and
+parameters with zero live behavioral effect, kept around mainly as
+tested-and-rejected history. Everything the owner actually uses (the
+4%/8% stop-loss/take-profit and the 24h gate time floor, both adopted
+earlier today) is untouched - this is a pure code-simplification pass,
+not a strategy change. Live behavior is identical before and after.
+
+Removed: `exit_criteria.check_exit`'s `peak_price_since_take_profit`/
+`trailing_stop_pct`/`peak_price_since_entry`/`profit_lock_trigger_pct`/
+`profit_lock_stop_pct` parameters and the `TRAILING_STOP_PCT`/
+`PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` constants;
+`profit_gate.gate_floor_should_force_exit`'s `price_floor_pct` parameter
+and `GATE_PRICE_FLOOR_PCT`; the matching pass-through parameters and
+peak-tracking state in `backtest.py`/`portfolio_backtest.py`.
+`PLAYBOOK.md`/`README.md` updated to describe the simpler `check_exit`/
+`gate_floor_should_force_exit` signatures and point to the rejection
+backtests (still on disk, unchanged) for either idea's full history if
+revisited. 18 tests removed (they tested only the removed mechanisms);
+full suite green (231/231).
