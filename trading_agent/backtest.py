@@ -20,7 +20,7 @@ from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROF
 from .entry_filter import confirmed_signal
 from .rsi_filter import passes_rsi_filter, DEFAULT_RSI_PERIOD, DEFAULT_RSI_OVERBOUGHT_PCT
 from .volume_filter import passes_volume_filter, DEFAULT_VOLUME_PERIOD, DEFAULT_VOLUME_MIN_RATIO
-from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT
+from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT, gate_floor_should_force_exit
 
 
 def backtest(closes, short_window, long_window, starting_cash=100.0, min_strength_pct=None, cooldown_bars=None,
@@ -29,7 +29,8 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
              profit_lock_trigger_pct=None, profit_lock_stop_pct=None,
              rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
              volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO,
-             min_sell_profit_pct=MIN_SELL_PROFIT_PCT):
+             min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
+             gate_max_hold_bars=None, gate_price_floor_pct=None):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -80,6 +81,14 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     immediately regardless of P&L). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 
+    gate_max_hold_bars/gate_price_floor_pct: profit_gate.gate_floor_should_force_exit's
+    two floor types - force a gate-blocked position out after this many
+    bars (gate_max_hold_bars) or once its loss reaches this threshold
+    (gate_price_floor_pct, typically tighter than stop_loss_pct), even
+    though blocks_sell_cross would otherwise keep holding it. Both None
+    (default) disables both floors - unchanged pre-floor behavior. See
+    profit_gate.py.
+
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
       equity_curve - list of portfolio value (cash + mark-to-market position)
@@ -91,6 +100,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     took_profit = False
     peak_since_take_profit = None
     peak_since_entry = None
+    blocked_since_index = None
     trades = []
     equity_curve = []
     last_exit_index = None
@@ -120,6 +130,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 took_profit = False
                 peak_since_take_profit = None
                 peak_since_entry = None
+                blocked_since_index = None
                 last_exit_index = i
             elif reason == "take_profit":
                 sell_qty = position_qty * fraction
@@ -140,6 +151,26 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 took_profit = False
                 peak_since_take_profit = None
                 peak_since_entry = None
+                blocked_since_index = None
+                last_exit_index = i
+
+        if position_qty > 0 and blocked_since_index is not None:
+            pct_change = (price - avg_cost_basis) / avg_cost_basis if avg_cost_basis > 0 else 0.0
+            if min_sell_profit_pct is not None and pct_change >= min_sell_profit_pct:
+                blocked_since_index = None
+            elif gate_floor_should_force_exit(price, avg_cost_basis, i - blocked_since_index,
+                                               max_hold_bars=gate_max_hold_bars,
+                                               price_floor_pct=gate_price_floor_pct):
+                proceeds = position_qty * price
+                cash += proceeds
+                trades.append({"index": i, "action": "sell", "reason": "gate_floor",
+                                "qty": position_qty, "price": price, "cash_after": cash})
+                position_qty = 0.0
+                avg_cost_basis = 0.0
+                took_profit = False
+                peak_since_take_profit = None
+                peak_since_entry = None
+                blocked_since_index = None
                 last_exit_index = i
 
         if min_strength_pct is None:
@@ -148,7 +179,10 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
             signal = confirmed_signal(window, short_window, long_window, min_strength_pct)
 
         if position_qty > 0 and signal == "sell":
-            if not blocks_sell_cross(price, avg_cost_basis, min_sell_profit_pct):
+            if blocks_sell_cross(price, avg_cost_basis, min_sell_profit_pct):
+                if blocked_since_index is None:
+                    blocked_since_index = i
+            else:
                 proceeds = position_qty * price
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": "death_cross",
@@ -158,6 +192,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 took_profit = False
                 peak_since_take_profit = None
                 peak_since_entry = None
+                blocked_since_index = None
                 last_exit_index = i
         elif position_qty == 0 and cash > 0 and signal == "buy":
             in_cooldown = (

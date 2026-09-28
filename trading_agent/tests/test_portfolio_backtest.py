@@ -251,3 +251,50 @@ def test_gated_death_cross_does_not_consume_a_daily_trade_slot():
     # the one daily slot went to the buy; the blocked death-cross took none
     assert len([t for t in trades if t["action"] == "buy"]) == 1
     assert not any(t["reason"] == "death_cross" for t in trades)
+
+
+_DEATH_CROSS_LONG_HOLD = (
+    [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.8, 8.7, 8.6] + [8.6] * 10
+)  # same block as _DEATH_CROSS_AT_A_LOSS, held flat afterward instead of
+   # ending right at the block.
+
+_DEATH_CROSS_THEN_FURTHER_DECLINE = (
+    [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.8, 8.7, 8.6] + [8.6, 8.6, 8.5]
+)  # same block, then drifts to -5.56% from entry - past a 5% price floor,
+   # well short of the real -10% stop-loss.
+
+
+def test_gate_time_floor_forces_exit_after_max_hold_bars():
+    series = {"A": list(_DEATH_CROSS_LONG_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0, gate_max_hold_bars=5,
+    )
+    floor_exits = [t for t in trades if t["reason"] == "gate_floor"]
+    assert len(floor_exits) == 1
+    assert final_state["A"]["qty"] == 0.0
+
+
+def test_gate_price_floor_forces_exit_before_the_real_stop_loss():
+    series = {"A": list(_DEATH_CROSS_THEN_FURTHER_DECLINE)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0, gate_price_floor_pct=0.05,
+    )
+    floor_exits = [t for t in trades if t["reason"] == "gate_floor"]
+    assert len(floor_exits) == 1
+    assert floor_exits[0]["price"] == 8.5
+    assert not any(t["reason"] == "stop_loss" for t in trades)
+
+
+def test_gate_floor_does_not_fire_on_a_position_never_blocked():
+    series = {"A": list(_DEATH_CROSS_LONG_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=None, gate_max_hold_bars=1, gate_price_floor_pct=0.01,
+    )
+    assert not any(t["reason"] == "gate_floor" for t in trades)
+    assert any(t["reason"] == "death_cross" for t in trades)

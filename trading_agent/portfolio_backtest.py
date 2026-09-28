@@ -14,7 +14,7 @@ asset's price at index i.
 from .strategy import sma_crossover_signal
 from .exit_criteria import check_exit, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TAKE_PROFIT_SELL_FRACTION
 from .entry_filter import _sma, confirmed_signal, crossover_strength_pct
-from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT
+from .profit_gate import blocks_sell_cross, MIN_SELL_PROFIT_PCT, gate_floor_should_force_exit
 
 
 def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
@@ -24,7 +24,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         take_profit_sell_fraction=TAKE_PROFIT_SELL_FRACTION,
                         max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
                         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
-                        min_sell_profit_pct=MIN_SELL_PROFIT_PCT):
+                        min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
+                        gate_max_hold_bars=None, gate_price_floor_pct=None):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -92,6 +93,14 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     entirely (pre-2026-09-28 behavior). See profit_gate.py and
     backtest_2026-09-28_sell_cross_profit_gate.md.
 
+    gate_max_hold_bars/gate_price_floor_pct: profit_gate.gate_floor_should_force_exit's
+    two floor types, applied per-asset - force a gate-blocked position out
+    after this many bars (gate_max_hold_bars) or once its loss reaches this
+    threshold (gate_price_floor_pct, typically tighter than stop_loss_pct),
+    even though blocks_sell_cross would otherwise keep holding it. Both
+    None (default) disables both floors. A forced floor exit counts toward
+    max_trades_per_day like any other sell. See profit_gate.py.
+
     Returns (trades, equity_curve, per_asset_final_state):
       trades - list of dicts: {index, asset, action, reason, qty, price, cash_after}
       equity_curve - total portfolio value (cash + mark-to-market of all
@@ -107,7 +116,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
         raise ValueError("max_trades_per_day requires timestamps aligned with series")
 
     cash = starting_cash
-    state = {asset: {"qty": 0.0, "avg_cost": 0.0, "took_profit": False, "last_exit_index": None}
+    state = {asset: {"qty": 0.0, "avg_cost": 0.0, "took_profit": False, "last_exit_index": None,
+                      "blocked_since_index": None}
               for asset in series}
     trades = []
     equity_curve = []
@@ -140,6 +150,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["avg_cost"] = 0.0
                 st["took_profit"] = False
                 st["last_exit_index"] = i
+                st["blocked_since_index"] = None
                 if max_trades_per_day is not None:
                     trades_today += 1
             elif reason == "take_profit":
@@ -150,6 +161,35 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["took_profit"] = True
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "take_profit",
                                 "qty": sell_qty, "price": price, "cash_after": cash})
+                if max_trades_per_day is not None:
+                    trades_today += 1
+
+        # Gate floor: a position stuck since a death-cross was blocked by
+        # the gate (see profit_gate.gate_floor_should_force_exit) gets
+        # forced out here, independent of whether a fresh sell signal
+        # exists this bar - same "runs every bar regardless of signal"
+        # shape as backtest.py's single-asset version.
+        for asset, closes in series.items():
+            st = state[asset]
+            if st["qty"] <= 0 or st["blocked_since_index"] is None:
+                continue
+            price = closes[i]
+            pct_change = (price - st["avg_cost"]) / st["avg_cost"] if st["avg_cost"] > 0 else 0.0
+            if min_sell_profit_pct is not None and pct_change >= min_sell_profit_pct:
+                st["blocked_since_index"] = None
+                continue
+            if gate_floor_should_force_exit(price, st["avg_cost"], i - st["blocked_since_index"],
+                                             max_hold_bars=gate_max_hold_bars,
+                                             price_floor_pct=gate_price_floor_pct):
+                proceeds = st["qty"] * price
+                cash += proceeds
+                trades.append({"index": i, "asset": asset, "action": "sell", "reason": "gate_floor",
+                                "qty": st["qty"], "price": price, "cash_after": cash})
+                st["qty"] = 0.0
+                st["avg_cost"] = 0.0
+                st["took_profit"] = False
+                st["last_exit_index"] = i
+                st["blocked_since_index"] = None
                 if max_trades_per_day is not None:
                     trades_today += 1
 
@@ -172,6 +212,8 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 if day_cap_blocked:
                     continue
                 if blocks_sell_cross(price, st["avg_cost"], min_sell_profit_pct):
+                    if st["blocked_since_index"] is None:
+                        st["blocked_since_index"] = i
                     continue
                 proceeds = st["qty"] * price
                 cash += proceeds
@@ -181,6 +223,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 st["avg_cost"] = 0.0
                 st["took_profit"] = False
                 st["last_exit_index"] = i
+                st["blocked_since_index"] = None
                 open_count -= 1
                 if max_trades_per_day is not None:
                     trades_today += 1

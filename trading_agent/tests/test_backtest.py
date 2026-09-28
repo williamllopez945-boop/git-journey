@@ -78,6 +78,45 @@ def test_death_cross_still_executes_when_gate_cleared():
     assert any(t["reason"] == "death_cross" for t in trades)
 
 
+def test_gate_time_floor_forces_exit_after_max_hold_bars():
+    # Same death-cross-then-blocked setup as
+    # test_death_cross_held_at_a_loss_when_gate_requires_breakeven, held
+    # flat afterward. With gate_max_hold_bars=5, the position is forced
+    # out 5 bars after the block instead of riding indefinitely.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6] + [8.6] * 10
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=0.0, gate_max_hold_bars=5)
+    floor_exits = [t for t in trades if t["reason"] == "gate_floor"]
+    assert len(floor_exits) == 1
+    assert floor_exits[0]["price"] == 8.6
+    # nothing remains open afterward
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert len(buys) == 1
+
+
+def test_gate_price_floor_forces_exit_before_the_real_stop_loss():
+    # Same block, then price drifts further down to -5.56% (past a 5%
+    # price floor) while staying well short of the real -10% stop-loss.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6] + [8.6, 8.6, 8.5]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=0.0, gate_price_floor_pct=0.05)
+    floor_exits = [t for t in trades if t["reason"] == "gate_floor"]
+    assert len(floor_exits) == 1
+    assert floor_exits[0]["price"] == 8.5
+    assert not any(t["reason"] == "stop_loss" for t in trades)
+
+
+def test_gate_floor_does_not_fire_on_a_position_never_blocked():
+    # A position that death-crosses and sells cleanly (gate disabled)
+    # never sets blocked_since_index, so an aggressive floor has nothing
+    # to act on - no spurious gate_floor exit.
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 8.8, 8.7, 8.6] + [8.6] * 10
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=None, gate_max_hold_bars=1, gate_price_floor_pct=0.01)
+    assert not any(t["reason"] == "gate_floor" for t in trades)
+    assert any(t["reason"] == "death_cross" for t in trades)
+
+
 def test_summarize_computes_return_and_drawdown():
     closes = [100.0] * 40
     trades, equity_curve = backtest(closes, short_window=10, long_window=30, starting_cash=100.0)
