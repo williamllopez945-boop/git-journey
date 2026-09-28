@@ -66,22 +66,34 @@ regime that has several of exactly those strong trends. **Not
 adopted** - PROFIT_LOCK_TRIGGER_PCT/PROFIT_LOCK_STOP_PCT stay None,
 mechanism built and tested but disabled. See
 backtest_2026-09-25_profit_lock.md.
+
+Tighter stop-loss/take-profit, 10%/20% -> 4%/8% (2026-09-28, owner
+request - "tighter (smaller moves)"): re-swept stop_loss_pct/
+take_profit_pct together against real historicals (STOCK_WATCHLIST +
+IBIT/ETHA proxies), worst-case-first, checking neighbors rather than
+trusting the first improvement seen. An initial pass looked best at
+5%/10%; extending the sweep further found 4%/8% was the true
+worst-case-optimal point - below 4%/8% whipsaw losses on otherwise-fine
+assets (TWLO, IBIT) start to dominate and the relationship reverses.
+Tested alongside profit_gate.py's new gate_floor mechanism (see that
+module) since both change how a held position ages; a price floor at
+or looser than this new 4% stop-loss was confirmed inert (byte-identical
+output to the stop-loss alone), so only a 24h time floor is adopted, not
+a price floor. **Adopted 2026-09-28** (owner approval). See
+backtest_2026-09-28_gate_floor_and_tighter_stops.md.
 """
 
-STOP_LOSS_PCT = 0.10              # exit the full position if price drops
-                                   # this far below the average cost basis
-TAKE_PROFIT_PCT = 0.20            # trigger level for partial profit-taking.
-                                   # Raised from 15% 2026-09-25 (owner request,
-                                   # a 1:2 risk/reward ratio against the 10%
-                                   # stop-loss) - backtested first against 48
-                                   # real series (current watchlist composition,
-                                   # 90-day hourly + 3 daily regimes): 22 helped/
-                                   # 9 hurt/17 flat, mean delta +2.02%, worst
-                                   # case -8.06% - a real but bounded cost, well
-                                   # inside what the original 2026-09-23 sweep
-                                   # already rejected at other levels (-25.84%
-                                   # to -75.26% for 50% take-profit). See
-                                   # backtest_2026-09-25_stop_take.md.
+STOP_LOSS_PCT = 0.04               # exit the full position if price drops
+                                   # this far below the average cost basis.
+                                   # Tightened from 10% 2026-09-28 (owner
+                                   # request) - see backtest_2026-09-28_
+                                   # gate_floor_and_tighter_stops.md.
+TAKE_PROFIT_PCT = 0.08            # trigger level for partial profit-taking.
+                                   # Tightened from 20% 2026-09-28 (owner
+                                   # request, keeps the 1:2 risk/reward
+                                   # ratio against the new 4% stop-loss) -
+                                   # see backtest_2026-09-28_gate_floor_and_
+                                   # tighter_stops.md.
 TAKE_PROFIT_SELL_FRACTION = 0.70  # fraction of the position sold at the
                                    # take-profit trigger; the rest keeps riding
 TRAILING_STOP_PCT = None          # see backtest_2026-09-24_trailing_stop.md;

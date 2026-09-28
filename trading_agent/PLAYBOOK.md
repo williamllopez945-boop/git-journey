@@ -273,8 +273,11 @@ done by hand, exactly as described below.
      If `True` (the position is below breakeven — `MIN_SELL_PROFIT_PCT`
      is `0.0`), **hold**: log
      `CycleLogStore().record(asset, "fresh_sell_cross", crossover_pct,
-     "blocked_unprofitable", price=current_price, avg_cost_basis=avg_cost_basis)`
-     and move on to the next asset — do not preview or place any order.
+     "blocked_unprofitable", price=current_price, avg_cost_basis=avg_cost_basis)`,
+     call `PositionStateStore().mark_gate_blocked(asset)` (a no-op if
+     already blocked from an earlier cycle — see "Per-position exit
+     rules" below for the every-cycle floor check this starts), and move
+     on to the next asset — do not preview or place any order.
      This never overrides stop-loss: "Per-position exit rules" below
      still runs every cycle regardless of this gate, so a position held
      back here remains fully protected from a further decline. Only when
@@ -489,7 +492,43 @@ positions.
      re-trigger next cycle on the remaining 30%.
    - `(None, 0.0)` — no protective exit fires this cycle; the SMA
      death-cross check above still applies independently.
-4. **These exits bypass `can_trade()`, the daily trade cap, the circuit
+4. **Gate floor (added 2026-09-28, owner-approved — "should the gate come
+   with a floor so it can't hold forever" — see
+   `backtest_2026-09-28_gate_floor_and_tighter_stops.md`):** unlike step 5
+   below, this step is **not** exempt from the daily-cap/circuit-breaker
+   gate ("Check the daily trade cap" above) — it's a same-substance
+   stand-in for the ordinary `fresh_sell_cross` death-cross exit it forces
+   through, not a protective safety net, so skip this step entirely for
+   the rest of the cycle if that earlier check already stopped it (same
+   as any other non-protective exit). Otherwise: if step 3 didn't already
+   close the position, and
+   `PositionStateStore().hours_since_gate_blocked(asset)` is not `None`
+   (this asset's `fresh_sell_cross` is currently being held by the
+   profitability gate — see that section above), do the following every
+   cycle for as long as the block lasts, independent of whether a fresh
+   sell signal is present this cycle (`blocks_sell_cross` only fires once,
+   at the bar the signal itself occurs — see `profit_gate.py`'s
+   docstring):
+   - If `current_price` has recovered to `avg_cost_basis` (unrealized P&L
+     at or above `profit_gate.MIN_SELL_PROFIT_PCT`), call
+     `PositionStateStore().clear_gate_blocked(asset)` and stop — no forced
+     exit, the position is simply no longer gated (a future
+     `fresh_sell_cross` will re-evaluate the gate fresh next time one fires).
+   - Otherwise call
+     `profit_gate.gate_floor_should_force_exit(current_price, avg_cost_basis,
+     bars_since_blocked=hours_since_gate_blocked, max_hold_bars=profit_gate.GATE_MAX_HOLD_HOURS,
+     price_floor_pct=profit_gate.GATE_PRICE_FLOOR_PCT)` (`GATE_PRICE_FLOOR_PCT`
+     is `None` — only the 24h time floor is adopted, a price floor was
+     backtested and found redundant once `STOP_LOSS_PCT` is this tight).
+     If `True`, sell the **entire** position (`quantity_transferable`) the
+     same way as a `stop_loss` exit in step 5 below, logging
+     `reason="gate_floor"` instead. **This is NOT a protective exit** —
+     unlike stop-loss/take-profit, it still calls
+     `RiskManager.record_trade(...)` **without** `protective=True` and
+     still counts toward `trades_today` (same as the `fresh_sell_cross`
+     death-cross exit it stands in for — see the note on this in step 5
+     below).
+5. **These exits bypass `can_trade()`, the daily trade cap, the circuit
    breaker, and `auto_execute_max_pct`** — protective exits are never
    blocked by the gates that limit new risk-taking, and (2026-09-28,
    owner request — "non-negotiable trades... does not count towards our
@@ -510,14 +549,17 @@ positions.
    protective in this sense — both still call `RiskManager.record_trade(...)`
    without `protective=True` and still count toward `trades_today`, same
    as before; only the two safety-net exits above are exempt.
-5. When a position's `quantity_transferable` reaches 0 (fully closed, by
-   any combination of SMA exits and these protective exits), call both
-   `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
-   future fresh entry starts without a stale one) AND
+6. When a position's `quantity_transferable` reaches 0 (fully closed, by
+   any combination of SMA exits, a gate-floor exit, and these protective
+   exits), call `PositionStateStore().reset(asset)` (clears the
+   take-profit flag, so a future fresh entry starts without a stale one),
    `PositionStateStore().record_exit(asset)` (starts the whipsaw
    cooldown — `DEFAULT_COOLDOWN_HOURS`, 4h by default — blocking a new
    entry into this asset until it expires, even if a fresh buy signal
-   fires in the meantime). Both calls are needed; they track independent
+   fires in the meantime), AND `PositionStateStore().clear_gate_blocked(asset)`
+   (so a future block on a future position in this asset starts its own
+   fresh clock, rather than inheriting a stale timestamp — a no-op if this
+   position was never gate-blocked). All three calls are needed; they track independent
    state and `reset` does not clear the cooldown.
 
 ## Hard rules
@@ -662,6 +704,7 @@ on both the polling and scanner paths, so the end-of-day review
 | `fresh_sell_cross` on an asset with no open position (nothing to sell — see the hard rule above) | `"blocked_no_position"` | no owner notification needed, nothing for them to decide |
 | `fresh_sell_cross` on a real held position, but the profitability gate held it (position below breakeven — added 2026-09-28) | `"blocked_unprofitable"` | include `price`, `avg_cost_basis` — the exit is only deferred, not skipped for good: stop-loss still protects the position every cycle, and a later cycle may see it clear the gate or hit stop-loss/take-profit instead |
 | Stop-loss or take-profit fired | `"protective_exit"` | include `reason` (`"stop_loss"`/`"take_profit"`), `price`, `avg_cost_basis`, resulting P/L |
+| Gate floor forced an exit the profitability gate had been holding (added 2026-09-28) | `"executed"` | include `reason="gate_floor"`, `price`, `avg_cost_basis`, `quantity`, resulting P/L — not protective, counts toward `trades_today` like any other exit (see "Per-position exit rules" step 4) |
 
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.

@@ -1101,3 +1101,62 @@ asset B's later fresh_buy_cross through, which it would not have before
 this change). Full suite green (242/242). No `RISK_LIMITS`/`config.py`
 change - `max_trades_per_day` itself is unchanged, this only changes
 what counts against it.
+
+## 2026-09-28 (later still) — Gate floor + tighter stop-loss/take-profit: adopted
+
+Owner request: "Should the gate come with a floor so it can't hold
+forever? ... let's modify the take profit and stop loss" - answered
+"do whichever is best from backtesting" (floor design) and "tighter
+(smaller moves)" (SL/TP direction). The backtest proposal from earlier
+today (`backtest_2026-09-28_gate_floor_and_tighter_stops.md`) is now
+live, per explicit owner approval.
+
+**`exit_criteria.py`: `STOP_LOSS_PCT` 10% → 4%, `TAKE_PROFIT_PCT` 20% →
+8%** (keeps the existing 1:2 risk/reward ratio). An initial sweep looked
+best at 5%/10%; extending it further (checking neighbors, not trusting
+the first improvement) found 4%/8% as the true worst-case-optimal point
+- below it, whipsaw losses on otherwise-fine assets (TWLO, IBIT) start
+to dominate and the relationship reverses.
+
+**`profit_gate.py`: new `gate_floor_should_force_exit` wired live**,
+via two new constants - `GATE_MAX_HOLD_HOURS = 24` (adopted) and
+`GATE_PRICE_FLOOR_PCT = None` (not adopted - a price floor was tested at
+the new 4%/8% baseline and found redundant: byte-identical backtest
+output to the stop-loss alone once the stop-loss is already this tight).
+A position the profitability gate has been holding for a full day now
+force-exits regardless of P&L, so the gate can no longer hold
+indefinitely - the exact problem the owner asked about.
+
+**`position_state.py`: new `gate_blocked_since` tracking** -
+`mark_gate_blocked`/`clear_gate_blocked`/`hours_since_gate_blocked`, the
+live (wall-clock) equivalent of `backtest.py`'s bar-counted
+`blocked_since_index`. `mark_gate_blocked` is a no-op once already set
+(mirrors the backtest's "if None" guard - a signal blocked for several
+consecutive cycles keeps its original timestamp, not the most recent
+one).
+
+**`PLAYBOOK.md`**: the `fresh_sell_cross` profitability-gate step now
+calls `mark_gate_blocked` when it holds a sell; "Per-position exit
+rules" gets a new step 4 (gate floor - clears on recovery to breakeven,
+otherwise force-exits at the 24h floor) between the stop-loss/take-profit
+check and the protective-exit exemption note; the position-close step
+now also calls `clear_gate_blocked`. New Cycle logging table row for
+`reason="gate_floor"`. Scope, unchanged from the earlier same-day
+protective-exit entry: the gate floor is explicitly **not** protective -
+it's a same-substance stand-in for an ordinary `fresh_sell_cross`
+death-cross exit, so it's still subject to `can_trade()`/the circuit
+breaker and still counts toward `trades_today`.
+
+11 tests updated/added: `test_exit_criteria.py` (2 threshold tests
+retargeted to 4%/8%, 1 test given an explicit `take_profit_pct`
+override to stay isolated from the new tighter default), 5 gate-floor
+tests in `test_backtest.py`/`test_portfolio_backtest.py` given an
+explicit `stop_loss_pct=0.10` override for the same isolation reason
+(their fixtures were built around the old 10% floor), 8 new
+`position_state.py` tests for the new tracking methods. Full suite
+green (249/249). `README.md` updated (Strategy/Exit-criteria/module
+table) to match the new live values.
+
+No `RISK_LIMITS`/`config.py` change - this only touches `exit_criteria.py`
+and `profit_gate.py`'s own module-level constants, per this project's
+existing convention for strategy-parameter tuning.

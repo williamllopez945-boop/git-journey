@@ -27,6 +27,25 @@ MIN_SELL_PROFIT_PCT = 0.0  # breakeven or better required for a plain
                             # sells immediately regardless of P&L). See
                             # backtest_2026-09-28_sell_cross_profit_gate.md.
 
+GATE_MAX_HOLD_HOURS = 24   # gate_floor_should_force_exit's max_hold_bars
+                            # for live cycles (1 cycle ~= 1 hour, see
+                            # position_state.hours_since_gate_blocked) -
+                            # a position the gate has held for a full day
+                            # exits regardless of P&L, so the gate can't
+                            # hold forever. None would disable this time
+                            # floor entirely. Backtested alongside the
+                            # tightened stop-loss/take-profit in
+                            # exit_criteria.py; a price floor was tested
+                            # too but found inert once the stop-loss is
+                            # this tight, so only the time floor is
+                            # adopted - GATE_PRICE_FLOOR_PCT stays None.
+                            # **Adopted 2026-09-28** (owner approval). See
+                            # backtest_2026-09-28_gate_floor_and_tighter_stops.md.
+GATE_PRICE_FLOOR_PCT = None  # see GATE_MAX_HOLD_HOURS above; not adopted -
+                              # redundant once stop_loss_pct is this tight
+                              # (confirmed byte-identical output in the
+                              # backtest with either value here).
+
 
 def blocks_sell_cross(current_price, avg_cost_basis, min_sell_profit_pct):
     """True if a death-cross/fresh_sell_cross signal should be held

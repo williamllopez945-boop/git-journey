@@ -13,21 +13,21 @@ def test_no_action_within_bands():
 
 
 def test_stop_loss_triggers_full_exit():
-    # 100 -> 89 is a 11% drop, past the 10% stop-loss
-    reason, fraction = check_exit(current_price=89, avg_cost_basis=100, take_profit_already_taken=False)
+    # 100 -> 95 is a 5% drop, past the 4% stop-loss
+    reason, fraction = check_exit(current_price=95, avg_cost_basis=100, take_profit_already_taken=False)
     assert reason == "stop_loss"
     assert fraction == 1.0
 
 
 def test_stop_loss_exact_threshold_triggers():
-    reason, fraction = check_exit(current_price=90, avg_cost_basis=100, take_profit_already_taken=False)
+    reason, fraction = check_exit(current_price=96, avg_cost_basis=100, take_profit_already_taken=False)
     assert reason == "stop_loss"
     assert fraction == 1.0
 
 
 def test_take_profit_triggers_partial_exit():
-    # 100 -> 121 is a 21% gain, past the 20% take-profit
-    reason, fraction = check_exit(current_price=121, avg_cost_basis=100, take_profit_already_taken=False)
+    # 100 -> 109 is a 9% gain, past the 8% take-profit
+    reason, fraction = check_exit(current_price=109, avg_cost_basis=100, take_profit_already_taken=False)
     assert reason == "take_profit"
     assert fraction == TAKE_PROFIT_SELL_FRACTION
 
@@ -49,10 +49,11 @@ def test_default_take_profit_sell_fraction_is_70_percent():
     assert TAKE_PROFIT_SELL_FRACTION == 0.70
 
 
-def test_default_take_profit_pct_is_20_percent():
-    # Locks in the tuned default explicitly (backtest_2026-09-25_stop_take.md)
-    # so an accidental change to the constant is caught, not just self-compared.
-    assert TAKE_PROFIT_PCT == 0.20
+def test_default_take_profit_pct_is_8_percent():
+    # Locks in the tuned default explicitly
+    # (backtest_2026-09-28_gate_floor_and_tighter_stops.md) so an
+    # accidental change to the constant is caught, not just self-compared.
+    assert TAKE_PROFIT_PCT == 0.08
 
 
 def test_trailing_stop_disabled_by_default_after_take_profit():
@@ -175,9 +176,12 @@ def test_profit_lock_does_not_fire_before_peak_clears_trigger():
 
 def test_profit_lock_does_not_fire_while_still_above_the_floor():
     # Peak cleared 15%, but price is still at +12%, above the 10% floor -
-    # no exit yet.
+    # no exit yet. take_profit_pct overridden well above +12% so this stays
+    # isolated to testing the profit_lock branch (the module default
+    # tightened to 8% 2026-09-28, which would otherwise fire take_profit
+    # first at this price and mask what's being tested here).
     reason, fraction = check_exit(current_price=112, avg_cost_basis=100, take_profit_already_taken=False,
-                                   peak_price_since_entry=116,
+                                   peak_price_since_entry=116, take_profit_pct=0.20,
                                    profit_lock_trigger_pct=0.15, profit_lock_stop_pct=0.10)
     assert reason is None
     assert fraction == 0.0

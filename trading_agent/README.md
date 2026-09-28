@@ -25,8 +25,9 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > reaches, **the $100 threshold no longer meaningfully gates anything** —
 > a properly-sized, strategy-confirmed entry now auto-executes with no
 > per-trade approval essentially always, not just "at or under" some
-> binding threshold. Per-position stop-loss (10%) and partial take-profit
-> (15%, sells 70%) also execute automatically once `DRY_RUN` is `False`
+> binding threshold. Per-position stop-loss (4%) and partial take-profit
+> (8%, sells 70%; tightened from 10%/20% 2026-09-28, see `CHANGELOG.md`)
+> also execute automatically once `DRY_RUN` is `False`
 > — see "Exit criteria" below. First real trade placed 2026-09-22: $5.02
 > PEPE buy, a discretionary override (not a strategy-confirmed signal). A
 > confirmed buy cross on the scanner path is also gated on real crypto
@@ -221,9 +222,9 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `equity_signals.py` | Computes `STOCK_WATCHLIST`'s sma10/sma30/pct_change/relative_volume directly from `get_equity_historicals` + `get_equity_quotes` per symbol, feeding `scanner_signals.classify` the same way the crypto scan does. Added 2026-09-25 to replace the retired stock scan as a signal source — see "Known gap: stock scan pagination" below |
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
-| `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
-| `profit_gate.py` | Profitability gate for the death-cross/`fresh_sell_cross` exit (`blocks_sell_cross`) — holds the exit instead of executing it while the position is below `MIN_SELL_PROFIT_PCT` (0%, breakeven or better). Backtested 2026-09-28 (see `backtest_2026-09-28_sell_cross_profit_gate.md`) and **adopted the same day** (owner approval) — live in `PLAYBOOK.md`'s `fresh_sell_cross` procedure for both crypto and stocks, logged as `"blocked_unprofitable"` when it holds. Never overrides stop-loss/take-profit, which run independently every cycle |
-| `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
+| `exit_criteria.py` | Per-position stop-loss (4%) and partial take-profit (8%, sells 70%) checks, independent of the SMA signal. Tightened from 10%/20% 2026-09-28 (owner request) — see `backtest_2026-09-28_gate_floor_and_tighter_stops.md` |
+| `profit_gate.py` | Profitability gate for the death-cross/`fresh_sell_cross` exit (`blocks_sell_cross`) — holds the exit instead of executing it while the position is below `MIN_SELL_PROFIT_PCT` (0%, breakeven or better). Backtested 2026-09-28 (see `backtest_2026-09-28_sell_cross_profit_gate.md`) and **adopted the same day** (owner approval) — live in `PLAYBOOK.md`'s `fresh_sell_cross` procedure for both crypto and stocks, logged as `"blocked_unprofitable"` when it holds. Never overrides stop-loss/take-profit, which run independently every cycle. Also owns the **gate floor** (`gate_floor_should_force_exit`, added 2026-09-28) — a 24h time floor (`GATE_MAX_HOLD_HOURS`) that forces a still-gated position out regardless of P&L, so the gate can't hold forever; a price floor was backtested but found redundant once the stop-loss is this tight, so it stays disabled (`GATE_PRICE_FLOOR_PCT = None`) |
+| `position_state.py` | Tracks take-profit state (fires once per position), the post-exit whipsaw cooldown (4h, blocks re-entry), and (added 2026-09-28) how long a position has been held under the profitability gate, for the gate floor above — all persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing (flat or volatility-scaled, plus a hard aggregate cap across all open positions), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
@@ -313,18 +314,28 @@ which is inherent to the approach, not something tuning fixes.
    `"blocked_unprofitable"` — see `backtest_2026-09-28_sell_cross_profit_gate.md`.
    Deferred only, never skipped for good: triggers 2 and 3 below still
    run every cycle regardless.
-2. **Stop-loss (10%)** — current price is 10% or more below the position's
+2. **Stop-loss (4%)** — current price is 4% or more below the position's
    average cost basis. Exits the full position, regardless of the SMA
-   state (`exit_criteria.py`).
-3. **Take-profit (15%, partial)** — current price is 15% or more above
+   state (`exit_criteria.py`). Tightened from 10% 2026-09-28 (owner
+   request) — see `backtest_2026-09-28_gate_floor_and_tighter_stops.md`.
+3. **Take-profit (8%, partial)** — current price is 8% or more above
    average cost basis. Sells 70% of the position, once per position
    lifecycle; the remaining 30% keeps riding, subject to the same
    stop-loss and death-cross checks afterward (`exit_criteria.py` +
-   `position_state.py`).
+   `position_state.py`). Tightened from 20% the same day, same doc.
+4. **Gate floor (added 2026-09-28)** — while a `fresh_sell_cross` is being
+   held by trigger 1's profitability gate, forces the position out anyway
+   once it's been held that way for 24h (`GATE_MAX_HOLD_HOURS`,
+   `profit_gate.py`), regardless of P&L, so the gate can't hold forever.
+   Cleared early if the price recovers to breakeven first. Not protective
+   in the same sense as triggers 2/3 — see "Auto-execution policy" below.
 
 Stop-loss and take-profit are protective/profit-locking checks, not new
 risk-taking — see "Auto-execution policy" below for why they're exempt
-from the size cap and trade limits that apply to entries.
+from the size cap and trade limits that apply to entries. The gate floor
+is a same-substance stand-in for an ordinary death-cross exit, not a
+protective one — it's subject to the same gates a `fresh_sell_cross`
+exit is, and it still counts toward `max_trades_per_day`.
 
 ## Risk limits (as configured)
 
@@ -494,13 +505,15 @@ Each cycle's `classify()` call returns one of:
   properly-sized confirmed entries auto-execute, approval is the
   exception - now holds automatically as equity moves, with no manual
   resync required. See `CHANGELOG.md`.
-- **Protective exits are not bounded the same way.** Stop-loss (10%) and
-  take-profit (15%, sells 70%) — see "Strategy" above — execute
+- **Protective exits are not bounded the same way.** Stop-loss (4%) and
+  take-profit (8%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
   the daily trade cap, and the circuit breaker. Only `DRY_RUN` gates
   them. This is deliberate: those gates limit new risk-taking, and
   applying them to an exit would mean being unable to cut a loss or lock
-  in a gain exactly when it matters.
+  in a gain exactly when it matters. The gate floor (trigger 4 above) is
+  NOT included in this exemption — it's an ordinary, non-protective exit
+  subject to `can_trade()`/the circuit breaker like any other.
 - **Every auto-executed trade is reported immediately after placement**
   (asset, side, quantity, price, order id, and for exits the reason and
   resulting P/L) — auto-execute removes the approval gate before the

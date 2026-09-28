@@ -7,6 +7,19 @@
   blocked, set whenever a position fully closes (stop-loss or death
   cross). Targets repeated whipsaw losses from re-entering a choppy
   market immediately after being stopped out.
+- gate_blocked_since: an ISO timestamp set the first cycle
+  profit_gate.blocks_sell_cross holds a fresh_sell_cross/death-cross for
+  this asset instead of executing it (2026-09-28, see profit_gate.py and
+  backtest_2026-09-28_gate_floor_and_tighter_stops.md). Live cycles run
+  on real wall-clock time, not the backtest's bar index, so this is the
+  live equivalent of backtest.py's blocked_since_index - the caller
+  converts elapsed wall-clock time to hours and passes that as
+  bars_since_blocked to profit_gate.gate_floor_should_force_exit (1
+  cycle ~= 1 hour, same convention as DEFAULT_COOLDOWN_HOURS below).
+  Only the FIRST block sets it (mirrors blocked_since_index's "if None"
+  guard) - a signal blocked for several consecutive cycles keeps the
+  original timestamp, not the most recent one. Cleared on recovery to
+  profitability or any exit, same as the backtest.
 
 DEFAULT_COOLDOWN_HOURS: an initial sweep against only IBIT/ETHA suggested
 12h, but re-tuning against a broader 11-series set (IBIT/ETHA plus GBTC's
@@ -71,3 +84,33 @@ class PositionStateStore:
             return False
         now = now or datetime.now(timezone.utc)
         return now < datetime.fromisoformat(until_str)
+
+    def mark_gate_blocked(self, asset, now=None):
+        """Record the first cycle profit_gate.blocks_sell_cross holds a
+        sell for this asset. A no-op if already marked (mirrors
+        backtest.py's blocked_since_index "if None" guard) - later calls
+        for the same still-blocked position never reset the clock."""
+        if self.data.get(asset, {}).get("gate_blocked_since") is not None:
+            return
+        now = now or datetime.now(timezone.utc)
+        self.data.setdefault(asset, {})["gate_blocked_since"] = now.isoformat()
+        self._save()
+
+    def clear_gate_blocked(self, asset):
+        """Call on recovery to profitability or any exit, so a future
+        block for this asset starts its own fresh clock."""
+        if self.data.get(asset, {}).get("gate_blocked_since") is not None:
+            self.data[asset]["gate_blocked_since"] = None
+            self._save()
+
+    def hours_since_gate_blocked(self, asset, now=None):
+        """Hours elapsed since mark_gate_blocked first fired for this
+        asset, for profit_gate.gate_floor_should_force_exit's
+        bars_since_blocked (1 cycle ~= 1 hour). None if not currently
+        blocked."""
+        since_str = self.data.get(asset, {}).get("gate_blocked_since")
+        if since_str is None:
+            return None
+        now = now or datetime.now(timezone.utc)
+        elapsed = now - datetime.fromisoformat(since_str)
+        return elapsed.total_seconds() / 3600.0
