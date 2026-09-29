@@ -4,9 +4,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from trading_agent.risk_manager import RiskManager
+from trading_agent.cost_basis_fallback import average_cost_basis_from_trade_log
 
 LIMITS = {
     "max_position_pct": 0.05,
@@ -197,6 +200,38 @@ def test_day_rollover_resets_daily_counters_but_keeps_trade_log():
     # a position bought yesterday and exited today loses its cost basis
     # (cost_basis_fallback.py needs this history across day boundaries).
     assert rm.state["trade_log"] == stale_state["trade_log"]
+
+
+def test_trade_log_survives_restart_with_correct_cost_basis_still_derivable():
+    # 2026-09-29 audit regression: it's not enough for trade_log to survive
+    # a restart/day-rollover as a raw list (test_day_rollover_resets_daily_
+    # counters_but_keeps_trade_log above already checks that) - a real
+    # consumer (cost_basis_fallback.py, feeding live protective-exit checks)
+    # must still derive the correct cost basis from what comes back. Uses
+    # the corrected real DOGE transfer-in + real-buy history
+    # (pnl_reconciliation_2026-09-29.md) as the fixture, bought "yesterday",
+    # recovered via a restart across a UTC day boundary, with no sell yet
+    # (position still open going into today).
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    tmp = Path(name)
+    stale_state = {
+        "date": "2000-01-01",
+        "starting_equity": 500.0,
+        "trades_today": 1,
+        "halted": False,
+        "trade_log": [
+            {"timestamp": "2000-01-01T16:31:49+00:00", "asset": "DOGE",
+             "side": "buy", "quantity": 1129.12766834, "price": 0.180421},
+            {"timestamp": "2000-01-01T14:10:54+00:00", "asset": "DOGE",
+             "side": "buy", "quantity": 49.64, "price": 0.09873026},
+        ],
+    }
+    tmp.write_text(json.dumps(stale_state))
+
+    rm = RiskManager(LIMITS, state_path=tmp)  # simulates a restart into a new UTC day
+    avg_cost = average_cost_basis_from_trade_log("DOGE", rm.state["trade_log"])
+    assert avg_cost == pytest.approx(0.1769808578562045, rel=1e-9)
 
 
 def test_position_size_aggregate_override_replaces_configured_value():
