@@ -1252,3 +1252,31 @@ level (already known, already accepted - see the original doc). No
 parameter changed as a result - `MIN_SELL_PROFIT_PCT=0.0` and
 `GATE_MAX_HOLD_HOURS=24` were already live. 245/245 tests pass (7 new,
 covering `fee_pct`).
+
+## 2026-09-29 (later still) — Walk-forward backtest: strategy beats cash in every one of 4 real out-of-sample windows
+
+Last of the three ChatGPT-review follow-ups. Pulled a full year of real
+hourly data and found (before running any backtest) that a real fraction
+of every prior pull in this project's history included
+`interpolated: true` placeholder bars (flat price, zero volume) -
+previously never checked or filtered. After filtering to real bars only:
+9 `STOCK_WATCHLIST` symbols + `IBIT`/`ETHA` share a real 9-month window
+(2025-12-22 to 2026-09-28); MAIR's real data only starts at its April
+2026 IPO (5.3 months). Ran a genuine 4-fold (2-fold for MAIR) walk-forward
+- independent sequential windows, not the H1/H2 split used everywhere
+else in this project - at current production settings, against
+buy-and-hold and cash benchmarks. Full write-up:
+`backtest_2026-09-29_walkforward.md`. Added `profit_factor` to
+`backtest.py`'s `summarize()` along the way (gross gain/loss ratio, in
+pct terms).
+
+**Result: the strategy beat cash in all 4 independent portfolio-level
+windows tested**, with a clear, mechanistically sensible regime pattern -
+it massively outperformed buy-and-hold in the one real down-market
+window (+7.13% vs -12.80%) and gave back some upside in two strong
+bull-market windows (as expected from stop-loss/take-profit capping
+exposure), roughly matching buy-and-hold in the one choppier window.
+MAIR's known weakness reproduced again on real (not proxy) data - a
+third independent method now agreeing with the watchlist-review and
+gate-cost findings. No parameter change - this is validation evidence,
+not a proposal. 247/247 tests pass (2 new, covering `profit_factor`).

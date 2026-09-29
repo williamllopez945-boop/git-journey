@@ -224,6 +224,16 @@ def summarize(trades, equity_curve, closes, starting_cash):
     wins = [r for r in round_trips if r["pnl_pct"] > 0]
     win_rate_pct = (len(wins) / len(round_trips) * 100) if round_trips else None
 
+    # profit_factor: gross gain / gross loss, both in pnl_pct terms (this
+    # project's convention throughout - see exit_criteria.py etc.) rather
+    # than dollar P&L. >1 means winning round trips outweigh losing ones
+    # in aggregate; None when there's nothing to divide by (no losses, or
+    # no round trips at all) rather than a misleading inf/0.
+    losses = [r for r in round_trips if r["pnl_pct"] < 0]
+    gross_gain = sum(r["pnl_pct"] for r in wins)
+    gross_loss = -sum(r["pnl_pct"] for r in losses)
+    profit_factor = (gross_gain / gross_loss) if gross_loss > 0 else None
+
     return {
         "final_equity": final_equity,
         "total_return_pct": total_return_pct,
@@ -232,5 +242,6 @@ def summarize(trades, equity_curve, closes, starting_cash):
         "num_trades": len(trades),
         "num_round_trips": len(round_trips),
         "win_rate_pct": win_rate_pct,
+        "profit_factor": profit_factor,
         "round_trips": round_trips,
     }

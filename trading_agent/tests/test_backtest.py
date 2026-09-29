@@ -179,3 +179,28 @@ def test_summarize_win_rate_from_round_trips():
     s = summarize(trades, equity_curve, closes, starting_cash=100.0)
     assert s["num_round_trips"] >= 1
     assert s["win_rate_pct"] is not None
+
+
+def test_profit_factor_none_when_no_losing_round_trips():
+    closes = [5.0] * 30 + [5.0, 5.0, 5.0, 5.0, 5.0, 9.0]
+    trades, equity_curve = backtest(closes, short_window=2, long_window=4, starting_cash=100.0)
+    s = summarize(trades, equity_curve, closes, starting_cash=100.0)
+    assert s["num_round_trips"] == 0
+    assert s["profit_factor"] is None
+
+
+def test_profit_factor_ratio_of_gross_gain_to_gross_loss():
+    # One winning round trip (+80%) and one losing round trip (-20%,
+    # gate disabled, stop-loss widened so the death-cross itself fires).
+    closes = ([5.0] * 30 +
+              [5, 5, 5, 5, 5, 9] +          # buy at 5, cross up
+              [9, 9, 9, 9, 9, 5] +          # death-cross sell at 5 (-44.4%... use a cleaner ratio below)
+              [5, 5, 5, 5, 5, 10] +         # re-buy at 5, cross up
+              [10, 10, 10, 10, 10, 8])      # death-cross sell at 8 (-20%)
+    trades, equity_curve = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                                     min_sell_profit_pct=None, stop_loss_pct=0.90)
+    s = summarize(trades, equity_curve, closes, starting_cash=100.0)
+    round_trips = s["round_trips"]
+    gains = sum(r["pnl_pct"] for r in round_trips if r["pnl_pct"] > 0)
+    losses = -sum(r["pnl_pct"] for r in round_trips if r["pnl_pct"] < 0)
+    assert s["profit_factor"] == pytest.approx(gains / losses)
