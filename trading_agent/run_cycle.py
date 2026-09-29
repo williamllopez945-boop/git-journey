@@ -164,6 +164,19 @@ def main():
                          help="override for tests - defaults to the real trading_agent/position_state.json")
     parser.add_argument("--cycle-log-path", default=str(DEFAULT_CYCLE_LOG_PATH),
                          help="override for tests - defaults to the real trading_agent/cycle_log.json")
+    parser.add_argument("--record-trade-asset", default=None,
+                        help="if set, records an already-executed trade after everything else runs")
+    parser.add_argument("--record-trade-side", choices=["buy", "sell"], default=None)
+    parser.add_argument("--record-trade-quantity", type=float, default=None)
+    parser.add_argument("--record-trade-price", type=float, default=None,
+                        help="actual fill price, not the order's requested price")
+    parser.add_argument("--record-trade-protective", action="store_true",
+                        help="stop-loss/take-profit exit - does not consume a daily trade slot")
+    parser.add_argument("--record-trade-action", default="executed")
+    parser.add_argument("--record-trade-classification", default=None)
+    parser.add_argument("--record-trade-crossover-pct", type=float, default=None)
+    parser.add_argument("--record-trade-notional", type=float, default=None)
+    parser.add_argument("--record-trade-order-id", default=None)
     args = parser.parse_args()
 
     watchlist = WATCHLIST if args.asset_class == "crypto" else STOCK_WATCHLIST
@@ -255,6 +268,21 @@ def main():
             pct = (price - avg_cost) / avg_cost * 100
             print(f"{asset} exit -> {reason} {fraction} pct_change={pct:.3f}% "
                   f"(price={price}, avg_cost={avg_cost:.6f})")
+
+    if args.record_trade_asset:
+        rm.record_trade(args.record_trade_asset, args.record_trade_side,
+                        args.record_trade_quantity, args.record_trade_price,
+                        protective=args.record_trade_protective)
+        extra = {"price": args.record_trade_price, "quantity": args.record_trade_quantity}
+        if args.record_trade_notional is not None:
+            extra["notional"] = args.record_trade_notional
+        if args.record_trade_order_id is not None:
+            extra["order_id"] = args.record_trade_order_id
+        log.record(args.record_trade_asset, args.record_trade_classification,
+                   args.record_trade_crossover_pct, args.record_trade_action, **extra)
+        print(f"recorded: {args.record_trade_side} {args.record_trade_quantity} "
+              f"{args.record_trade_asset} @ {args.record_trade_price} "
+              f"(trades_today now {rm.state['trades_today']})")
 
 
 if __name__ == "__main__":
