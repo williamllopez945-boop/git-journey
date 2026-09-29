@@ -17,30 +17,41 @@ README.md's "Coverage" section).
 ## Steps, per cycle
 
 1. **Load config.** `WATCHLIST`, `LOOKBACK_DAYS`, `NEWS_LIMIT`,
-   `FORM_TYPES`, `EARNINGS_LOOKAHEAD_DAYS` from `research_agent/config.py`.
+   `NEWS_ALLOWED_DOMAINS`, `FORM_TYPES`, `EARNINGS_LOOKAHEAD_DAYS` from
+   `research_agent/config.py`.
 
 2. **For each symbol in `WATCHLIST`:**
 
-   a. **News.** Call `get_equity_news(symbol, limit=NEWS_LIMIT)`. It
-      returns `articles: [{id, title, publisher, preview_text, content,
-      published_at, source_type}]`, newest first. Before logging
-      anything, call `ResearchLogStore().entries_for_asset(symbol)` and
-      collect every `article_ids` list already logged for this symbol
-      (news entries store a *list* of covered ids, not a single one) —
-      `get_equity_news` returns *recent* articles each call, not just
-      new ones since the last run, so without this check the same
-      article gets re-logged every day it stays in that recent window.
-      Filter to articles whose `id` is NOT already covered. If none are
-      new, log nothing for this symbol. If one or more are new, write
-      **one consolidated entry**, not one entry per article — synthesize
-      a single 2-3 sentence summary of what's new across those articles
-      (the real signal: price moves, analyst rating/target changes,
-      earnings results, material announcements; skip pure filler like
-      "$1000 invested N years ago" pieces and mentions where the symbol
-      is only feed-tagged, not the subject) and call `record(symbol,
-      "news", <consolidated summary>, article_ids=[<ids of every new
-      article covered>], article_count=<count>,
-      published_at=<newest covered article's published_at>,
+   a. **News (source changed 2026-09-29 — see `config.py`'s "News source
+      change" note: `get_equity_news` does not exist in this session's
+      toolset; `WebSearch` is the replacement, owner-approved).** Call
+      `WebSearch(query="<symbol> stock", allowed_domains=NEWS_ALLOWED_DOMAINS)`
+      — one call per symbol; a bare ticker plus "stock" reliably surfaces
+      that company rather than an unrelated word (e.g. a plain "AR" would
+      not). Results are search-result blocks with a title, URL, and a
+      short snippet, newest/most-relevant first per the tool's own
+      ranking (no reliable `published_at` field the way `get_equity_news`
+      had — don't fabricate one). Before logging anything, call
+      `ResearchLogStore().entries_for_asset(symbol)` and collect every
+      `urls` list already logged for this symbol under `source_type="news"`
+      (news entries store a *list* of covered URLs, not a single one,
+      same shape as the old `article_ids` field it replaces) — a fresh
+      search returns whatever is currently prominent, not just new items
+      since the last run, so without this check the same story gets
+      re-logged every day it stays prominent. **Legacy entries logged
+      before 2026-09-29 carry `article_ids` (RobinHood article UUIDs),
+      not `urls` — never compare a WebSearch URL against an old
+      `article_ids` list; only compare URLs against URLs.** Filter to
+      results whose URL is NOT already covered. If none are new, log
+      nothing for this symbol. If one or more are new, write **one
+      consolidated entry**, not one entry per result — synthesize a
+      single 2-3 sentence summary of what's new across those results (the
+      real signal: price moves, analyst rating/target changes, earnings
+      results, material announcements; skip pure filler like "$1000
+      invested N years ago" pieces and results where the symbol is only
+      tangentially mentioned, not the subject) and call `record(symbol,
+      "news", <consolidated summary>, urls=[<URLs of every new result
+      covered>], result_count=<count>,
       kind=<"baseline" if this symbol had no prior "news" entry, else
       "delta">)`. This keeps the log to one compact row per symbol per
       cycle instead of up to `NEWS_LIMIT` rows, which is what was
@@ -126,13 +137,15 @@ README.md's "Coverage" section).
   `STOCK_WATCHLIST`, or `VOLTRAP_WATCHLIST` — this agent reads those
   watchlists, it doesn't own or change any of them.
 - Always check `entries_for_asset`/`entries_for_date` for existing
-  `article_ids`/`filing_id` values before calling `record()` for news or
-  a SEC filing — re-scanning the same recent window every day without
-  this check would flood the log with duplicates.
+  `urls`/`filing_id` values before calling `record()` for news or a SEC
+  filing — re-scanning the same recent window every day without this
+  check would flood the log with duplicates. Legacy news entries (before
+  2026-09-29) carry `article_ids` instead of `urls` — never cross-compare
+  the two; see step 2a.
 - News is logged as one consolidated entry per symbol per cycle, not one
-  entry per article — see step 2a. This keeps the log (and the tokens
+  entry per result — see step 2a. This keeps the log (and the tokens
   spent reading it back) proportional to the watchlist size, not to
   `NEWS_LIMIT`.
 - Crypto (`trading_agent.config.WATCHLIST`, the non-stock list) is out
-  of scope — never call an equity-only tool (`get_equity_news`,
+  of scope — never call an equity-only tool (`WebSearch` for news,
   `get_sec_filing_index`, `get_earnings_results`) with a crypto symbol.
