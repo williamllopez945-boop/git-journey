@@ -41,8 +41,18 @@ WATCHLIST = [
 # the two worst 90-day backtested performers (-22.77%/-30.71%); CRDO/PYPL
 # backtested +17.59%/+16.82% and passed the same $10B+ market cap screen.
 # See watchlist_review_2026-09-26_stocks.md and CHANGELOG.md.
+# MAIR -> VTRS (2026-09-29 watchlist review): MAIR was independently
+# flagged as the weakest member 3 times (2026-09-26/09-27 reviews, then
+# the 2026-09-29 walk-forward backtest's -21.92% real fold). Sourced 6
+# candidates via the production scan; every one beat MAIR at the
+# portfolio level (not just isolated). VTRS won on the binding portfolio
+# metric (+31.66% vs. MAIR-in's +17.64% full-period, best worst-case
+# fold among top candidates, lower turnover) despite a mediocre isolated
+# result - another isolated/portfolio ranking flip. MAIR had zero open
+# positions and zero trade history, so no liquidation was needed. See
+# watchlist_review_2026-09-29_stocks.md and CHANGELOG.md.
 STOCK_WATCHLIST = [
-    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "MAIR", "AR", "PYPL",
+    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "VTRS", "AR", "PYPL",
 ]
 
 STRATEGY = {

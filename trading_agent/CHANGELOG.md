@@ -1334,3 +1334,14 @@ flip this project keeps finding.
 `config.py` not edited - waiting on owner approval. MAIR carries zero
 open positions and zero trade history, so no liquidation step is needed
 if approved.
+
+## 2026-09-29 (later still) — MAIR -> VTRS swap approved and applied
+
+Owner approved the recommendation from the same-day review doc.
+`config.py` changed: `STOCK_WATCHLIST`: `MAIR` -> `VTRS`. No sell order
+needed - confirmed via `get_equity_positions` that the account holds
+zero open equity positions of any kind at the time of the swap. Real
+Robinhood "Trading Agent — Stock Watchlist" (`147f9bb2-...`) updated to
+match (`MAIR` removed, `VTRS` added), same step as every prior approved
+swap. Full reasoning: `watchlist_review_2026-09-29_stocks.md`. 247/247
+tests passing (no test logic changed, config-only edit).
