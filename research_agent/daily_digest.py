@@ -14,6 +14,11 @@ def _describe_entry(entry):
     source_type = entry["source_type"]
     summary = entry["summary"]
     if source_type == "news":
+        # result_count (WebSearch, since 2026-09-29) or legacy
+        # article_count (get_equity_news) - never both on one entry.
+        if "result_count" in entry:
+            count = entry["result_count"]
+            return f"{summary} ({count} new result{'s' if count != 1 else ''})"
         count = entry.get("article_count")
         if count:
             return f"{summary} ({count} new article{'s' if count != 1 else ''})"

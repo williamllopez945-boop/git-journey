@@ -53,6 +53,16 @@ def test_format_daily_digest_labels_a_consolidated_news_entry_with_its_article_c
     assert "(5 new articles)" in digest
 
 
+def test_format_daily_digest_labels_a_consolidated_news_entry_with_its_result_count():
+    entries = [
+        _entry("CRDO", "news", "AI data-center demand continues to drive coverage.",
+               result_count=4, urls=["https://a.example.com", "https://b.example.com"]),
+    ]
+    digest = format_daily_digest(entries, "2026-09-29")
+    assert "**News**" in digest
+    assert "(4 new results)" in digest
+
+
 def test_format_daily_digest_tags_a_baseline_entry_but_not_a_delta():
     entries = [
         _entry("CRWD", "sec_filing", "Most recent 10-Q on file at first coverage of this symbol.",
