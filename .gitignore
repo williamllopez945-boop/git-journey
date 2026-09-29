@@ -13,9 +13,11 @@ robinhood_credentials*
 robinhood_token*
 
 # Trading agent runtime state/logs (live account + trade data, never commit)
+trading_agent/state.json
 trading_agent/price_history.json
 trading_agent/scanner_state.json
 trading_agent/position_state.json
+trading_agent/cycle_log.json
 trading_agent/*.log
 trading_agent/logs/
 # trading_agent/daily_logs/*.md is NOT ignored - the daily after-action
@@ -34,3 +36,5 @@ __pycache__/
 # Per-workspace development environments (never shared between agents)
 .venv/
 
+# VOLTRAP runtime state, like the other production state above
+trading_agent/voltrap_state.json
