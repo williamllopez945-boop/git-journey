@@ -1280,3 +1280,34 @@ MAIR's known weakness reproduced again on real (not proxy) data - a
 third independent method now agreeing with the watchlist-review and
 gate-cost findings. No parameter change - this is validation evidence,
 not a proposal. 247/247 tests pass (2 new, covering `profit_factor`).
+
+## 2026-09-29 (later still) — Loss-budget position sizing evaluation: mixed evidence, not adopted
+
+Fourth and last ChatGPT-review follow-up. Full write-up:
+`backtest_2026-09-29_loss_budget_sizing.md`. Key finding before any
+backtest ran: since `stop_loss_pct` is a single fixed 4% for every asset
+on the live scanner path (`volatility_sizing.py`'s per-asset scaling only
+applies on the unused polling path - `PLAYBOOK.md`'s own documented
+scope note), "size by loss budget" is exact algebra identical to "use a
+smaller flat `max_position_pct`" in this system - `risk_pct = max_position_pct
+x stop_loss_pct`. Backtested 12.5%/10%/6.25% (0.5%/0.4%/0.25% implied
+risk-per-trade) against the current 20% (0.8%), same real walk-forward
+data and folds as the previous doc.
+
+**Result is genuinely mixed, not a clean win for smaller sizing**: 12.5%
+slightly beats 20% on full-period portfolio return and drawdown, but the
+one real down-market fold (F1) clearly favors the current 20% instead -
+smaller sizing gives up real downside protection in exactly the regime
+this strategy exists to handle. Found along the way: at 20% sizing, the
+60% aggregate cap only ever allows 3 of the nominally-allowed 5
+concurrent positions - a real, previously unnoticed interaction between
+`max_position_pct` and `max_aggregate_pct`, likely explaining most of
+12.5%'s edge. Also: `max_aggregate_pct` (60%) x `stop_loss_pct` (4%) =
+2.40% implied worst-case same-day correlated-stop loss, uncomfortably
+close to the 3.00% circuit breaker - a structural observation, not
+separately backtested here.
+
+**No `RISK_LIMITS` change** - evidence doesn't clear this project's bar
+for a live parameter change (worst-case-first, holds across neighbors).
+12.5% flagged as a genuine paper-test candidate per ChatGPT's own
+framing, not a proposal to adopt from this backtest alone.
