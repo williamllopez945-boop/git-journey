@@ -1359,3 +1359,17 @@ closing sale, same method as the 2026-09-28 audit's five VWAP
 corrections. Both positions were already fully closed before this
 landed - historical P&L accuracy only, no effect on any live
 protective-exit calculation. 247/247 tests passing.
+
+## 2026-09-29 (later still) — Walk-forward backtest re-run with VTRS, fresh data
+
+Full write-up: `backtest_2026-09-29_walkforward_v2_vtrs.md`. Re-ran the
+same-day 4-fold walk-forward with the current live watchlist (`VTRS` in
+place of `MAIR`, following today's approved swap) and a fresh data pull
+- not because the DOGE/SOL or AVAX record fixes required it (backtests
+never read `trade_log`/`state.json`), but because the watchlist itself
+changed. Same result holds: strategy beats cash in all 4 folds,
+including an even wider down-market outperformance in F1 (+10.84% vs.
+buy-and-hold's -9.75%) than the original 11-symbol run. VTRS's one weak
+fold (F3, -10.71%) reproduces the same weakness already found in the
+watchlist review's shorter overlap window - not new. No parameter
+change; reconfirms the strategy on the updated watchlist.
