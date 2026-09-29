@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -165,6 +166,68 @@ def test_stock_asset_class_uses_historicals_and_quotes_not_scan_file():
         )
         assert result.returncode == 0, result.stderr
         assert "circuit_breaker_halted:" in result.stdout
+
+
+def test_protective_exit_still_reported_during_a_circuit_breaker_halt():
+    # 2026-09-29 regression: ChatGPT's second-opinion review flagged an
+    # apparent contradiction between earlier reports ("circuit-breaker halts
+    # skipped all evaluation") and the current PLAYBOOK.md/CHANGELOG.md
+    # claim ("protective exits are never gated by the halt") and asked for
+    # the actual code path to be verified and regression-tested, not just
+    # asserted in prose. This is that test, at the run_cycle.py level (the
+    # code path a live cycle actually calls): pre-seed a starting_equity
+    # far above today's portfolio value (a real, current-day breach, not a
+    # stale prior-day figure that start_of_day() would just overwrite), and
+    # a held position priced well past the 4% stop-loss threshold. Assert
+    # BOTH that the script reports the halt AND that it still reports the
+    # stop-loss exit - proving protective exits are not skipped in the
+    # actual code, not just documented as such.
+    with tempfile.TemporaryDirectory() as tmp:
+        scan = {
+            "data": {"result": {"results": [
+                {"ticker": "BTC", "columns": {
+                    "Symbol": "BTC", "SMA 10 (1h)": "100", "SMA 30 (1h)": "95",
+                    "% Change": "-0.10", "Relative volume": "1.2", "Last": "90",
+                }},
+            ]}}
+        }
+        # Today's equity (200.40) is a 33% drawdown from starting_equity
+        # (300) - well past the 3% daily_loss_limit_pct - and "date" is
+        # today's real UTC date so RiskManager treats this as already
+        # recorded today rather than resetting it via start_of_day().
+        portfolio = {"data": {"total_value": "200.40"}}
+        today = datetime.now(timezone.utc).date().isoformat()
+        risk_state = {
+            "date": today, "starting_equity": 300.0, "trades_today": 0,
+            "halted": False, "trade_log": [],
+        }
+        # BTC held at cost basis 100, marked at 90 (-10%) - well past the
+        # 4% stop-loss trigger (exit_criteria.STOP_LOSS_PCT).
+        positions = {"data": {"results": [
+            {"currency": {"code": "BTC"}, "quantity_transferable": "1.0",
+             "cost_bases": [{"direct_quantity": "1.0", "direct_cost_basis": "100.0"}]},
+        ]}}
+
+        scan_file = _write(tmp, "scan.json", scan)
+        portfolio_file = _write(tmp, "portfolio.json", portfolio)
+        positions_file = _write(tmp, "positions.json", positions)
+        risk_state_path = Path(tmp) / "state.json"
+        risk_state_path.write_text(json.dumps(risk_state))
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto",
+             "--scan-file", scan_file, "--portfolio-file", portfolio_file,
+             "--positions-file", positions_file, "--no-log",
+             "--risk-state-path", str(risk_state_path),
+             "--scanner-state-path", str(Path(tmp) / "scanner_state.json"),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+        assert "circuit_breaker_halted: True" in result.stdout
+        assert "can_trade: False" in result.stdout
+        assert "BTC exit -> stop_loss" in result.stdout
 
 
 def test_stock_asset_class_requires_historicals_and_quotes_files():
