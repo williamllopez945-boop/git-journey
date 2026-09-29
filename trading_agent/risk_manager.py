@@ -4,6 +4,7 @@ cap. State is persisted to disk so limits hold across process restarts and
 across the scheduled cycles that drive the agent."""
 
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -141,9 +142,24 @@ class RiskManager:
         of current total portfolio value (2026-09-27, owner request -
         replaces a flat dollar cap that went stale as portfolio value
         changed; see CHANGELOG.md), so it scales automatically instead of
-        needing a manual bump every time equity moves meaningfully."""
+        needing a manual bump every time equity moves meaningfully.
+
+        Uses math.isclose (2026-09-29 fix) rather than a bare <=: a caller
+        that sizes an order via position_size() and then recomputes its
+        notional as quantity * price (every real call site does this - the
+        quantity is what actually gets placed) can get a notional that is
+        off from portfolio_value * max_pct by float noise alone, since
+        division then multiplication doesn't always exactly invert. Found
+        live 2026-09-29 (LIT, $91.25): notional came back
+        91.25317997295242 against a cap of 91.25317997295241 - the same
+        value, 1.4e-14 apart, on the wrong side of a strict <=, which
+        wrongly forced a correctly-sized, in-budget order into manual
+        review. rel_tol=1e-9 absorbs float noise many orders of magnitude
+        below any real overage while still rejecting a genuinely
+        oversized order."""
         max_pct = self.limits.get("auto_execute_max_pct", 0.0)
-        return order_value_usd <= portfolio_value * max_pct
+        cap = portfolio_value * max_pct
+        return order_value_usd <= cap or math.isclose(order_value_usd, cap, rel_tol=1e-9)
 
     def record_trade(self, asset, side, quantity, price, protective=False):
         """Log a real trade to trade_log (always) and count it toward

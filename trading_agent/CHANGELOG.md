@@ -1412,3 +1412,41 @@ recovery to 75) gives back exactly the upside SMA crossover exists to
 capture. MACD+RSI won on 3 of 12 (both crypto proxies + PYPL) - a real
 but narrow signal, not enough to justify a switch. **Rejected - no
 code change.**
+
+## 2026-09-29 (later still) — Two live sizing/execution bugs found and fixed
+
+Found live during real hourly cycles today, not a backtest change - no
+strategy or risk parameter touched, both are correctness fixes.
+
+1. **`RiskManager.can_auto_execute` float-precision false negative**
+   (LIT, $91.25): every real call site sizes an order via
+   `position_size()` then recomputes its actual notional as
+   `quantity * price` (the number that actually gets placed) - float
+   division then multiplication doesn't always exactly invert, so that
+   notional can land a few ulps on the wrong side of
+   `portfolio_value * auto_execute_max_pct`. Live case: notional
+   `91.25317997295242` against a cap of `91.25317997295241` - the same
+   value, 1.4e-14 apart, wrongly forced a correctly-sized, in-budget
+   order into manual review instead of auto-executing. Fixed with
+   `math.isclose(..., rel_tol=1e-9)` alongside the existing `<=` -
+   absorbs float noise many orders of magnitude below any real
+   overage while still rejecting a genuine one (regression test
+   confirms a real $1-over-cap case still blocks).
+2. **Fractional equity sizing can't be placed as a marketable limit
+   order** (PANW, $92.03 sized to 0.2413 shares): `place_equity_order`
+   only accepts a fractional `quantity` on `type=market`, never
+   `type=limit` - and PLAYBOOK.md's equity policy requires `type=limit`
+   for price protection (see the 2026-09-27 order-type-policy-gap
+   incident above). Added `equity_signals.whole_share_quantity()` -
+   floors a risk-sized quantity to a whole share, which can only size
+   the order at or under budget, never over it; `0.0` means even one
+   share exceeds this cycle's budget, the signal to present as
+   `"recommended"` instead of auto-executing. PLAYBOOK.md's equity
+   execution steps now call this out explicitly - never round up over
+   the cap, never drop to `type=market` to force the exact fractional
+   quantity through.
+
+Both were found via the routine's own live cycles today, not invented
+- see `cycle_log.json`'s `2026-09-29T15:32:00` (LIT) and PANW's
+`recommended` entries. 5 new regression tests
+(`test_risk_manager.py`, `test_equity_signals.py`). 252/252 passing.

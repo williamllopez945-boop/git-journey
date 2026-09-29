@@ -424,7 +424,21 @@ scope: extended-hours trading is not implemented.
      accepting plain market-order slippage on equities the way the crypto
      path already does, and a marketable limit gets the same effective
      fill during regular hours with explicit price protection. Use
-     `quantity` (shares), not `dollar_amount`.
+     `quantity` (shares), not `dollar_amount` - `place_equity_order` only
+     accepts a fractional `quantity` on `type=market`, never `type=limit`
+     (confirmed live 2026-09-29, PANW: a $92.03-sized order came out to
+     0.2413 shares, which a marketable limit order can't place at all).
+     **Always run `RiskManager.position_size(...)`'s result through
+     `equity_signals.whole_share_quantity(...)` before sizing/placing an
+     equity order** - it floors to a whole share, which can only put the
+     order at or under the risk-sized budget, never over it. If that
+     floors to `0.0`, the per-share price alone exceeds this cycle's
+     budget: log `"recommended"` and wait for approval, the same as any
+     order over `auto_execute_max_pct` - never round up over the cap and
+     never fall back to `type=market` to force the exact fractional
+     quantity through (see the 2026-09-27 order-type-policy-gap incident,
+     `CHANGELOG.md` - a market order dropped the price-protection collar
+     it was never authorized to drop).
    - `open_position_count` / `total_open_position_value`: the **same
      shared counters** from step 2 above, not separate ones - a stock
      entry and a crypto entry draw from the same concurrent-positions cap

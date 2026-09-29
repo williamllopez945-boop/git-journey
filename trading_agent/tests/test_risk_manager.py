@@ -234,6 +234,37 @@ def test_trade_log_survives_restart_with_correct_cost_basis_still_derivable():
     assert avg_cost == pytest.approx(0.1769808578562045, rel=1e-9)
 
 
+def test_can_auto_execute_absorbs_float_noise_at_the_cap_boundary():
+    # 2026-09-29 live finding (LIT, $91.25): position_size() then
+    # quantity * price for the actual order notional can land a few ulps
+    # on the wrong side of portfolio_value * auto_execute_max_pct, purely
+    # from float division-then-multiplication not exactly inverting - not
+    # a real overage. A correctly-sized order must not be forced into
+    # manual review over noise this small.
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    tmp = Path(name)
+    tmp.unlink()
+    # Matches the real RISK_LIMITS values in play for this finding (both
+    # 0.2, as in config.py) - can_auto_execute reads auto_execute_max_pct
+    # directly, so it must match the max_position_pct used to size the order.
+    rm = RiskManager(dict(LIMITS, max_position_pct=0.2, auto_execute_max_pct=0.2), state_path=tmp)
+    portfolio_value = 456.265899864762
+    price = 4.4173
+    qty = rm.position_size(portfolio_value, price, total_open_position_value=88.825899864762,
+                            max_aggregate_pct=0.6)
+    notional = qty * price
+    cap = portfolio_value * 0.2
+    assert notional > cap  # reproduces the float-noise overshoot itself
+    assert rm.can_auto_execute(notional, portfolio_value) is True
+
+
+def test_can_auto_execute_still_rejects_a_real_overage():
+    rm = _new_manager()
+    # $1 over a $500 cap is a real overage, not float noise - must still block.
+    assert rm.can_auto_execute(501.0, 10_000) is False
+
+
 def test_position_size_aggregate_override_replaces_configured_value():
     fd, name = tempfile.mkstemp(suffix=".json")
     os.close(fd)  # Windows cannot unlink an open file.
