@@ -1311,3 +1311,26 @@ separately backtested here.
 for a live parameter change (worst-case-first, holds across neighbors).
 12.5% flagged as a genuine paper-test candidate per ChatGPT's own
 framing, not a proposal to adopt from this backtest alone.
+
+## 2026-09-29 (later still) — MAIR watchlist review: swap-to-VTRS recommended, not applied
+
+Full write-up: `watchlist_review_2026-09-29_stocks.md`. Third
+independent flag on MAIR (after the 2026-09-26/09-27 reviews and today's
+walk-forward doc's -21.92% real fold). Sourced 6 candidates via the
+production stock scan (SMMT, BURL, BJ, ROIV, HBM, VTRS), backtested
+each in isolation and MAIR on its own real window, then - per the
+2026-09-27 lesson that isolated wins can reverse - confirmed at the
+portfolio level against the full current watchlist over the 676-bar
+window where every member (including MAIR) has real data.
+
+**Every one of the 6 candidates beat the current MAIR-in portfolio on
+full-period return.** VTRS won on the binding portfolio metric (full
+return, worst-case fold, drawdown, and turnover all favor it), despite
+ranking only #5 of 6 in isolation - HBM ranked #1 in isolation but #2 at
+the portfolio level. A third instance of the isolated/portfolio ranking
+flip this project keeps finding.
+
+**Recommendation only: swap MAIR -> VTRS in `STOCK_WATCHLIST`.**
+`config.py` not edited - waiting on owner approval. MAIR carries zero
+open positions and zero trade history, so no liquidation step is needed
+if approved.
