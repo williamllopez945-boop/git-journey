@@ -1396,3 +1396,19 @@ stocks alone saw worse full-period drawdown without it (6.41% ->
 7.60%) - owner reviewed and proceeded anyway, accepting low confidence
 either way given how rarely the floor actually fired in this window.
 247/247 tests passing (no test depended on the module-level default).
+
+## 2026-09-29 (later still) — MACD+RSI combo strategy backtested, rejected
+
+Full write-up: `backtest_2026-09-29_macd_rsi_strategy_rejected.md`.
+Owner requested testing a source-verified MACD+RSI strategy (MACD
+signal cross + RSI<60 + price>SMA200 entry, RSI>=75 exit) as a possible
+replacement for SMA(10,30) crossover. Backtested with our own risk
+management layered on (4%/8% SL/TP) - the real "should we switch"
+question. **SMA wins on 9 of 12 symbols**, often by a wide margin on
+the strongest trend names (CRDO 87.97% vs 23.01%, CRWD 66.65% vs
+-6.77%) - same root cause as the 2026-09-23 RSI rejection: this is a
+trend-following strategy, and a mean-reversion-flavored exit (RSI
+recovery to 75) gives back exactly the upside SMA crossover exists to
+capture. MACD+RSI won on 3 of 12 (both crypto proxies + PYPL) - a real
+but narrow signal, not enough to justify a switch. **Rejected - no
+code change.**
