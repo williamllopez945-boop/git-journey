@@ -76,9 +76,14 @@ commit/push, or account-management steps during development.
 - Research is advisory, with coverage defined by its imported watchlists.
   It does not place orders or change trading gates. VOLTRAP has separate
   configuration and its own go-live conditions.
-- Never edit, copy from production, or commit runtime state:
-  `state.json`, `price_history.json`, `scanner_state.json`,
-  `position_state.json`, `cycle_log.json`, `voltrap_state.json`, and
+- `state.json`, `cycle_log.json`, and `voltrap_state.json` are tracked in
+  Git as of 2026-09-29 (owner decision, `.gitignore` updated on `main`) -
+  unlike the files below, they may be committed and pushed. This was a
+  deliberate reversal to let an agent record an already-executed trade
+  when a live auto-mode permission block prevented any other path; treat
+  it as the current policy, not a one-off exception. Never edit, copy from
+  production, or commit runtime state for the files that remain untracked:
+  `price_history.json`, `scanner_state.json`, `position_state.json`, and
   `research_agent/research_log.json`. Temporary test fixtures are distinct
   from production state. Keep development folders separate from a live runner.
 - Keep secrets, `.env` files, credentials, private keys, tokens, and local
