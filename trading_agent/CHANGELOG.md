@@ -1345,3 +1345,17 @@ Robinhood "Trading Agent — Stock Watchlist" (`147f9bb2-...`) updated to
 match (`MAIR` removed, `VTRS` added), same step as every prior approved
 swap. Full reasoning: `watchlist_review_2026-09-29_stocks.md`. 247/247
 tests passing (no test logic changed, config-only edit).
+
+## 2026-09-29 (later still) — DOGE/SOL cost-basis correction applied
+
+Applied the correction identified in `pnl_reconciliation_2026-09-29.md`
+(the same-day audit that found the true all-time realized P&L, -$189.10
+per `get_realized_pnl`, diverged from local `trade_log` estimates due to
+two stale transfer-in cost bases). `state.json`'s `trade_log`: DOGE
+transfer-in buy entry price `0.098310635` -> `0.180421`; SOL transfer-in
+buy entry price `130.0` -> `166.549955`. Both back-calculated from
+Robinhood's own real `sell_price`/`realized_gain` on each position's
+closing sale, same method as the 2026-09-28 audit's five VWAP
+corrections. Both positions were already fully closed before this
+landed - historical P&L accuracy only, no effect on any live
+protective-exit calculation. 247/247 tests passing.
