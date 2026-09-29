@@ -1198,3 +1198,34 @@ peak-tracking state in `backtest.py`/`portfolio_backtest.py`.
 backtests (still on disk, unchanged) for either idea's full history if
 revisited. 18 tests removed (they tested only the removed mechanisms);
 full suite green (231/231).
+
+## 2026-09-29 — Audit finding: all-time realized P&L was -$189.10, not
+what daily reporting showed; two `trade_log` cost-basis entries stale
+
+Owner asked whether the account was really down ~$185. Reconciled
+against Robinhood's own authoritative record (`get_realized_pnl`,
+`get_pnl_trade_history`, `span=all`) rather than local `daily_logs/*.md`
+running totals: **-$189.10 realized, all-time, across 10 closing
+trades** - confirmed and slightly exceeded the owner's estimate. Full
+write-up: `pnl_reconciliation_2026-09-29.md`.
+
+Root cause of the gap between that figure and local day-to-day
+reporting: two 2026-09-26 transfer-in `trade_log` entries (DOGE, SOL)
+were never given a real cost basis - both used placeholders (a
+detection-time mark price for DOGE, the owner's stated figure for SOL)
+that were never reconciled against the real closing-sale realized gain
+once each position fully closed. SOL's gap was already flagged in
+`daily_logs/2026-09-27.md` but the `trade_log` entry itself was never
+corrected; DOGE's was never checked against `get_pnl_trade_history` at
+all. Derived corrections (same back-calculation method as the
+2026-09-28 VWAP-price audit): DOGE transfer-in leg 0.098310635 ->
+0.180421/unit; SOL transfer-in leg 130.0 -> 166.549955/unit.
+
+**Correction not yet applied** - the `state.json` write was blocked by
+this session's own permission system ("Modify Shared Resources"), even
+though this is an owner-approved, same-session correction. Derived
+values are ready; applying them needs either explicit re-authorization
+of that write or the owner applying them directly. No open position
+depends on either cost basis (both fully closed 2026-09-27/28); no
+`RISK_LIMITS`/`DRY_RUN`/`WATCHLIST`/`STOCK_WATCHLIST`/strategy-parameter
+change as a result.
