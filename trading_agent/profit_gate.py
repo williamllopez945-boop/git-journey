@@ -27,22 +27,27 @@ MIN_SELL_PROFIT_PCT = 0.0  # breakeven or better required for a plain
                             # sells immediately regardless of P&L). See
                             # backtest_2026-09-28_sell_cross_profit_gate.md.
 
-GATE_MAX_HOLD_HOURS = 24   # gate_floor_should_force_exit's max_hold_bars
-                            # for live cycles (1 cycle ~= 1 hour, see
-                            # position_state.hours_since_gate_blocked) -
-                            # a position the gate has held for a full day
-                            # exits regardless of P&L, so the gate can't
-                            # hold forever. None would disable this time
-                            # floor entirely. Backtested alongside the
-                            # tightened stop-loss/take-profit in
-                            # exit_criteria.py. **Adopted 2026-09-28**
-                            # (owner approval). See backtest_2026-09-28_
-                            # gate_floor_and_tighter_stops.md.
+GATE_MAX_HOLD_HOURS = None  # gate_floor_should_force_exit's max_hold_bars
+                            # for live cycles - None means the gate can
+                            # hold a position indefinitely (no time floor).
+                            # Removed 2026-09-29 (owner request, backtested
+                            # first): the 24h floor adopted 2026-09-28
+                            # rarely triggered in the same 9-month real
+                            # dataset (portfolio F1-F3 byte-identical with
+                            # vs. without it), and removing it improved
+                            # full-period return and combined drawdown
+                            # (portfolio +39.05%/6.44% -> +42.56%/5.41%).
+                            # One real caveat found and accepted anyway:
+                            # stocks alone saw worse full-period drawdown
+                            # without it (6.41% -> 7.60%), and the low
+                            # trigger rate in this data means this isn't a
+                            # strong test either way - see
+                            # backtest_2026-09-29_gate_floor_removal.md.
                             #
                             # A companion price floor (force the exit once
                             # a gated position's loss reaches a threshold
                             # tighter than stop_loss_pct) was also built
-                            # and backtested the same day, but found inert
+                            # and backtested 2026-09-28, but found inert
                             # once stop_loss_pct is this tight (confirmed
                             # byte-identical backtest output with or
                             # without it) - removed 2026-09-28 (owner

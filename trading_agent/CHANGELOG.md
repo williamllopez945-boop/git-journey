@@ -1373,3 +1373,26 @@ buy-and-hold's -9.75%) than the original 11-symbol run. VTRS's one weak
 fold (F3, -10.71%) reproduces the same weakness already found in the
 watchlist review's shorter overlap window - not new. No parameter
 change; reconfirms the strategy on the updated watchlist.
+
+## 2026-09-29 (later still) — 70% partial stop-loss backtested, rejected
+
+Full write-up: `backtest_2026-09-29_partial_stop_loss_rejected.md`.
+Owner proposed matching stop-loss to take-profit's shape (70% partial,
+once per position). Backtested before implementing (COLLABORATION.md
+rule). Worst-case-first, it weakens down-market protection (portfolio
+F1 +10.84% -> +3.34%, the exact regime stop-loss exists to protect)
+without a consistent full-period upside elsewhere. **Rejected - no
+code change.**
+
+## 2026-09-29 (later still) — 24h gate floor removed
+
+Full write-up: `backtest_2026-09-29_gate_floor_removal.md`.
+`profit_gate.GATE_MAX_HOLD_HOURS`: `24` -> `None`. Backtested first: the
+floor rarely triggered in the same 9-month real dataset (portfolio
+F1-F3 byte-identical with vs. without it); removing it improved
+full-period return and combined drawdown (+39.05%/6.44% ->
++42.56%/5.41%). One real caveat found and flagged before applying:
+stocks alone saw worse full-period drawdown without it (6.41% ->
+7.60%) - owner reviewed and proceeded anyway, accepting low confidence
+either way given how rarely the floor actually fired in this window.
+247/247 tests passing (no test depended on the module-level default).
