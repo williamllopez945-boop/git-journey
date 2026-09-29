@@ -209,6 +209,24 @@ inherits the same already-permitted command pattern instead of
 triggering a new permission check. See `run_cycle.py --help` for the
 full flag list.
 
+**`--record-trade-price` MUST be the order's real fill VWAP
+(`average_price` from `place_crypto_order`/`place_equity_order`'s
+response), never the order's requested/entered/limit price** (found
+2026-09-29, full-system audit: a live cycle recorded a LINK stop-loss's
+`limit_price` of 14.50 instead of its real `average_price` of
+14.5557783 — the sixth time this exact mistake has happened, after five
+supposedly-fixed instances on 2026-09-28 alone; LINK/CRV/AVAX/DOGE/SOL
+before it. This has never actually been fixed at the root, only patched
+after the fact each time - treat this line as the fix.). A market order
+in particular can fill meaningfully away from its quoted price; a
+marketable limit order fills at its limit or better, so its
+`average_price` is *at least as good as*, and often different from,
+the `limit_price` passed to place the order. Always re-read the order's
+own response (or a follow-up `get_crypto_orders`/`get_equity_orders`
+call with that order's id) for `average_price` before recording -
+never reuse the price you originally computed to size or place the
+order.
+
 1. Run the saved scan (`run_scan`, scan_id `8f2ca450-1f7f-4e69-b015-daafe494c14e`
    — "Crypto SMA(10,30) 1h Crossover — Strategy Screener"), which returns
    `SMA 10 (1h)`, `SMA 30 (1h)`, `Relative volume`, and `% Change` for
