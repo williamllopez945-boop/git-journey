@@ -1,0 +1,3194 @@
+[
+  {
+    "timestamp": "2026-09-23T15:10:58.409320+00:00",
+    "asset": "PEPE",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -1.432,
+    "action": "executed",
+    "price": 4.46e-06,
+    "quantity": 1014198,
+    "notional": 4.52,
+    "order_id": "6ab3ebf2-e0d4-4b57-afc9-48c2fc3eefc0",
+    "reason": "death_cross",
+    "entry_price": 4.94e-06,
+    "realized_pnl_pct": -9.96
+  },
+  {
+    "timestamp": "2026-09-23T15:10:58.409419+00:00",
+    "asset": "BONK",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.683,
+    "action": "excellent_watch",
+    "relative_volume": 1.52
+  },
+  {
+    "timestamp": "2026-09-23T15:10:58.409571+00:00",
+    "asset": "PENGU",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.564,
+    "action": "excellent_watch",
+    "relative_volume": 2.525
+  },
+  {
+    "timestamp": "2026-09-23T16:09:11.030013+00:00",
+    "asset": "PEPE",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.149,
+    "action": "excellent_watch",
+    "relative_volume": 2.178
+  },
+  {
+    "timestamp": "2026-09-23T16:09:11.030414+00:00",
+    "asset": "WIF",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.218,
+    "action": "excellent_watch",
+    "relative_volume": 0.516
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.876551+00:00",
+    "asset": "DOGE",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.928,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.876914+00:00",
+    "asset": "WIF",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.894,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.877249+00:00",
+    "asset": "FLOKI",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.183,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.877458+00:00",
+    "asset": "SHIB",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.719,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.877634+00:00",
+    "asset": "PEPE",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.961,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T17:26:49.877814+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.4,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T18:09:08.796964+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.964,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T18:09:08.797313+00:00",
+    "asset": "ARQT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.097,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.479019+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.957,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.479356+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.786,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.479618+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.319,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.479943+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.408,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.480197+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": 0.903,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.480467+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.539,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.480764+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.791,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.481035+00:00",
+    "asset": "ASTER",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.376,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T19:08:56.481306+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.43,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.109991+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.896,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.110393+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.287,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.110662+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.674,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.110926+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.025,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.111170+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.821,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.111636+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.28,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.111913+00:00",
+    "asset": "ASTER",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.664,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T20:09:28.112185+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.889,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.585017+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.765,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.585488+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.821,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.585790+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.099,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.586122+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.8,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.586435+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.157,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.586738+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.915,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.587044+00:00",
+    "asset": "ASTER",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.007,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T21:09:21.587351+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.424,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.702875+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.75,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.703622+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.058,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.704307+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.395,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.704982+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.358,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.705611+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.455,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.706264+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.332,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.706912+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.412,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T22:08:47.707878+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.82,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.464077+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.687,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.464562+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.303,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.464917+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.691,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.465442+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.928,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.465868+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.008,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.466254+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.422,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.466653+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.585,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-23T23:09:37.467029+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.167,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T00:10:18.649339+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.492,
+    "action": "excellent_watch",
+    "relative_volume": 0.32,
+    "pct_change": -0.0015038259100357957
+  },
+  {
+    "timestamp": "2026-09-24T00:10:18.650091+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -6.324,
+    "action": "excellent_watch",
+    "relative_volume": 0.282,
+    "pct_change": 0.005504982162627672
+  },
+  {
+    "timestamp": "2026-09-24T01:09:32.429583+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.463,
+    "action": "excellent_watch",
+    "relative_volume": 0.418
+  },
+  {
+    "timestamp": "2026-09-24T01:09:32.430214+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -6.29,
+    "action": "excellent_watch",
+    "relative_volume": 0.236
+  },
+  {
+    "timestamp": "2026-09-24T02:09:07.703631+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.22,
+    "action": "excellent_watch",
+    "relative_volume": 0.197
+  },
+  {
+    "timestamp": "2026-09-24T02:09:07.704361+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.966,
+    "action": "excellent_watch",
+    "relative_volume": 0.429
+  },
+  {
+    "timestamp": "2026-09-24T02:30:10.607256+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.22,
+    "action": "excellent_watch",
+    "relative_volume": 0.197
+  },
+  {
+    "timestamp": "2026-09-24T02:30:10.607941+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.966,
+    "action": "excellent_watch",
+    "relative_volume": 0.429
+  },
+  {
+    "timestamp": "2026-09-24T02:37:37.422817+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.22,
+    "action": "excellent_watch",
+    "relative_volume": 0.197
+  },
+  {
+    "timestamp": "2026-09-24T02:37:37.423651+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.966,
+    "action": "excellent_watch",
+    "relative_volume": 0.429
+  },
+  {
+    "timestamp": "2026-09-24T02:46:31.586051+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.22,
+    "action": "excellent_watch",
+    "price": 0.090668
+  },
+  {
+    "timestamp": "2026-09-24T02:46:31.586754+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.97,
+    "action": "excellent_watch",
+    "price": 0.33591
+  },
+  {
+    "timestamp": "2026-09-24T03:09:14.550347+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.575499020168936,
+    "action": "excellent_watch",
+    "price": 0.326688
+  },
+  {
+    "timestamp": "2026-09-24T04:09:21.784109+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.276186004179681,
+    "action": "excellent_watch",
+    "price": 0.32680000000000003
+  },
+  {
+    "timestamp": "2026-09-24T12:10:20.804515+00:00",
+    "asset": "LIT",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -1.0006810786267128,
+    "action": "fresh_sell_cross",
+    "price": 5.23284
+  },
+  {
+    "timestamp": "2026-09-24T14:50:26.780769+00:00",
+    "asset": "DOT",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.20251733269858732,
+    "action": "fresh_buy_cross",
+    "price": 1.122502
+  },
+  {
+    "timestamp": "2026-09-24T14:54:15.909669+00:00",
+    "asset": "DOT",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.20251733269858732,
+    "action": "executed",
+    "price": 1.1659154,
+    "quantity": 34.256,
+    "notional": 39.94,
+    "order_id": "6ab538e6-5e21-46c5-abec-4027f5c97d91"
+  },
+  {
+    "timestamp": "2026-09-24T15:10:12.730600+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -0.0464,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T16:09:42.644764+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 0.8241,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T17:09:08.993578+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.1548,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T18:09:55.186106+00:00",
+    "asset": "LINK",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.6415,
+    "action": "executed",
+    "price": 13.07284,
+    "quantity": 3.058,
+    "notional": 39.98,
+    "order_id": "6ab56769-6588-4d50-80b1-f9b4ae9f18cc"
+  },
+  {
+    "timestamp": "2026-09-24T18:09:55.186944+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.3623,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T18:09:55.187527+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.0923,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T18:10:11.648719+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.0628,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:25.523592+00:00",
+    "asset": "HBAR",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.4923,
+    "action": "executed",
+    "price": 0.0936791,
+    "quantity": 211.8,
+    "notional": 19.85,
+    "order_id": "6ab57592-1644-49d0-92e8-3f14ce42adb4"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:25.524851+00:00",
+    "asset": "XLM",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.7595,
+    "action": "blocked_aggregate_cap"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:25.525435+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.8474,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:25.525982+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.6276,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:25.526546+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.3702,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T19:10:51.627912+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.4269,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T20:09:20.823466+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.3612,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T20:09:20.824904+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.3228,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T20:09:20.826235+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.0861,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T20:09:20.827250+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.4905,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T20:09:34.861623+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.7754,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T21:09:26.741673+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.6558,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T21:09:26.742554+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.8707,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T21:09:26.743200+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.638,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T21:09:26.743811+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.0422,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T22:09:56.263252+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.9402,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T22:09:56.264586+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.2672,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T22:09:56.265695+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.2059,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T22:09:56.266442+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.5871,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T23:09:43.286463+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -0.8245,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T23:09:43.287254+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.1582,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T23:09:43.287942+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.557,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T23:09:43.288647+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.6999,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-24T23:09:43.289314+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.0495,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-25T02:08:50.356005+00:00",
+    "asset": "BCH",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.2309,
+    "action": "blocked_aggregate_cap"
+  },
+  {
+    "timestamp": "2026-09-25T09:10:38.119246+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.0035,
+    "action": "excellent_watch",
+    "pct_change": 0.05259259259259261,
+    "relative_volume": 1.3101712663720466
+  },
+  {
+    "timestamp": "2026-09-25T09:10:38.120500+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.375,
+    "action": "blocked_no_position",
+    "pct_change": 0.02044897559062825,
+    "relative_volume": 2.463060011977549
+  },
+  {
+    "timestamp": "2026-09-25T11:15:36.137886+00:00",
+    "asset": "BCH",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.0657,
+    "action": "blocked_no_position",
+    "pct_change": 0.00585487018747418,
+    "relative_volume": 0.7121916548340557
+  },
+  {
+    "timestamp": "2026-09-25T11:15:36.139022+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.2591,
+    "action": "excellent_watch",
+    "pct_change": 0.0667195767195767,
+    "relative_volume": 0.5521735823090612
+  },
+  {
+    "timestamp": "2026-09-25T12:20:57.726254+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.3291,
+    "action": "excellent_watch",
+    "pct_change": 0.05064247921390778,
+    "relative_volume": 0.7098304031592623
+  },
+  {
+    "timestamp": "2026-09-25T13:19:53.742286+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.4398,
+    "action": "executed",
+    "price": 10.60202854,
+    "quantity": 1.7842,
+    "notional": 18.916139321068,
+    "order_id": "6ab674ec-09b4-4261-8a72-24e2f6cd6932"
+  },
+  {
+    "timestamp": "2026-09-25T13:19:57.962948+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.4854,
+    "action": "excellent_watch",
+    "pct_change": 0.061738473167044505,
+    "relative_volume": 2.8405131265220405
+  },
+  {
+    "timestamp": "2026-09-25T15:10:43.486801+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.7564,
+    "action": "excellent_watch",
+    "pct_change": -0.05468272585700489,
+    "relative_volume": 3.2664871936999162
+  },
+  {
+    "timestamp": "2026-09-25T15:10:43.488017+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.5265,
+    "action": "excellent_watch",
+    "pct_change": 0.05605442176870749,
+    "relative_volume": 4.74758450281191
+  },
+  {
+    "timestamp": "2026-09-25T16:10:24.860225+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.9114,
+    "action": "excellent_watch",
+    "pct_change": -0.06629344162116337,
+    "relative_volume": 3.8707201969067158
+  },
+  {
+    "timestamp": "2026-09-25T17:10:31.121202+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.0554,
+    "action": "excellent_watch",
+    "pct_change": -0.06116816810897116,
+    "relative_volume": 1.7823267880881795
+  },
+  {
+    "timestamp": "2026-09-25T17:10:31.122642+00:00",
+    "asset": "XCN",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": 0.0,
+    "action": "blocked_no_position",
+    "pct_change": null,
+    "relative_volume": 1.9069166220522256
+  },
+  {
+    "timestamp": "2026-09-25T18:10:31.923606+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.0919,
+    "action": "excellent_watch",
+    "pct_change": -0.052317215005223766,
+    "relative_volume": 0.9868250358683988
+  },
+  {
+    "timestamp": "2026-09-25T19:09:50.832626+00:00",
+    "asset": "BTC",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.1024,
+    "action": "blocked_no_position",
+    "pct_change": -0.00487882456934768,
+    "relative_volume": 0.16007552641415898
+  },
+  {
+    "timestamp": "2026-09-25T19:09:50.834131+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.2234,
+    "action": "excellent_watch",
+    "pct_change": -0.0567525478523132,
+    "relative_volume": 1.0485932824353035
+  },
+  {
+    "timestamp": "2026-09-25T19:09:50.835400+00:00",
+    "asset": "CRV",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2119,
+    "action": "blocked_no_position",
+    "pct_change": -0.007479928377519889,
+    "relative_volume": 0.8986292850004192
+  },
+  {
+    "timestamp": "2026-09-25T21:11:30.951958+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.45,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-25T22:09:44.849461+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.576,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-25T23:09:41.547673+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.815,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-26T00:09:24.905575+00:00",
+    "asset": "ETH",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.042,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T09:09:55.164926+00:00",
+    "asset": "XLM",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.092,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T11:10:28.235580+00:00",
+    "asset": "LIT",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.083,
+    "action": "blocked_aggregate_cap"
+  },
+  {
+    "timestamp": "2026-09-26T13:10:39.349731+00:00",
+    "asset": "BCH",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.173,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T14:11:05.125860+00:00",
+    "asset": "LIT",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.011,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T14:11:05.126971+00:00",
+    "asset": "ASTER",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.228,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T14:11:05.127810+00:00",
+    "asset": "HBAR",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.143,
+    "action": "blocked_permission_denied",
+    "reason": "real exit signal on a held position (211.8 HBAR) - place_crypto_order sell was denied by the Claude Code auto-mode safety classifier (Real-World Transactions); not placed, needs owner attention"
+  },
+  {
+    "timestamp": "2026-09-26T15:13:51.398845+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.13002975537687853,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T15:47:38.529650+00:00",
+    "asset": "HBAR",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.143,
+    "action": "executed",
+    "price": 0.09388258,
+    "quantity": 211.8,
+    "notional": 19.88,
+    "order_id": "6ab7e919-911a-4b33-b4b9-4aea6c33e53e",
+    "reason": "death_cross",
+    "entry_price": 0.0936791,
+    "realized_pnl_pct": 0.22,
+    "note": "the 14:11 UTC block was resolved by an owner-side permission change (auto-mode classifier no longer denied place_crypto_order); re-executed the same pending exit at the owner's explicit request"
+  },
+  {
+    "timestamp": "2026-09-26T16:34:00.250893+00:00",
+    "asset": "BTC",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.03306897339636869,
+    "action": "blocked_concurrent_cap"
+  },
+  {
+    "timestamp": "2026-09-26T16:34:00.252150+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.9801265793850207,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-26T17:09:14.134624+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.2108567289329963,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-26T18:10:12.941462+00:00",
+    "asset": "HBAR",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.010572342046012578,
+    "action": "blocked_cooldown"
+  },
+  {
+    "timestamp": "2026-09-26T18:10:12.942767+00:00",
+    "asset": "ASTER",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.0024564592596180604,
+    "action": "blocked_concurrent_cap"
+  },
+  {
+    "timestamp": "2026-09-26T20:09:38.468379+00:00",
+    "asset": "HBAR",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.05326850974532463,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-26T21:16:18.262808+00:00",
+    "asset": "SOL",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.03,
+    "action": "blocked_aggregate_cap",
+    "price": 120.75
+  },
+  {
+    "timestamp": "2026-09-26T22:09:56.026688+00:00",
+    "asset": "ZORA",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.359,
+    "action": "blocked_no_position",
+    "price": 0.008952
+  },
+  {
+    "timestamp": "2026-09-26T23:11:20.333853+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.003,
+    "action": "recommended",
+    "price": 121.48,
+    "quantity": 1.66043295,
+    "notional": 199.65,
+    "limit_price": 120.24
+  },
+  {
+    "timestamp": "2026-09-26T23:11:20.336693+00:00",
+    "asset": "CRV",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.103,
+    "action": "blocked_no_position",
+    "price": 0.34532
+  },
+  {
+    "timestamp": "2026-09-26T23:14:38.277896+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.003,
+    "action": "held_owner_reviewed",
+    "price": 121.62,
+    "reason": "crossover essentially zero-strength (SMA10~=SMA30, price flat 120.75-121.63 for 4+ cycles), stop-loss not triggered (-6.5% vs -10% threshold) - owner declined the sell recommendation"
+  },
+  {
+    "timestamp": "2026-09-27T04:09:50.421970+00:00",
+    "asset": "AERO",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -1.242,
+    "action": "blocked_no_position",
+    "price": 0.86564
+  },
+  {
+    "timestamp": "2026-09-27T04:09:50.423480+00:00",
+    "asset": "ASTER",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.078,
+    "action": "blocked_no_position",
+    "price": 0.72974
+  },
+  {
+    "timestamp": "2026-09-27T05:11:10.901833+00:00",
+    "asset": "LINK",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2414014452463227,
+    "action": "executed",
+    "price": 13.27,
+    "quantity": 3.058,
+    "notional": 42.72,
+    "order_id": "6ab8a564-200e-4efe-aaf7-26073b09a5b8"
+  },
+  {
+    "timestamp": "2026-09-27T05:11:16.686251+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.06878075439016047,
+    "action": "recommended",
+    "price": 120.484503205,
+    "quantity": 1.66043295,
+    "notional": 200.06
+  },
+  {
+    "timestamp": "2026-09-27T05:18:25.608604+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.06878075439016047,
+    "action": "executed",
+    "price": 113.47,
+    "quantity": 1.66043295,
+    "notional": 188.44,
+    "order_id": "6ab8a718-42e3-4e72-adcf-32d6137df65b",
+    "reason": "owner-approved (over auto_execute_max_pct threshold)"
+  },
+  {
+    "timestamp": "2026-09-27T09:11:10.574663+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.6594927069335005,
+    "action": "executed",
+    "price": 11.28,
+    "quantity": 8.6006,
+    "notional": 96.07,
+    "order_id": "6ab8dda5-6492-4104-8722-10e377cad081"
+  },
+  {
+    "timestamp": "2026-09-27T09:11:10.576653+00:00",
+    "asset": "SOL",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.3973883549250471,
+    "action": "blocked_cooldown"
+  },
+  {
+    "timestamp": "2026-09-27T11:11:21.189409+00:00",
+    "asset": "LINK",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.41456074399541026,
+    "action": "blocked_daily_trade_cap",
+    "reason": "max_trades_per_day (3) already reached today"
+  },
+  {
+    "timestamp": "2026-09-27T14:10:54.346559+00:00",
+    "asset": "DOGE",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.2047268874074226,
+    "action": "executed",
+    "price": 0.099893,
+    "quantity": 49.64,
+    "notional": 4.91,
+    "order_id": "6ab923e7-4bd8-4a2f-8231-b3dcc73ec666"
+  },
+  {
+    "timestamp": "2026-09-27T16:10:38.631735+00:00",
+    "asset": "CRV",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.13506295599301277,
+    "action": "blocked_daily_trade_cap",
+    "reason": "max_trades_per_day (4) already reached today"
+  },
+  {
+    "timestamp": "2026-09-27T16:13:22.363124+00:00",
+    "asset": "CRV",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.13506295599301277,
+    "action": "executed",
+    "price": 0.3543,
+    "quantity": 213.28,
+    "notional": 74.83,
+    "order_id": "6ab9406f-31cc-44fe-a789-5797e66da4fe",
+    "reason": "owner-approved manual override of max_trades_per_day (cap 4, this was trade 5 today) - signal was previously logged blocked_daily_trade_cap this same cycle"
+  },
+  {
+    "timestamp": "2026-09-27T19:13:42.321022+00:00",
+    "asset": "DOT",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2685,
+    "action": "executed",
+    "price": 1.24404332,
+    "quantity": 34.256,
+    "notional": 42.61594796992,
+    "order_id": "6ab96a0c-89f1-4edb-abf8-9a91cf66bbdc",
+    "reason": "AGENT ERROR: can_trade() gate not checked before this order - trades_today was already 5 (cap=4), should have stopped the cycle per PLAYBOOK step 4. Not owner-authorized, unlike the CRV trade 5 override. Order filled before caught."
+  },
+  {
+    "timestamp": "2026-09-27T19:13:42.323333+00:00",
+    "asset": "ASTER",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.1187,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-27T20:10:24.717316+00:00",
+    "asset": "LINK",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2145,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-27T21:09:47.518308+00:00",
+    "asset": "BCH",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2793,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-27T22:09:53.240393+00:00",
+    "asset": "ETH",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.1143,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-27T23:10:18.518745+00:00",
+    "asset": "CRV",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.1823,
+    "action": "blocked_daily_trade_cap",
+    "reason": "max_trades_per_day (4) already reached today (trades_today=6)"
+  },
+  {
+    "timestamp": "2026-09-28T01:11:23.305913+00:00",
+    "asset": "DOGE",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.0295,
+    "action": "executed",
+    "price": 0.09579283,
+    "quantity": 1178.76,
+    "notional": 112.9167562908,
+    "order_id": "6ab9be87-dafc-417d-9e69-f084a4311fa0"
+  },
+  {
+    "timestamp": "2026-09-28T02:09:30.984359+00:00",
+    "asset": "BTC",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.0954,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T03:10:56.669608+00:00",
+    "asset": null,
+    "classification": null,
+    "crossover_pct": null,
+    "action": "halted_circuit_breaker",
+    "reason": "daily_loss_limit_pct (3%) breached: starting_equity=574.4453767308917, current_equity=474.632004939952, drawdown=17.38%. Root cause appears to be a real, non-agentic DOGE buy order (1000 DOGE, $96.51, filled 2026-09-28T02:21:10Z, no initiator_type=agentic tag - not placed by this agent) followed by the DOGE position no longer appearing in get_crypto_positions at all - consistent with the owner buying then transferring it out, same pattern as the 2026-09-26 transfer event. Cash fell by almost exactly the buy notional ($96.51). Not yet fully confirmed as the sole cause of the full drawdown - flagged to the owner for review. All crypto/stock evaluation and order placement skipped this cycle per the circuit breaker rule."
+  },
+  {
+    "timestamp": "2026-09-28T03:12:51.313757+00:00",
+    "asset": null,
+    "classification": null,
+    "crossover_pct": null,
+    "action": "circuit_breaker_override",
+    "reason": "Owner-approved override: confirmed the drawdown was a personal fund transfer (~$96.51 DOGE buy+move), not a trading loss. starting_equity adjusted down by that confirmed non-trading outflow (574.45 -> 477.94) rather than disabling the check outright; halted cleared to False. Trading resumed for the rest of today."
+  },
+  {
+    "timestamp": "2026-09-28T03:14:09.698418+00:00",
+    "asset": "XLM",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.0031,
+    "action": "executed",
+    "price": 0.2164138,
+    "quantity": 438.33,
+    "notional": 94.860660954,
+    "order_id": "6ab9db75-5f9b-438d-a7af-462f1cb377a4"
+  },
+  {
+    "timestamp": "2026-09-28T03:14:09.699284+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.1011,
+    "action": "excellent_watch",
+    "pct_change": -5.29
+  },
+  {
+    "timestamp": "2026-09-28T04:10:24.896499+00:00",
+    "asset": "SOL",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.2361,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T04:10:24.897877+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.5002,
+    "action": "excellent_watch",
+    "pct_change": -5.27
+  },
+  {
+    "timestamp": "2026-09-28T05:12:04.222487+00:00",
+    "asset": "XLM",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.3641,
+    "action": "blocked_unprofitable",
+    "price": 0.2101896,
+    "avg_cost_basis": 0.216414
+  },
+  {
+    "timestamp": "2026-09-28T05:12:04.224073+00:00",
+    "asset": "CRV",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.4895,
+    "action": "blocked_unprofitable",
+    "price": 0.334445091,
+    "avg_cost_basis": 0.3543
+  },
+  {
+    "timestamp": "2026-09-28T05:12:04.225508+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.5218,
+    "action": "blocked_unprofitable",
+    "price": 10.643100195,
+    "avg_cost_basis": 11.163519
+  },
+  {
+    "timestamp": "2026-09-28T05:12:04.226895+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.9262,
+    "action": "excellent_watch",
+    "pct_change": -5.35
+  },
+  {
+    "timestamp": "2026-09-28T05:12:04.228257+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.8006,
+    "action": "excellent_watch",
+    "pct_change": -5.19
+  },
+  {
+    "timestamp": "2026-09-28T07:23:14.728926+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.1844,
+    "action": "excellent_watch",
+    "pct_change": -5.86
+  },
+  {
+    "timestamp": "2026-09-28T07:23:14.730475+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.908,
+    "action": "excellent_watch",
+    "pct_change": -7.43
+  },
+  {
+    "timestamp": "2026-09-28T07:23:14.731696+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.5891,
+    "action": "excellent_watch",
+    "pct_change": -6.61
+  },
+  {
+    "timestamp": "2026-09-28T07:23:14.733081+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.1809,
+    "action": "excellent_watch",
+    "pct_change": -7.22
+  },
+  {
+    "timestamp": "2026-09-28T07:23:14.734234+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.3602,
+    "action": "excellent_watch",
+    "pct_change": -6.45
+  },
+  {
+    "timestamp": "2026-09-28T09:11:09.958300+00:00",
+    "asset": null,
+    "classification": null,
+    "crossover_pct": null,
+    "action": "halted_circuit_breaker",
+    "reason": "daily_loss_limit_pct (3%) breached: starting_equity=477.9353767308917 (already adjusted this morning for the confirmed non-trading DOGE transfer), current_equity=463.036121246098, drawdown=3.12%. Unlike the 03:10 UTC halt today, this is a REAL trading drawdown, not a transfer - it lines up with the ongoing crypto sell-off on real held positions (CRV -8.05%, AVAX -6.89%, XLM -4.08% unrealized vs cost basis as of the last fetched marks, none yet at the -10% stop-loss floor). See backtest_2026-09-28_sell_off_gate_review.md for the live review of these positions. All crypto/stock evaluation and order placement skipped this cycle per the circuit breaker rule. NOT auto-overridden - unlike the earlier transfer-caused halt, this drawdown has a real trading cause and needs owner review before any override."
+  },
+  {
+    "timestamp": "2026-09-28T09:58:19.734259+00:00",
+    "asset": null,
+    "classification": null,
+    "crossover_pct": null,
+    "action": "circuit_breaker_override",
+    "reason": "Owner explicitly authorized resuming trading today despite a REAL trading drawdown (distinct from the earlier same-day transfer-caused halt). starting_equity reset from 477.9353767308917 to current equity (463.775001544724) as the new baseline for the rest of today; halted cleared to False. Same cycle, owner also authorized correcting 5 trade_log price entries (CRV buy, DOGE buy 49.64, AVAX buy 8.6006, SOL sell, LINK sell) that had recorded the order entered price instead of the real fill average_price - see state.json trade_log notes and CHANGELOG.md for detail."
+  },
+  {
+    "timestamp": "2026-09-28T11:17:09.087801+00:00",
+    "asset": "XLM",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": null,
+    "action": "executed",
+    "price": 0.210026,
+    "quantity": 438.33,
+    "notional": 92.06,
+    "order_id": "6aba4c24-c284-4c8b-8e85-bb22f72400a5",
+    "reason": "Owner-directed manual sell, executed outside the normal fresh_sell_cross flow: the death-cross that fired earlier today (05:12 UTC) was blocked by the profitability gate (blocked_unprofitable); technicals still showed the same bearish signal this cycle (SMA10 below SMA30 for all three), and the owner explicitly directed initiating the sell now given the ongoing sell-off, overriding the gate for these three specific positions. Not a change to profit_gate.MIN_SELL_PROFIT_PCT or PLAYBOOK.md policy - a one-time owner override."
+  },
+  {
+    "timestamp": "2026-09-28T11:17:09.089653+00:00",
+    "asset": "CRV",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": null,
+    "action": "executed",
+    "price": 0.326275975,
+    "quantity": 213.28,
+    "notional": 69.58,
+    "order_id": "6aba4c26-ead5-4ea6-a28d-3f848e115645",
+    "reason": "Owner-directed manual sell, executed outside the normal fresh_sell_cross flow: the death-cross that fired earlier today (05:12 UTC) was blocked by the profitability gate (blocked_unprofitable); technicals still showed the same bearish signal this cycle (SMA10 below SMA30 for all three), and the owner explicitly directed initiating the sell now given the ongoing sell-off, overriding the gate for these three specific positions. Not a change to profit_gate.MIN_SELL_PROFIT_PCT or PLAYBOOK.md policy - a one-time owner override."
+  },
+  {
+    "timestamp": "2026-09-28T11:17:09.091317+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": null,
+    "action": "executed",
+    "price": 10.44489346,
+    "quantity": 10.3848,
+    "notional": 108.46,
+    "order_id": "6aba4c27-9d38-4e7c-bc48-fc3d36a82d37",
+    "reason": "Owner-directed manual sell, executed outside the normal fresh_sell_cross flow: the death-cross that fired earlier today (05:12 UTC) was blocked by the profitability gate (blocked_unprofitable); technicals still showed the same bearish signal this cycle (SMA10 below SMA30 for all three), and the owner explicitly directed initiating the sell now given the ongoing sell-off, overriding the gate for these three specific positions. Not a change to profit_gate.MIN_SELL_PROFIT_PCT or PLAYBOOK.md policy - a one-time owner override."
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.661396+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.0591,
+    "action": "excellent_watch",
+    "pct_change": -5.36
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.662908+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.8027,
+    "action": "excellent_watch",
+    "pct_change": -6.82
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.664068+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.1383,
+    "action": "excellent_watch",
+    "pct_change": -6.81
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.665132+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.2776,
+    "action": "excellent_watch",
+    "pct_change": 21.18
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.666250+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.1377,
+    "action": "excellent_watch",
+    "pct_change": -6.46
+  },
+  {
+    "timestamp": "2026-09-28T11:22:46.667486+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.1779,
+    "action": "excellent_watch",
+    "pct_change": -7.99
+  },
+  {
+    "timestamp": "2026-09-28T11:48:09.399811+00:00",
+    "asset": null,
+    "classification": null,
+    "crossover_pct": null,
+    "action": "trade_cap_override",
+    "reason": "Owner explicitly directed resetting trades_today (was 5/4, hit earlier today from the manual XLM/CRV/AVAX sell before market open) so the automated system can act on real stock signals during today's 9:30-16:00 ET session. Reset to 0. RISK_LIMITS[\"max_trades_per_day\"] itself unchanged (still 4)."
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.832942+00:00",
+    "asset": "DOT",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -1.8616,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.834599+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.9406,
+    "action": "excellent_watch",
+    "pct_change": -5.53
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.835875+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -5.0995,
+    "action": "excellent_watch",
+    "pct_change": -5.91
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.837265+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.266,
+    "action": "excellent_watch",
+    "pct_change": -5.9
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.838460+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.5864,
+    "action": "excellent_watch",
+    "pct_change": 28.58
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.839606+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.4642,
+    "action": "excellent_watch",
+    "pct_change": -6.39
+  },
+  {
+    "timestamp": "2026-09-28T12:27:23.840922+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.4278,
+    "action": "excellent_watch",
+    "pct_change": 5.42
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.668842+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.8047,
+    "action": "excellent_watch",
+    "pct_change": -6.62
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.671204+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.8144,
+    "action": "excellent_watch",
+    "pct_change": -5.96
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.673404+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.2181,
+    "action": "excellent_watch",
+    "pct_change": -6.33
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.675389+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 7.1769,
+    "action": "excellent_watch",
+    "pct_change": 23.56
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.677433+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.1031,
+    "action": "excellent_watch",
+    "pct_change": -6.72
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.679444+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.4728,
+    "action": "excellent_watch",
+    "pct_change": -6.09
+  },
+  {
+    "timestamp": "2026-09-28T13:25:25.681561+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.4044,
+    "action": "excellent_watch",
+    "pct_change": -7.21
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.788927+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.6778,
+    "action": "excellent_watch",
+    "pct_change": -6.6
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.790496+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.5752,
+    "action": "excellent_watch",
+    "pct_change": -6.47
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.791895+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.0778,
+    "action": "excellent_watch",
+    "pct_change": -7.39
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.793192+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 8.835,
+    "action": "excellent_watch",
+    "pct_change": 23.76
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.794728+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.2248,
+    "action": "excellent_watch",
+    "pct_change": -7.28
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.796406+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.4454,
+    "action": "excellent_watch",
+    "pct_change": -6.66
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.798472+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.3975,
+    "action": "excellent_watch",
+    "pct_change": -8.01
+  },
+  {
+    "timestamp": "2026-09-28T14:19:22.800932+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 6.0132,
+    "action": "excellent_watch",
+    "pct_change": -0.24
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.018889+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.699,
+    "action": "excellent_watch",
+    "pct_change": -6.65
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.020549+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.5001,
+    "action": "excellent_watch",
+    "pct_change": -7.24
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.021803+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.9933,
+    "action": "excellent_watch",
+    "pct_change": -8.52
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.023151+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 10.2965,
+    "action": "excellent_watch",
+    "pct_change": 22.41
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.024771+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.6986,
+    "action": "excellent_watch",
+    "pct_change": -8.64
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.025933+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.5415,
+    "action": "excellent_watch",
+    "pct_change": -7.6
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.027145+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.5791,
+    "action": "excellent_watch",
+    "pct_change": -9.56
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.028390+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.8092,
+    "action": "excellent_watch",
+    "pct_change": -6.27
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.029721+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.8289,
+    "action": "excellent_watch",
+    "pct_change": 0.49
+  },
+  {
+    "timestamp": "2026-09-28T15:15:33.031392+00:00",
+    "asset": "CRDO",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.345,
+    "action": "excellent_watch",
+    "pct_change": -9.32
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.445338+00:00",
+    "asset": "PTC",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.0196,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.448433+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.5892,
+    "action": "excellent_watch",
+    "pct_change": -6.74
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.450108+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.2027,
+    "action": "excellent_watch",
+    "pct_change": -7.05
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.451810+00:00",
+    "asset": "AERO",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.9071,
+    "action": "excellent_watch",
+    "pct_change": -5.9
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.453290+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 11.9908,
+    "action": "excellent_watch",
+    "pct_change": 31.29
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.455879+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.9394,
+    "action": "excellent_watch",
+    "pct_change": -7.83
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.458561+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.404,
+    "action": "excellent_watch",
+    "pct_change": -5.51
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.461205+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.5334,
+    "action": "excellent_watch",
+    "pct_change": -8.73
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.464010+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.8431,
+    "action": "excellent_watch",
+    "pct_change": -5.19
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.466780+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.592,
+    "action": "excellent_watch",
+    "pct_change": 0.53
+  },
+  {
+    "timestamp": "2026-09-28T16:10:37.469331+00:00",
+    "asset": "CRDO",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.1658,
+    "action": "excellent_watch",
+    "pct_change": -8.68
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.858612+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.837,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.860454+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": -0.325,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.862242+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -1.634,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.863726+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -2.087,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.865229+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.293,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.866820+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.864,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.868285+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -3.421,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.869815+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 13.698,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.872062+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.117,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.874014+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": -3.137,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.875730+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.357,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.877264+00:00",
+    "asset": "LINK",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 0.87,
+    "action": "executed",
+    "price": 15.48046847,
+    "quantity": 6.0035,
+    "notional": 92.94
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.878793+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -2.764,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.880383+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.943,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:20:09.882080+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 0.517,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.410745+00:00",
+    "asset": "CRWD",
+    "classification": "hold",
+    "crossover_pct": 0.192,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.412695+00:00",
+    "asset": "PANW",
+    "classification": "hold",
+    "crossover_pct": 0.056,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.414336+00:00",
+    "asset": "TWLO",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -1.312,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.416747+00:00",
+    "asset": "ILMN",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.144,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.418494+00:00",
+    "asset": "IR",
+    "classification": "hold",
+    "crossover_pct": 1.344,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.420145+00:00",
+    "asset": "PTC",
+    "classification": "hold",
+    "crossover_pct": 0.047,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.422424+00:00",
+    "asset": "CRDO",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.87,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.424835+00:00",
+    "asset": "MAIR",
+    "classification": "hold",
+    "crossover_pct": 0.132,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.426778+00:00",
+    "asset": "AR",
+    "classification": "fresh_sell_cross",
+    "crossover_pct": -0.537,
+    "action": "blocked_no_position"
+  },
+  {
+    "timestamp": "2026-09-28T17:21:40.428458+00:00",
+    "asset": "PYPL",
+    "classification": "hold",
+    "crossover_pct": 2.321,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.396866+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.685,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.401563+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": -0.111,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.403830+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -1.379,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.406271+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -1.755,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.408852+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.168,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.411507+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.49,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.414432+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -2.839,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.417545+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 15.6,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.420131+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.052,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.422465+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": -2.426,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.424817+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -4.049,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.426969+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 1.714,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.429341+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -2.496,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.431895+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.725,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.434809+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 1.263,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.437703+00:00",
+    "asset": "CRWD",
+    "classification": "hold",
+    "crossover_pct": 0.034,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.440417+00:00",
+    "asset": "PANW",
+    "classification": "hold",
+    "crossover_pct": -0.107,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.443082+00:00",
+    "asset": "TWLO",
+    "classification": "hold",
+    "crossover_pct": -2.16,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.445701+00:00",
+    "asset": "ILMN",
+    "classification": "hold",
+    "crossover_pct": 4.665,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.448360+00:00",
+    "asset": "IR",
+    "classification": "hold",
+    "crossover_pct": 1.431,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.450819+00:00",
+    "asset": "PTC",
+    "classification": "hold",
+    "crossover_pct": 0.068,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.453598+00:00",
+    "asset": "CRDO",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.572,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.456547+00:00",
+    "asset": "MAIR",
+    "classification": "hold",
+    "crossover_pct": 0.227,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.459498+00:00",
+    "asset": "AR",
+    "classification": "hold",
+    "crossover_pct": -1.012,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T18:10:31.462274+00:00",
+    "asset": "PYPL",
+    "classification": "hold",
+    "crossover_pct": 2.534,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.169104+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.524,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.177385+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.084,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.183225+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -1.148,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.187296+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -1.439,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.191044+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.88,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.194887+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.1,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.198845+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -2.178,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.203086+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 16.261,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.207414+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.069,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.211191+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": -1.537,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.215117+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.731,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.218192+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.588,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.221264+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -2.321,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.223981+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.469,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.227580+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.017,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.232013+00:00",
+    "asset": "CRWD",
+    "classification": "hold",
+    "crossover_pct": 0.026,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.236148+00:00",
+    "asset": "PANW",
+    "classification": "hold",
+    "crossover_pct": 0.049,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.238517+00:00",
+    "asset": "TWLO",
+    "classification": "hold",
+    "crossover_pct": -2.245,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.240866+00:00",
+    "asset": "ILMN",
+    "classification": "hold",
+    "crossover_pct": 4.118,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.244211+00:00",
+    "asset": "IR",
+    "classification": "hold",
+    "crossover_pct": 1.421,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.248078+00:00",
+    "asset": "PTC",
+    "classification": "hold",
+    "crossover_pct": 0.012,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.251557+00:00",
+    "asset": "CRDO",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.898,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.255173+00:00",
+    "asset": "MAIR",
+    "classification": "hold",
+    "crossover_pct": 0.178,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.257695+00:00",
+    "asset": "AR",
+    "classification": "hold",
+    "crossover_pct": -1.175,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T19:10:56.260275+00:00",
+    "asset": "PYPL",
+    "classification": "hold",
+    "crossover_pct": 2.296,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.491246+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.371,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.494380+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.255,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.497018+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.964,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.499656+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -1.177,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.502338+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -2.524,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.505088+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.799,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.507668+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -1.547,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.510326+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 16.188,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.513049+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.061,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.515681+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": -0.688,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.518358+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.46,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.521096+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.44,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.523180+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -2.139,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.524967+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.303,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T20:10:05.526663+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 2.599,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.218870+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.26,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.221825+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.361,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.223664+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.857,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.225429+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.983,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.227227+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -2.291,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.228952+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.588,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.230828+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -1.042,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.232650+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 15.804,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.234938+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.113,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.236776+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": 0.094,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.238821+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.311,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.240905+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.098,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.242933+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -2.037,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.244763+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.175,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T21:10:13.246662+00:00",
+    "asset": "XLM",
+    "classification": "excellent_watch",
+    "crossover_pct": 3.14,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.124476+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.195,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.126659+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.401,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.128650+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.828,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.130742+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.854,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.132612+00:00",
+    "asset": "LIT",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.141,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.134335+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.429,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.136188+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -0.704,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.138018+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 15.191,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.139874+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.205,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.141892+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": 0.834,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.143746+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.218,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.145662+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.599,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.147347+00:00",
+    "asset": "AVAX",
+    "classification": "excellent_watch",
+    "crossover_pct": -1.975,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.149015+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.071,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T22:10:12.150914+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 3.559,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.932684+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.164,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.935339+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.388,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.937466+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.86,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.939437+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.851,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.941319+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -1.83,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.943318+00:00",
+    "asset": "BCH",
+    "classification": "excellent_watch",
+    "crossover_pct": -2.331,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.945151+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": -0.392,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.947261+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 14.482,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.949182+00:00",
+    "asset": "DOT",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.202,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.951129+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": 1.559,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.952995+00:00",
+    "asset": "ZORA",
+    "classification": "excellent_watch",
+    "crossover_pct": -3.326,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.954890+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 4.678,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.956783+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -1.9,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.959189+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -1.068,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-28T23:09:37.961189+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 3.335,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.588790+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.14,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.591163+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.381,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.593143+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.853,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.595246+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.75,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.597257+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -1.426,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.599237+00:00",
+    "asset": "BCH",
+    "classification": "hold",
+    "crossover_pct": -2.186,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.601187+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": 0.039,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.603188+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 13.648,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.605241+00:00",
+    "asset": "DOT",
+    "classification": "hold",
+    "crossover_pct": -3.131,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.607256+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": 2.717,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.609196+00:00",
+    "asset": "ZORA",
+    "classification": "hold",
+    "crossover_pct": -3.197,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.611169+00:00",
+    "asset": "LINK",
+    "classification": "hold",
+    "crossover_pct": 4.845,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.613096+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -1.7,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.615190+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -0.973,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T00:10:21.617173+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 3.508,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.491418+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.054,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.493880+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.444,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.495729+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.702,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.497936+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.463,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.500823+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -1.044,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.503006+00:00",
+    "asset": "BCH",
+    "classification": "hold",
+    "crossover_pct": -1.915,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.505074+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": 0.635,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.507740+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 13.015,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.510321+00:00",
+    "asset": "DOT",
+    "classification": "hold",
+    "crossover_pct": -2.77,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.512637+00:00",
+    "asset": "CRV",
+    "classification": "hold",
+    "crossover_pct": 3.912,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.514937+00:00",
+    "asset": "ZORA",
+    "classification": "hold",
+    "crossover_pct": -2.769,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.518497+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.411,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.520578+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -1.159,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.522775+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -0.734,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T01:09:28.524797+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 3.847,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.477593+00:00",
+    "asset": "BTC",
+    "classification": "hold",
+    "crossover_pct": -0.025,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.480222+00:00",
+    "asset": "ETH",
+    "classification": "hold",
+    "crossover_pct": 0.427,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.482202+00:00",
+    "asset": "SOL",
+    "classification": "hold",
+    "crossover_pct": -0.673,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.484231+00:00",
+    "asset": "DOGE",
+    "classification": "hold",
+    "crossover_pct": -0.381,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.486177+00:00",
+    "asset": "LIT",
+    "classification": "hold",
+    "crossover_pct": -0.807,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.488250+00:00",
+    "asset": "BCH",
+    "classification": "hold",
+    "crossover_pct": -1.746,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.490378+00:00",
+    "asset": "AERO",
+    "classification": "hold",
+    "crossover_pct": 1.014,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.492496+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 11.637,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.494488+00:00",
+    "asset": "DOT",
+    "classification": "hold",
+    "crossover_pct": -2.587,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.496495+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.07,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.498409+00:00",
+    "asset": "ZORA",
+    "classification": "hold",
+    "crossover_pct": -2.606,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.500390+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.691,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.502269+00:00",
+    "asset": "AVAX",
+    "classification": "hold",
+    "crossover_pct": -0.824,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.504275+00:00",
+    "asset": "ASTER",
+    "classification": "hold",
+    "crossover_pct": -0.664,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T02:09:09.506209+00:00",
+    "asset": "XLM",
+    "classification": "hold",
+    "crossover_pct": 3.969,
+    "action": "hold"
+  },
+  {
+    "timestamp": "2026-09-29T03:10:45.379625+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 10.112,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T03:10:45.383402+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 6.016,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T03:10:45.386582+00:00",
+    "asset": "LINK",
+    "classification": "excellent_watch",
+    "crossover_pct": 5.262,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T04:11:24.145401+00:00",
+    "asset": "LINK",
+    "classification": null,
+    "crossover_pct": null,
+    "action": "protective_exit",
+    "reason": "stop_loss",
+    "price": 14.5,
+    "avg_cost_basis": 15.48046847,
+    "pnl_pct": -6.333583973250391,
+    "quantity": 6.0035,
+    "order_id": "6abb3a5e-d675-4eb3-9c7a-97b1ec6fbb86"
+  },
+  {
+    "timestamp": "2026-09-29T04:12:05.318787+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 8.341,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T04:12:05.321344+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 6.673,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T05:10:21.442166+00:00",
+    "asset": "HBAR",
+    "classification": "excellent_watch",
+    "crossover_pct": 6.883,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T05:10:21.445121+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 7.028,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T07:12:40.663835+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 8.112,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T09:30:26.864196+00:00",
+    "asset": "CRV",
+    "classification": "excellent_watch",
+    "crossover_pct": 8.928410651180558,
+    "action": "excellent_watch"
+  },
+  {
+    "timestamp": "2026-09-29T09:31:51.764643+00:00",
+    "asset": "AVAX",
+    "classification": "fresh_buy_cross",
+    "crossover_pct": 1.7211,
+    "action": "executed",
+    "price": 11.560665,
+    "quantity": 7.9511,
+    "notional": 91.92,
+    "order_id": "6abb8587-7a90-4230-8127-ad18b8e59b4a"
+  }
+]

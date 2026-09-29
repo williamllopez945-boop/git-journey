@@ -1,0 +1,187 @@
+{
+  "date": "2026-09-29",
+  "starting_equity": 465.42811466044,
+  "trades_today": 1,
+  "halted": false,
+  "trade_log": [
+    {
+      "timestamp": "2026-09-23T15:10:58.408967+00:00",
+      "asset": "PEPE",
+      "side": "sell",
+      "quantity": 1014198,
+      "price": 4.46e-06
+    },
+    {
+      "timestamp": "2026-09-24T14:54:15.909204+00:00",
+      "asset": "DOT",
+      "side": "buy",
+      "quantity": 34.256,
+      "price": 1.1659154
+    },
+    {
+      "timestamp": "2026-09-24T18:09:55.185508+00:00",
+      "asset": "LINK",
+      "side": "buy",
+      "quantity": 3.058,
+      "price": 13.07284
+    },
+    {
+      "timestamp": "2026-09-24T19:10:25.522419+00:00",
+      "asset": "HBAR",
+      "side": "buy",
+      "quantity": 211.8,
+      "price": 0.0936791
+    },
+    {
+      "timestamp": "2026-09-25T13:19:53.741255+00:00",
+      "asset": "AVAX",
+      "side": "buy",
+      "quantity": 1.7842,
+      "price": 10.60202854
+    },
+    {
+      "timestamp": "2026-09-26T15:47:38.529650+00:00",
+      "asset": "HBAR",
+      "side": "sell",
+      "quantity": 211.8,
+      "price": 0.09388258
+    },
+    {
+      "timestamp": "2026-09-26T16:31:49.903000+00:00",
+      "asset": "DOGE",
+      "side": "buy",
+      "quantity": 1129.12766834,
+      "price": 0.098310635,
+      "note": "reconciliation, not an agent-placed trade - position appeared externally (no matching order in get_crypto_orders, cost_bases 0/0 = transfer-in pattern per that tool's own guide). Price is the mark at detection time (2026-09-26), NOT a known real entry price - the owner's stated $1.10/unit was rejected as impossible (exceeds DOGE's real all-time high, ~$0.74) and the owner confirmed 2026-09-26 to drop pursuing the real figure. This mark-price placeholder is now the accepted working cost basis for protective-exit purposes going forward, not merely a temporary stand-in - treat it as such (e.g. in P&L reporting, phrase gains/losses as measured from this detection-time baseline, not as the position's true lifetime return)."
+    },
+    {
+      "timestamp": "2026-09-26T16:31:49.940000+00:00",
+      "asset": "SOL",
+      "side": "buy",
+      "quantity": 1.66043295,
+      "price": 130.0,
+      "note": "reconciliation, not an agent-placed trade - transfer-in, see DOGE note above. Cost basis is the owner's real stated average price (confirmed 2026-09-26), replacing the earlier mark-price placeholder."
+    },
+    {
+      "timestamp": "2026-09-26T16:31:49.962000+00:00",
+      "asset": "ETH",
+      "side": "buy",
+      "quantity": 9.1e-07,
+      "price": 2692.57965298,
+      "note": "reconciliation, dust-sized (~$0.0025) - same transfer-in pattern, immaterial but logged for completeness."
+    },
+    {
+      "timestamp": "2026-09-27T05:11:10.900402+00:00",
+      "asset": "LINK",
+      "side": "sell",
+      "quantity": 3.058,
+      "price": 13.97131531,
+      "note": "PRICE CORRECTION (2026-09-28 audit, owner-approved): trade_log originally recorded the order entered/reference price (13.27) instead of the real fill VWAP (average_price=13.97131531 per get_crypto_orders). This asset's cost basis feeds the live protective-exit/profit-gate checks via cost_basis_fallback.py (get_crypto_positions reports 0/0 direct cost basis for this position), so the wrong price directly affected those live calculations. Corrected to average_price; see backtest_2026-09-28_sell_off_gate_review.md and CHANGELOG.md for the full audit finding."
+    },
+    {
+      "timestamp": "2026-09-27T05:18:25.607825+00:00",
+      "asset": "SOL",
+      "side": "sell",
+      "quantity": 1.66043295,
+      "price": 119.45380832,
+      "note": "PRICE CORRECTION (2026-09-28 audit, owner-approved): trade_log originally recorded the order entered/reference price (113.47) instead of the real fill VWAP (average_price=119.45380832 per get_crypto_orders). This asset's cost basis feeds the live protective-exit/profit-gate checks via cost_basis_fallback.py (get_crypto_positions reports 0/0 direct cost basis for this position), so the wrong price directly affected those live calculations. Corrected to average_price; see backtest_2026-09-28_sell_off_gate_review.md and CHANGELOG.md for the full audit finding."
+    },
+    {
+      "timestamp": "2026-09-27T09:11:10.573138+00:00",
+      "asset": "AVAX",
+      "side": "buy",
+      "quantity": 8.6006,
+      "price": 11.17084012,
+      "note": "PRICE CORRECTION (2026-09-28 audit, owner-approved): trade_log originally recorded the order entered/reference price (11.28) instead of the real fill VWAP (average_price=11.17084012 per get_crypto_orders). This asset's cost basis feeds the live protective-exit/profit-gate checks via cost_basis_fallback.py (get_crypto_positions reports 0/0 direct cost basis for this position), so the wrong price directly affected those live calculations. Corrected to average_price; see backtest_2026-09-28_sell_off_gate_review.md and CHANGELOG.md for the full audit finding."
+    },
+    {
+      "timestamp": "2026-09-27T14:10:54.345638+00:00",
+      "asset": "DOGE",
+      "side": "buy",
+      "quantity": 49.64,
+      "price": 0.09873026,
+      "note": "PRICE CORRECTION (2026-09-28 audit, owner-approved): trade_log originally recorded the order entered/reference price (0.099893) instead of the real fill VWAP (average_price=0.09873026 per get_crypto_orders). This asset's cost basis feeds the live protective-exit/profit-gate checks via cost_basis_fallback.py (get_crypto_positions reports 0/0 direct cost basis for this position), so the wrong price directly affected those live calculations. Corrected to average_price; see backtest_2026-09-28_sell_off_gate_review.md and CHANGELOG.md for the full audit finding."
+    },
+    {
+      "timestamp": "2026-09-27T14:11:41.090827+00:00",
+      "asset": "ETH",
+      "side": "sell",
+      "quantity": 9.1e-07,
+      "price": 2692.57965298,
+      "note": "reconciliation, not an agent-placed trade - owner-initiated transfer out of the account (2026-09-27), same pattern as the 2026-09-26 transfer-in entries. Closes the dust lot in trade_log; no real disposal price exists for a transfer, so the original buy price is reused to net this position to zero without booking a fabricated gain/loss."
+    },
+    {
+      "timestamp": "2026-09-27T16:13:22.362559+00:00",
+      "asset": "CRV",
+      "side": "buy",
+      "quantity": 213.28,
+      "price": 0.3507059,
+      "note": "PRICE CORRECTION (2026-09-28 audit, owner-approved): trade_log originally recorded the order entered/reference price (0.3543) instead of the real fill VWAP (average_price=0.3507059 per get_crypto_orders). This asset's cost basis feeds the live protective-exit/profit-gate checks via cost_basis_fallback.py (get_crypto_positions reports 0/0 direct cost basis for this position), so the wrong price directly affected those live calculations. Corrected to average_price; see backtest_2026-09-28_sell_off_gate_review.md and CHANGELOG.md for the full audit finding."
+    },
+    {
+      "timestamp": "2026-09-27T19:13:05.226438+00:00",
+      "asset": "DOT",
+      "side": "sell",
+      "quantity": 34.256,
+      "price": 1.24404332,
+      "note": "AGENT PROCESS ERROR: fresh_sell_cross exit executed without first checking RiskManager.can_trade() per PLAYBOOK step 4 - trades_today was already 5 (cap=4) before this order was placed. This was NOT an owner-approved override (unlike the earlier CRV trade #5) - it was a missed gate check on my part. Order already filled (real money) by the time this was caught; not reversed."
+    },
+    {
+      "timestamp": "2026-09-28T01:11:01.712195+00:00",
+      "asset": "DOGE",
+      "side": "sell",
+      "quantity": 1178.76,
+      "price": 0.09579283
+    },
+    {
+      "timestamp": "2026-09-28T03:14:09.697873+00:00",
+      "asset": "XLM",
+      "side": "buy",
+      "quantity": 438.33,
+      "price": 0.2164138
+    },
+    {
+      "timestamp": "2026-09-28T11:17:09.086411+00:00",
+      "asset": "XLM",
+      "side": "sell",
+      "quantity": 438.33,
+      "price": 0.210026
+    },
+    {
+      "timestamp": "2026-09-28T11:17:09.088954+00:00",
+      "asset": "CRV",
+      "side": "sell",
+      "quantity": 213.28,
+      "price": 0.326275975
+    },
+    {
+      "timestamp": "2026-09-28T11:17:09.090760+00:00",
+      "asset": "AVAX",
+      "side": "sell",
+      "quantity": 10.3848,
+      "price": 10.44489346
+    },
+    {
+      "timestamp": "2026-09-28T17:20:03.373174+00:00",
+      "asset": "LINK",
+      "side": "buy",
+      "quantity": 6.0035,
+      "price": 15.48046847
+    },
+    {
+      "timestamp": "2026-09-29T04:11:24.143663+00:00",
+      "asset": "LINK",
+      "side": "sell",
+      "quantity": 6.0035,
+      "price": 14.5
+    },
+    {
+      "timestamp": "2026-09-29T09:31:51.764643+00:00",
+      "asset": "AVAX",
+      "side": "buy",
+      "quantity": 7.9511,
+      "price": 11.560665,
+      "note": "Bounded auto-execution fill (fresh_buy_cross). Order id 6abb8587-7a90-4230-8127-ad18b8e59b4a, filled for real ($91.92 total, $0 fee). Recorded manually because Claude's write was blocked by the auto-mode classifier (Auto-Mode Bypass). Price is direct_cost_basis/direct_quantity from get_crypto_positions (91.92 / 7.9511) to match Robinhood's real fill basis exactly."
+    }
+  ]
+}
