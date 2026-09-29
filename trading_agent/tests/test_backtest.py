@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from trading_agent.backtest import backtest, summarize
@@ -124,6 +126,48 @@ def test_summarize_computes_return_and_drawdown():
     assert s["max_drawdown_pct"] == 0.0
     assert s["num_trades"] == 0
     assert s["win_rate_pct"] is None
+
+
+def test_fee_pct_zero_is_unchanged_from_default_behavior():
+    closes = [5.0] * 30 + [5.0, 5.0, 5.0, 5.0, 5.0, 9.0]
+    trades_a, curve_a = backtest(closes, short_window=2, long_window=4, starting_cash=100.0)
+    trades_b, curve_b = backtest(closes, short_window=2, long_window=4, starting_cash=100.0, fee_pct=0.0)
+    assert trades_a == trades_b
+    assert curve_a == curve_b
+
+
+def test_fee_pct_reduces_quantity_bought():
+    closes = [5.0] * 30 + [5.0, 5.0, 5.0, 5.0, 5.0, 9.0]
+    trades_free, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0, fee_pct=0.0)
+    trades_fee, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0, fee_pct=0.01)
+    buy_free = next(t for t in trades_free if t["action"] == "buy")
+    buy_fee = next(t for t in trades_fee if t["action"] == "buy")
+    # same cash spent (all of it), but 1% fee buys ~1% fewer units
+    assert buy_fee["qty"] == pytest.approx(buy_free["qty"] / 1.01, rel=1e-9)
+
+
+def test_fee_pct_reduces_sell_proceeds():
+    # Buy then death-cross sell (gate disabled, stop_loss widened so the
+    # death-cross itself is what's being measured here).
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9, 9, 5]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          min_sell_profit_pct=None, stop_loss_pct=0.90, fee_pct=0.01)
+    sell = next(t for t in trades if t["action"] == "sell")
+    # 1% fee: proceeds are 1% less than qty*price
+    assert sell["cash_after"] == pytest.approx(sell["qty"] * sell["price"] * 0.99, rel=1e-9)
+
+
+def test_fee_pct_raises_effective_cost_basis_so_stop_loss_triggers_sooner():
+    # A 4% price decline alone wouldn't breach the 4% stop-loss (it's
+    # exactly at the edge), but a 1% entry fee raises the effective cost
+    # basis, pushing the real pct_change just past -4%.
+    entry_price = 10.0
+    fee_pct = 0.01
+    decline_price = entry_price * 0.96  # exactly -4% off the raw entry price
+    closes = [5.0] * 30 + [5, 5, 5, 5, 5, entry_price, decline_price, decline_price, decline_price, decline_price]
+    trades, _ = backtest(closes, short_window=2, long_window=4, starting_cash=100.0,
+                          fee_pct=fee_pct, stop_loss_pct=0.04)
+    assert any(t["reason"] == "stop_loss" for t in trades)
 
 
 def test_summarize_win_rate_from_round_trips():

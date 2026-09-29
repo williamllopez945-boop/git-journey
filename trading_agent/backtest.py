@@ -29,7 +29,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
              rsi_period=None, rsi_overbought_pct=DEFAULT_RSI_OVERBOUGHT_PCT,
              volumes=None, volume_period=DEFAULT_VOLUME_PERIOD, volume_min_ratio=DEFAULT_VOLUME_MIN_RATIO,
              min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
-             gate_max_hold_bars=None):
+             gate_max_hold_bars=None, fee_pct=0.0):
     """Run the strategy over a closing-price series (oldest first).
 
     min_strength_pct: when set, entries require entry_filter.confirmed_signal
@@ -75,6 +75,23 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
     holding it. None (default) disables the floor - unchanged pre-floor
     behavior. See profit_gate.py.
 
+    fee_pct: round-trip friction applied at every fill (fraction, e.g.
+    0.001 = 0.1%) - a buy converts less cash into quantity than the raw
+    price implies (qty = cash / (price * (1+fee_pct))), a sell returns
+    less cash than the raw price implies (proceeds = qty * price *
+    (1-fee_pct)). Every prior backtest in this project has flagged "no
+    transaction costs/slippage modeled" as an unaddressed limitation
+    (see backtest_2026-09-28_sell_cross_profit_gate.md's "What this
+    doesn't establish") - this is that model, added 2026-09-29 for the
+    ChatGPT-review-prompted gate re-test. It's a flat approximation of
+    spread/slippage, not real fee data (Robinhood crypto/stock orders
+    observed live this session mostly show $0 explicit fees - the real
+    cost is bid/ask spread from marketable-limit fills, which this
+    proxies as a symmetric haircut on both sides of a trade, applied
+    identically to every fill reason - buy, stop_loss, take_profit,
+    death_cross, gate_floor). 0.0 (default) is the pre-existing,
+    frictionless behavior.
+
     Returns (trades, equity_curve):
       trades - list of dicts: {index, action, reason, qty, price, cash_after}
       equity_curve - list of portfolio value (cash + mark-to-market position)
@@ -97,7 +114,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                                            stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
                                            take_profit_sell_fraction=take_profit_sell_fraction)
             if reason == "stop_loss":
-                proceeds = position_qty * price
+                proceeds = position_qty * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": reason,
                                 "qty": position_qty, "price": price, "cash_after": cash})
@@ -108,7 +125,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 last_exit_index = i
             elif reason == "take_profit":
                 sell_qty = position_qty * fraction
-                proceeds = sell_qty * price
+                proceeds = sell_qty * price * (1 - fee_pct)
                 cash += proceeds
                 position_qty -= sell_qty
                 took_profit = True
@@ -121,7 +138,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 blocked_since_index = None
             elif gate_floor_should_force_exit(price, avg_cost_basis, i - blocked_since_index,
                                                max_hold_bars=gate_max_hold_bars):
-                proceeds = position_qty * price
+                proceeds = position_qty * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": "gate_floor",
                                 "qty": position_qty, "price": price, "cash_after": cash})
@@ -141,7 +158,7 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 if blocked_since_index is None:
                     blocked_since_index = i
             else:
-                proceeds = position_qty * price
+                proceeds = position_qty * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "action": "sell", "reason": "death_cross",
                                 "qty": position_qty, "price": price, "cash_after": cash})
@@ -165,9 +182,9 @@ def backtest(closes, short_window, long_window, starting_cash=100.0, min_strengt
                 and not passes_volume_filter(volumes[: i + 1], volume_period, volume_min_ratio)
             )
             if not in_cooldown and not rsi_blocked and not volume_blocked:
-                qty = cash / price
+                qty = cash / (price * (1 + fee_pct))
                 position_qty = qty
-                avg_cost_basis = price
+                avg_cost_basis = price * (1 + fee_pct)
                 trades.append({"index": i, "action": "buy", "reason": "fresh_buy_cross",
                                 "qty": qty, "price": price, "cash_after": 0.0})
                 cash = 0.0

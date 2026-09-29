@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from trading_agent.portfolio_backtest import portfolio_backtest, summarize_portfolio
@@ -292,6 +294,26 @@ def test_protective_exit_does_not_consume_a_daily_trade_slot():
     )
     assert any(t["asset"] == "A" and t["reason"] == "stop_loss" for t in trades)
     assert any(t["asset"] == "B" and t["action"] == "buy" for t in trades)
+
+
+def test_fee_pct_zero_is_unchanged_from_default_behavior():
+    series = {"A": list(_RAMP_AND_HOLD)}
+    a = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                            max_position_pct=0.5)
+    b = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                            max_position_pct=0.5, fee_pct=0.0)
+    assert a == b
+
+
+def test_fee_pct_reduces_quantity_bought_and_sell_proceeds():
+    series = {"A": list(_RAMP_AND_HOLD)}
+    trades_free, _, _ = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                                            max_position_pct=0.5, fee_pct=0.0)
+    trades_fee, _, _ = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                                           max_position_pct=0.5, fee_pct=0.01)
+    buy_free = next(t for t in trades_free if t["action"] == "buy")
+    buy_fee = next(t for t in trades_fee if t["action"] == "buy")
+    assert buy_fee["qty"] == pytest.approx(buy_free["qty"] / 1.01, rel=1e-9)
 
 
 def test_gate_floor_does_not_fire_on_a_position_never_blocked():

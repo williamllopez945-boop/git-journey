@@ -1229,3 +1229,26 @@ of that write or the owner applying them directly. No open position
 depends on either cost basis (both fully closed 2026-09-27/28); no
 `RISK_LIMITS`/`DRY_RUN`/`WATCHLIST`/`STOCK_WATCHLIST`/strategy-parameter
 change as a result.
+
+## 2026-09-29 (later) — Profitability gate re-tested at current settings, net of costs: re-confirmed, not changed
+
+ChatGPT second-opinion review flagged two real gaps in the original gate
+backtest (`backtest_2026-09-28_sell_cross_profit_gate.md`): it ran at the
+superseded 10%/20% stop-loss/take-profit (before 4%/8% + the 24h gate
+floor were adopted later that same day), and modeled no transaction
+costs at all. Added `fee_pct` (round-trip friction, default `0.0`) to
+`backtest.py`/`portfolio_backtest.py` and re-ran the full gate-on/gate-off
+A/B comparison at current production settings, at three fee levels
+(0%/0.05%/0.15% per fill). Full write-up:
+`backtest_2026-09-29_gate_ab_test_with_costs.md`.
+
+**Result reinforces the original decision, doesn't overturn it**: at
+4%/8%, the gate now wins on worst-case (H1) in the stock portfolio too
+(+5.76% vs -4.07% at 0% fee, holding to +4.58% vs -5.17% at the highest
+fee tested) - a cleaner win than the original 10%/20%-level backtest
+found, which only won on full-period mean. Crypto-proxy shows the same
+pattern. MAIR's isolated weakness under the gate reproduces at every fee
+level (already known, already accepted - see the original doc). No
+parameter changed as a result - `MIN_SELL_PROFIT_PCT=0.0` and
+`GATE_MAX_HOLD_HOURS=24` were already live. 245/245 tests pass (7 new,
+covering `fee_pct`).

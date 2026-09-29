@@ -25,7 +25,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         max_aggregate_pct=None, timestamps=None, max_trades_per_day=None,
                         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
                         min_sell_profit_pct=MIN_SELL_PROFIT_PCT,
-                        gate_max_hold_bars=None):
+                        gate_max_hold_bars=None, fee_pct=0.0):
     """Run the strategy over several aligned closing-price series at once.
 
     series: dict {asset_name: [closes...]}, all the same length, bar i of
@@ -100,6 +100,11 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
     A forced floor exit counts toward max_trades_per_day like any other
     sell. See profit_gate.py.
 
+    fee_pct: same meaning as backtest.py's single-asset version - a
+    round-trip friction (fraction) applied at every fill, every asset,
+    every reason. 0.0 (default) is the pre-existing, frictionless
+    behavior. See backtest.py's docstring for the full rationale.
+
     Returns (trades, equity_curve, per_asset_final_state):
       trades - list of dicts: {index, asset, action, reason, qty, price, cash_after}
       equity_curve - total portfolio value (cash + mark-to-market of all
@@ -141,7 +146,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                                            stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
                                            take_profit_sell_fraction=take_profit_sell_fraction)
             if reason == "stop_loss":
-                proceeds = st["qty"] * price
+                proceeds = st["qty"] * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "stop_loss",
                                 "qty": st["qty"], "price": price, "cash_after": cash})
@@ -157,7 +162,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 # trades_today increment here.
             elif reason == "take_profit":
                 sell_qty = st["qty"] * fraction
-                proceeds = sell_qty * price
+                proceeds = sell_qty * price * (1 - fee_pct)
                 cash += proceeds
                 st["qty"] -= sell_qty
                 st["took_profit"] = True
@@ -181,7 +186,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                 continue
             if gate_floor_should_force_exit(price, st["avg_cost"], i - st["blocked_since_index"],
                                              max_hold_bars=gate_max_hold_bars):
-                proceeds = st["qty"] * price
+                proceeds = st["qty"] * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "gate_floor",
                                 "qty": st["qty"], "price": price, "cash_after": cash})
@@ -215,7 +220,7 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                     if st["blocked_since_index"] is None:
                         st["blocked_since_index"] = i
                     continue
-                proceeds = st["qty"] * price
+                proceeds = st["qty"] * price * (1 - fee_pct)
                 cash += proceeds
                 trades.append({"index": i, "asset": asset, "action": "sell", "reason": "death_cross",
                                 "qty": st["qty"], "price": price, "cash_after": cash})
@@ -255,9 +260,9 @@ def portfolio_backtest(series, short_window, long_window, starting_cash=1000.0,
                         remaining_aggregate = max(portfolio_value * effective_aggregate_pct - total_open_value, 0.0)
                         alloc = min(alloc, remaining_aggregate)
                     if alloc > 0:
-                        qty = alloc / price
+                        qty = alloc / (price * (1 + fee_pct))
                         st["qty"] = qty
-                        st["avg_cost"] = price
+                        st["avg_cost"] = price * (1 + fee_pct)
                         cash -= alloc
                         trades.append({"index": i, "asset": asset, "action": "buy", "reason": "fresh_buy_cross",
                                         "qty": qty, "price": price, "cash_after": cash})
