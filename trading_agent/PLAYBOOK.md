@@ -970,3 +970,60 @@ decisions, never a side effect of an automated cycle); never place a
 naked option (every put is cash-secured, every call is covered — no
 exceptions, no margin leverage beyond what's already reserved as
 collateral).
+
+### VOLTRAP dry-run (paper — owner request, 2026-09-30)
+
+**Separate from the real (unfunded, still gated) VOLTRAP above.** The
+owner wants to see the mechanism work against real live market data
+before committing real funds. This dry-run Routine is **read-only with
+respect to money**: it never calls `place_option_order`, never touches
+`VOLTRAP_RISK_LIMITS`/`VOLTRAP_WATCHLIST`/`VOLTRAP_AUTO_EXECUTE`, and
+never changes the real go-live gate above. See
+`voltrap_dryrun_2026-09-30.md` for the first run's full worked example
+and findings.
+
+Per firing (weekly, Monday shortly after open — matching the real
+design's intended cadence; a mid-week entry was found live to leave too
+little time for clean delta granularity near a 2-day expiration, see
+the dry-run doc):
+
+1. Use a **hypothetical portfolio value of $5,000** (owner-specified
+   2026-09-30) wherever the real procedure above would read
+   `get_portfolio` — do not touch the real account balance for this.
+2. Reserved collateral ceiling = $5,000 × `VOLTRAP_RISK_LIMITS["max_voltrap_pct"]`
+   (the real, already-confirmed 0.25) = $1,250.
+3. Assume **2 concurrent positions** (not a documented VOLTRAP config
+   value — a reasonable small-book default; max_collateral_per_contract
+   = $1,250 / 2 = $625) unless the owner has since specified otherwise.
+4. Run the real candidate screen (`run_scan`, scan_id
+   `e3983260-740b-4a84-8369-54420cbeafdd`) → `voltrap_candidates.rank_by_voltrap_fit`
+   with the hypothetical `max_collateral_per_contract` and the real
+   `min_avg_options_volume`/`min_open_interest` from
+   `VOLTRAP_RISK_LIMITS` → for the top 1-3 survivors: `get_option_chains`
+   → `get_option_instruments` (nearest Friday with at least ~5+ calendar
+   days out, not the very next Friday if that's only 1-2 days away) →
+   `get_option_quotes` → `voltrap_candidates.pick_strike_by_delta` with
+   the real `target_delta_min`/`target_delta_max` → `review_option_order`
+   for real collateral/fee/probability numbers.
+5. **Never call `place_option_order` or `place_equity_order` from this
+   Routine under any circumstance** — this is the one hard line that
+   makes it safe to run unattended. If a step would require placing an
+   order to continue (it shouldn't), stop and log why instead.
+6. Log the cycle's findings to a dated file
+   `trading_agent/voltrap_dryrun_<date>.md` (same format as the first
+   run) — ranked candidates, the walked-through strike pick(s), real
+   collateral/premium/probability numbers, any new observations (e.g.
+   if watchlist names now fit, if liquidity/IV shifted materially).
+   Commit and push that file (same branch as this session).
+7. Send one `PushNotification` (<200 chars) summarizing the cycle's top
+   pick(s) and the headline numbers (strike, premium, collateral,
+   chance of profit) — clearly labeled "VOLTRAP dry-run (paper)" so it's
+   never confused with a real trading notification.
+
+Hard rules (same posture as everywhere else in this file): never modify
+`VOLTRAP_RISK_LIMITS`, `VOLTRAP_WATCHLIST`, `VOLTRAP_AUTO_EXECUTE`, or
+`RISK_LIMITS`/`WATCHLIST`/`DRY_RUN` from within this Routine; never place
+any real order of any kind; the $5,000/2-concurrent-position assumptions
+live only in this Routine's own prompt and this PLAYBOOK section, never
+in `config.py`, so there's no risk of them leaking into the real,
+still-gated VOLTRAP path.
