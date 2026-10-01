@@ -8,6 +8,23 @@ backtest write-up: real numbers first, judgment on top of them.
 """
 
 
+def _is_protective_exit(entry):
+    """True for both historical logging formats: the early explicit
+    `action="protective_exit"` convention (through 2026-09-28), and the
+    current `action="executed"` + `reason="stop_loss"/"take_profit"`
+    convention used since - run_cycle.py's --record-trade-* flags have
+    no --record-trade-reason option, so these are logged via a direct
+    CycleLogStore().record() call instead (see PLAYBOOK.md's "Per-cycle
+    helper" section). A death_cross or gate_floor exit also carries a
+    `reason` on an action="executed" entry, but neither value is
+    "stop_loss"/"take_profit", so those correctly fall through to the
+    ordinary executed-trade path - they're confirmed-signal exits, not
+    this safety net."""
+    if entry["action"] == "protective_exit":
+        return True
+    return entry["action"] == "executed" and entry.get("reason") in ("stop_loss", "take_profit")
+
+
 def summarize_day(cycle_entries, trade_log_entries, date_iso):
     """cycle_entries: CycleLogStore.entries_for_date(date_iso) - every
     non-hold classification and gate outcome that day.
@@ -31,15 +48,18 @@ def summarize_day(cycle_entries, trade_log_entries, date_iso):
 
     recommended = [e for e in cycle_entries if e["action"] == "recommended"]
     excellent_watch = [e for e in cycle_entries if e["action"] == "excellent_watch"]
-    protective_exits = [e for e in cycle_entries if e["action"] == "protective_exit"]
+    protective_exits = [e for e in cycle_entries if _is_protective_exit(e)]
     # cycle_log's own "executed" entries (classification/crossover_pct/price/
     # quantity/notional/order_id) - the reasoning behind each executed trade,
     # richer than trade_log_entries' bare {asset, side, quantity, price},
     # which stays the ground truth for what money actually moved. Both are
     # kept: trade_log_entries drives num_executed/num_buys/num_sells/
     # total_notional above (unaffected by this), cycle_log's copy feeds the
-    # executive summary's per-decision "why" below.
-    executed_entries = [e for e in cycle_entries if e["action"] == "executed"]
+    # executive summary's per-decision "why" below. Protective exits are
+    # excluded here (despite also carrying action="executed") since they're
+    # already counted in protective_exits above - included in both lists
+    # would double them up in format_executive_summary's combined timeline.
+    executed_entries = [e for e in cycle_entries if e["action"] == "executed" and not _is_protective_exit(e)]
 
     return {
         "date": date_iso,
@@ -76,6 +96,16 @@ def _describe_event(entry):
     classification = entry.get("classification")
     cross = _fmt_pct(entry.get("crossover_pct"))
 
+    if _is_protective_exit(entry):
+        reason = entry.get("reason", "?")
+        # pnl_pct is the early-format field name, realized_pnl_pct the
+        # current one (see _is_protective_exit) - check both.
+        pnl = entry.get("pnl_pct")
+        if pnl is None:
+            pnl = entry.get("realized_pnl_pct")
+        pnl_str = f", P/L {_fmt_pct(pnl)}" if isinstance(pnl, (int, float)) else ""
+        label = "stop-loss" if reason == "stop_loss" else "take-profit" if reason == "take_profit" else reason
+        return f"**{asset}** — {label} fired on the open position: sold{pnl_str}."
     if action == "executed":
         side = "bought" if classification == "fresh_buy_cross" else "sold"
         notional = entry.get("notional")
@@ -104,12 +134,6 @@ def _describe_event(entry):
     if action == "excellent_watch":
         return (f"**{asset}** — a large move (crossover {cross}) was worth a look, but never "
                 f"confirmed as a fresh crossover: held, no action taken.")
-    if action == "protective_exit":
-        reason = entry.get("reason", "?")
-        pnl = entry.get("pnl_pct")
-        pnl_str = f", P/L {_fmt_pct(pnl)}" if isinstance(pnl, (int, float)) else ""
-        label = "stop-loss" if reason == "stop_loss" else "take-profit" if reason == "take_profit" else reason
-        return f"**{asset}** — {label} fired on the open position: sold{pnl_str}."
     return f"**{asset}** — {action}."
 
 
