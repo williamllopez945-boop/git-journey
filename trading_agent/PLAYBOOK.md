@@ -772,6 +772,28 @@ high-signal record Codex can pick up real context from, not an hourly
 noise stream (this replaced an earlier "post every cycle regardless"
 design from the same day, which the owner asked to narrow).
 
+**Message format (added 2026-10-01, owner request: "recommendations in
+a separate line with a bullet or number next to it, cleaner concise
+reporting").** Both the Slack post and the chat-visible cycle summary
+follow this shape:
+
+- One bolded status line: `*<time> UTC cycle* — <circuit breaker/trade
+  cap state in a few words>.`
+- One bullet per asset class or notable item (`•`), each a single
+  short line - lead with the asset/ticker, state, and the one number
+  that matters (price delta, crossover strength, P/L). No paragraphs.
+- **Any `"recommended"` entry (awaiting owner approval) gets its own
+  bullet, never folded into a narrative sentence**, prefixed so it's
+  scannable at a glance, e.g. `• **Recommendation:** buy PTC — ...`.
+  Multiple recommendations in one cycle each get their own bullet, not
+  a combined paragraph.
+- Research context (when pulled per step 7) is its own short bullet
+  under the relevant recommendation, not inline with it.
+- Skip routine/quiet detail (e.g. `blocked_no_position` on an
+  unheld asset) rather than padding the message - this section's
+  existing notable-only trigger still decides whether to post at all;
+  this only governs the shape once something is worth posting.
+
 **Daily after-action review:** posts every day regardless (same as its
 `PushNotification`) — a once-a-day substantive summary is inherently
 pertinent, not noise, so it keeps the original always-on behavior. It
