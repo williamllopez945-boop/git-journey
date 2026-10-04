@@ -329,7 +329,25 @@ order.
      instead — asset, direction, current price, suggested size — and
      stop; do not call `place_crypto_order` until the owner explicitly
      approves that specific trade. Use `preview_crypto_order` to show
-     them exact cost/fee first in that case too. **Order type (changed
+     them exact cost/fee first in that case too.
+     **Exception: a profitable death-cross exit always auto-executes,
+     regardless of notional size (owner-confirmed as a standing rule,
+     2026-10-04 — see the BCH case, `CHANGELOG.md`).** The size cap
+     above exists to bound how much *new* exposure a buy takes on in
+     one shot; a `fresh_sell_cross` that has already cleared the
+     profitability gate just above (`blocks_sell_cross` returned
+     `False` — the position is at or above breakeven) is pure risk
+     reduction on a position that already exists, not new exposure, so
+     gating it on dollar size serves no purpose the cap was built for
+     and only delays locking in a real gain. `RiskManager.can_auto_execute`
+     is not consulted for this one case — skip straight to
+     preview/place/record/notify as below. This exception applies
+     **only** to a `fresh_sell_cross` that cleared the gate: it does
+     **not** apply to a fresh *buy*, to a gate-floor-forced exit (which
+     fires precisely because the position is *not* at breakeven), or to
+     a stop-loss/take-profit exit (those are already unconditional and
+     never went through this check in the first place).
+     **Order type (changed
      2026-09-24, owner request - "limit orders to the best price from
      our analysis"): use a marketable limit order (`type=limit`,
      `limit_price` at or slightly above the current ask for a buy / at
@@ -346,6 +364,14 @@ order.
      routine places: fresh-cross entries and exits here, and the
      protective stop-loss/take-profit exits in "Per-position exit
      rules" below - all of them switch from market to marketable limit.
+     **Compute the limit price with `order_pricing.marketable_limit_price(side, bid, ask)`
+     (added 2026-10-04, see `CHANGELOG.md`'s two order-type-policy-gap
+     incidents — 2026-09-27 and 2026-10-04 — this project's policy
+     lapsed back to `type=market` live, twice, despite being written
+     down here both times) — never hand-pick the limit price or decide
+     `type=market`/`type=limit` from memory; call this function with
+     the fresh `get_crypto_quotes` bid/ask every time, pass its result
+     as `limit_price`, and always pass `type=limit`.**
      **If placing by `quantity` is rejected for excess decimal
      precision ("Your order quantity has too much precision"), switch
      the sizing input to `dollar_amount` - never switch `type` to
@@ -418,8 +444,9 @@ scope: extended-hours trading is not implemented.
      `account_number` `581911765`, not `rhs_account_number`); no crypto
      `symbol`-as-pair resolution - just the plain ticker.
    - Order type: use a **marketable limit order** (`type=limit`,
-     `limit_price` at or slightly above the current ask for a buy / at or
-     slightly below the current bid for a sell, `market_hours=regular_hours`),
+     `limit_price` from `order_pricing.marketable_limit_price(side, bid, ask)`
+     (added 2026-10-04) using the current `get_equity_quotes` bid/ask,
+     `market_hours=regular_hours`),
      not `type=market` - the account owner has not been asked about
      accepting plain market-order slippage on equities the way the crypto
      path already does, and a marketable limit gets the same effective
@@ -455,7 +482,13 @@ scope: extended-hours trading is not implemented.
    - Auto-execution policy is identical: `RiskManager.can_auto_execute`
      doesn't distinguish asset class, so a confirmed stock signal at/under
      `auto_execute_max_pct` of current total portfolio value auto-executes
-     exactly like a crypto one.
+     exactly like a crypto one. The profitable-death-cross-exit exception
+     (see the crypto cycle's step 3 above, owner-confirmed standing rule,
+     2026-10-04) applies here too, identically — a `fresh_sell_cross` on
+     a stock position that cleared the profitability gate always
+     auto-executes regardless of notional size. Compute its limit price
+     the same way, with `order_pricing.marketable_limit_price(side, bid, ask)`
+     from the current `get_equity_quotes`/`get_equity_price_book` bid/ask.
    - `excellent_watch` and `hold` handling: identical to the crypto cycle.
    - **Research context on recommendations only (added 2026-09-23, see
      `research_agent/README.md`):** when a stock signal is presented as a
@@ -578,9 +611,11 @@ positions.
    later real signal. The only gate that still applies is `DRY_RUN`:
    while `True`, log what would have been sold and take no action; while
    `False`, place the sell immediately - **`place_crypto_order`,
-   `side=sell`, `type=limit`, `limit_price` at or slightly below the
-   current bid (same marketable-limit reasoning as the scanner-cycle
-   order type note above - not `type=market`, changed 2026-09-24)** -
+   `side=sell`, `type=limit`, `limit_price` from
+   `order_pricing.marketable_limit_price("sell", bid, ask)` (same
+   marketable-limit reasoning and helper as the scanner-cycle order
+   type note above - not `type=market`, changed 2026-09-24, helper
+   added 2026-10-04)** -
    record it via `run_cycle.py`'s `--record-trade-*` flags with
    `--record-trade-protective` set (still fully logged to `trade_log`
    for cost-basis/daily-review purposes, just exempt from
@@ -658,7 +693,11 @@ positions.
   `False`, only when
   `RiskManager.can_auto_execute(order_notional_usd, portfolio_value)` is
   `True` (at/under `RISK_LIMITS["auto_execute_max_pct"]` of current total
-  portfolio value, owner-set).
+  portfolio value, owner-set) —
+  **except a `fresh_sell_cross` that already cleared the profitability
+  gate (position at/above breakeven), which always auto-executes
+  regardless of notional size (owner-confirmed standing rule, 2026-10-04 —
+  see the scanner cycle's step 3 and `CHANGELOG.md`'s BCH case).**
   `excellent_watch` is never auto-executed regardless of size. Anything
   outside those conditions is a recommendation requiring the account
   owner's explicit, per-trade approval before `place_crypto_order` is

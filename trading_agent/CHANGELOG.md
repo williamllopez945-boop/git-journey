@@ -1496,3 +1496,42 @@ script. Flagged here rather than silently corrected going forward only -
 worth a real fix (e.g. a small wrapper that takes side/symbol/quantity
 and always resolves a marketable limit price from a fresh quote) so
 this class of mistake stops depending on memory each cycle.
+
+## 2026-10-04 (later, same day) — Both open items resolved: standing rule confirmed, order-type helper added
+
+**Standing rule confirmed.** Owner explicitly confirmed (asked directly
+whether the BCH approval above should be a one-off or a standing rule):
+"Standing rule, go ahead." `PLAYBOOK.md`'s crypto cycle step 3, the
+stock cycle's equivalent note, and the "Hard rules" summary now all
+state it plainly: a `fresh_sell_cross` that has already cleared the
+profitability gate (position at or above breakeven) auto-executes
+unconditionally, regardless of notional size - `RiskManager.can_auto_execute`
+is no longer consulted for this one case. Scope unchanged from the
+draft written (then reverted) earlier today: applies only to a
+gate-cleared `fresh_sell_cross`, never to a fresh buy, a gate-floor-forced
+exit, or stop-loss/take-profit (the latter two were already
+unconditional). `RISK_LIMITS`/`auto_execute_max_pct` itself is still
+untouched - this is a procedural exception in `PLAYBOOK.md`, not a
+config change.
+
+**Order-type bug fixed.** New module `trading_agent/order_pricing.py`
+(`marketable_limit_price(side, bid, ask, buffer_pct=0.001)`) - the "small
+wrapper" proposed in the entry above. Since no code in this repo places
+orders (every real order is an MCP tool call made directly from
+`PLAYBOOK.md`'s instructions each cycle - see the 2026-09-27 root-cause
+note above), this can't be a fix to order-placement code; it's a fix to
+*how the limit price gets picked*, turning a recalled policy ("remember
+to use type=limit, remember to pick a sensible price") into a single
+tested function call. `PLAYBOOK.md` updated at all four real
+order-placement sites (crypto scanner-cycle entries/exits, stock
+scanner-cycle entries/exits, crypto protective stop-loss/take-profit,
+and the stock-side note that already deferred to "as above") to call
+this function with the cycle's fresh quote instead of hand-picking a
+price. 4 new tests (`tests/test_order_pricing.py`): buy prices above the
+ask, sell prices below the bid, a custom buffer override, and an invalid
+`side` raising. Full suite: 258/258 passing
+(`trading_agent/tests/` + `research_agent/tests/`).
+
+This does not retroactively fix the two live incidents already logged
+(2026-09-27, 2026-10-04 earlier today) - both already recorded,
+no trades reversed. It only prevents a third recurrence.

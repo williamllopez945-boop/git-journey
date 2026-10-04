@@ -234,6 +234,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log, including a chronological executive summary of every buy/sell/hold decision and why — see "Daily after-action review" below |
 | `voltrap_state.py` | VOLTRAP (options wheel strategy, added 2026-09-26, renamed same day) — per-symbol state machine (idle → csp_open → holding_shares → covered_call_open → ...), persisted to `voltrap_state.json`. See "VOLTRAP" below |
 | `voltrap_candidates.py` | VOLTRAP — candidate ranking (`rank_by_voltrap_fit`) and strike selection (`pick_strike_by_delta`/`pick_strike_by_otm_pct`), pure functions mirroring `watchlist_review.py`'s pattern |
+| `order_pricing.py` | Resolves the marketable-limit-order price (`marketable_limit_price`) PLAYBOOK.md's order-type policy requires for every real order. Added 2026-10-04 after the policy lapsed back to `type=market` live twice (2026-09-27, 2026-10-04) despite being written down both times — no code in this repo places orders, so making the correct limit price a single tested function call is the only durable fix available |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
