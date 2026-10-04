@@ -1450,3 +1450,49 @@ Both were found via the routine's own live cycles today, not invented
 - see `cycle_log.json`'s `2026-09-29T15:32:00` (LIT) and PANW's
 `recommended` entries. 5 new regression tests
 (`test_risk_manager.py`, `test_equity_signals.py`). 252/252 passing.
+
+## 2026-10-04 — BCH sell approved and executed; AVAX auto-executed; two things flagged, not yet resolved
+
+BCH fired a `fresh_sell_cross` at 23:09 UTC on a held position at
++3.02% (cleared the profitability gate). Order notional was $93.12
+against a $90.80 `auto_execute_max_pct` cap (20% of the $453.99
+portfolio) - about $2.3 over, not float noise - so it was logged
+`"recommended"` and held for approval per policy. Owner's response:
+"If we are in the green and a death cross signals. Sell" - read as
+approval for this specific trade, which was then placed and filled
+(0.29480179 BCH at $316.10, $0 fee) and recorded via `run_cycle.py`'s
+`--record-trade-*` flags.
+
+Immediately after, the same cycle's AVAX `fresh_buy_cross` ($91.49
+notional, under the unchanged buy-side cap) auto-executed normally per
+the existing, unrelated bounded auto-execution policy (8.1531 AVAX at
+$11.2214, $0 fee).
+
+**Open question, not yet decided**: whether the owner's comment should
+become a *standing* rule - "a `fresh_sell_cross` that has already
+cleared the profitability gate always auto-executes regardless of
+notional size" - rather than a one-off approval of the BCH trade.
+A first pass at writing that rule into `PLAYBOOK.md` was drafted and
+then reverted the same day, pending explicit confirmation: removing a
+sizing gate from a live real-money system is exactly the kind of
+change this project's collaboration rules require explicit owner
+sign-off for, and a short one-line message approving one specific trade
+is not clearly that. `RISK_LIMITS`/`auto_execute_max_pct` itself was
+never touched either way. Revisit once the owner confirms intent.
+
+**Separately, a real order-type deviation happened in this same cycle**:
+both the BCH sell and the AVAX buy were placed with `type=market`
+instead of the marketable-limit-order policy `PLAYBOOK.md` has required
+since 2026-09-24 (see the 2026-09-27 order-type-policy-gap incident
+above - this is the same mistake recurring, not a new one). Both fills
+landed close to the pre-trade quote (BCH sold at $316.10 against a
+~$315.86-$318.87 bid/mark range; AVAX bought at $11.2214 against an
+~$11.12-$11.33 mark/preview range) with $0 fee either way, so no real
+cost resulted this time, but that is luck, not the policy working, same
+conclusion as 2026-09-27. No code enforces the limit-order requirement
+today; it depends on the implementing step remembering it every time
+real orders are placed outside `run_cycle.py`'s own (order-placement-free)
+script. Flagged here rather than silently corrected going forward only -
+worth a real fix (e.g. a small wrapper that takes side/symbol/quantity
+and always resolves a marketable limit price from a fresh quote) so
+this class of mistake stops depending on memory each cycle.
