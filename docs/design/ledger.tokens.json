@@ -1,0 +1,141 @@
+{
+  "$description": "Ledger design system for git-journey's trading and research reports. Format: W3C Design Tokens (DTCG). The default theme is 'continental' (dark); 'light' is the original v0.1 palette. Design only: nothing in trading_agent/ or research_agent/ reads this file.",
+  "$extensions": {
+    "ledger": {
+      "version": "0.2.0",
+      "defaultTheme": "continental",
+      "canvas": "https://claude.ai/artifact/YGjNVJsTpotmfnPHHLkMPB"
+    }
+  },
+
+  "font": {
+    "$type": "fontFamily",
+    "display": { "$value": ["Cinzel", "Trajan Pro", "serif"], "$description": "h1 / page titles only (continental theme)" },
+    "sans": { "$value": ["IBM Plex Sans", "system-ui", "sans-serif"], "$description": "headings and body" },
+    "mono": { "$value": ["IBM Plex Mono", "ui-monospace", "monospace"], "$description": "numbers, tickers in tables, config keys, cycle_log action codes" }
+  },
+
+  "fontSize": {
+    "$type": "dimension",
+    "display": { "$value": "56px" },
+    "h1": { "$value": "36px" },
+    "h2": { "$value": "22px" },
+    "body": { "$value": "16px" },
+    "small": { "$value": "14px" },
+    "label": { "$value": "13px", "$description": "mono, uppercase, letter-spacing 0.08em" },
+    "code": { "$value": "14px" }
+  },
+
+  "fontWeight": {
+    "$type": "fontWeight",
+    "regular": { "$value": 400 },
+    "medium": { "$value": 500 },
+    "semibold": { "$value": 600 }
+  },
+
+  "space": {
+    "$type": "dimension",
+    "1": { "$value": "4px" },
+    "2": { "$value": "8px" },
+    "3": { "$value": "12px" },
+    "4": { "$value": "16px" },
+    "6": { "$value": "24px" },
+    "8": { "$value": "32px" },
+    "12": { "$value": "48px" },
+    "18": { "$value": "72px" }
+  },
+
+  "radius": {
+    "$type": "dimension",
+    "code": { "$value": "3px" },
+    "chip": { "$value": "4px" },
+    "card": { "$value": "6px" }
+  },
+
+  "border": {
+    "$type": "dimension",
+    "rule": { "$value": "1px" },
+    "emphasis": { "$value": "2px", "$description": "live-money state, header rules, worst-case tile" }
+  },
+
+  "color": {
+    "$type": "color",
+    "continental": {
+      "$description": "Dark theme: near-black ink, Continental gold, blood crimson, Red Circle neon.",
+      "paper": { "$value": "#0B0B0D", "$description": "page ground" },
+      "surface": { "$value": "#15151A", "$description": "cards, tables" },
+      "rule": { "$value": "#2A2A31" },
+      "ink": { "$value": "#ECE6D8", "$description": "primary text; executed chip fill" },
+      "ink2": { "$value": "#B8B0A0", "$description": "secondary text" },
+      "ink3": { "$value": "#8C8577", "$description": "meta text, ~5.0:1 on surface" },
+      "onFill": { "$value": "#0B0B0D", "$description": "text on solid gold/crimson/magenta/bone fills" },
+      "brass": { "$value": "#C9A227", "$description": "2px header rules" },
+      "gain": { "$value": "#D9B44A", "$description": "buy, fresh_buy_cross, positive P/L, ADOPTED" },
+      "gainTint": { "$value": "#2A2410" },
+      "gainStrong": { "$value": "#F0D27A", "$description": "text on gainTint; link hover" },
+      "loss": { "$value": "#E5484D", "$description": "sell, fresh_sell_cross, negative P/L, LIVE badge" },
+      "lossTint": { "$value": "#2B1013" },
+      "lossStrong": { "$value": "#F07A80" },
+      "gate": { "$value": "#A3A3AF", "$description": "blocked_* outcomes" },
+      "gateTint": { "$value": "#24242B", "$description": "gate chip fill; inline code background" },
+      "watch": { "$value": "#2EC4B6", "$description": "excellent_watch" },
+      "watchTint": { "$value": "#0F2A28" },
+      "watchStrong": { "$value": "#5FE0D3" },
+      "approval": { "$value": "#D14BD8", "$description": "recommended, awaiting approval" },
+      "approvalTint": { "$value": "#2A1230" },
+      "approvalStrong": { "$value": "#E98AEE" }
+    },
+    "light": {
+      "$description": "Original v0.1 palette (cool paper, blue gain / orange loss).",
+      "paper": { "$value": "#F3F4F6" },
+      "surface": { "$value": "#FFFFFF" },
+      "rule": { "$value": "#D9DCE1" },
+      "ink": { "$value": "#14171C" },
+      "ink2": { "$value": "#4A515C" },
+      "ink3": { "$value": "#6B7280" },
+      "onFill": { "$value": "#FFFFFF" },
+      "brass": { "$value": "#14171C" },
+      "gain": { "$value": "#1D4ED8" },
+      "gainTint": { "$value": "#E3EBFD" },
+      "gainStrong": { "$value": "#163A9E" },
+      "loss": { "$value": "#B4410E" },
+      "lossTint": { "$value": "#FCE9DD" },
+      "lossStrong": { "$value": "#8C3209" },
+      "gate": { "$value": "#3F4652" },
+      "gateTint": { "$value": "#E7E9ED" },
+      "watch": { "$value": "#7A5A00" },
+      "watchTint": { "$value": "#FAF0D2" },
+      "watchStrong": { "$value": "#6B4F00" },
+      "approval": { "$value": "#5B3FB0" },
+      "approvalTint": { "$value": "#EEE9FB" },
+      "approvalStrong": { "$value": "#4A3291" }
+    }
+  },
+
+  "semantic": {
+    "$description": "Maps cycle_log actions and scanner classifications (trading_agent/daily_review.py, scanner_signals.py) to color roles. Values are role names under color.<theme>.",
+    "action": {
+      "executed": { "$value": { "fill": "ink", "text": "onFill" } },
+      "recommended": { "$value": { "fill": "approvalTint", "text": "approvalStrong", "border": "approval" } },
+      "blocked_*": { "$value": { "fill": "gateTint", "text": "gate" } },
+      "excellent_watch": { "$value": { "fill": "watchTint", "text": "watchStrong" } },
+      "protective_exit": { "$value": { "fill": "lossTint", "text": "lossStrong" } }
+    },
+    "classification": {
+      "fresh_buy_cross": { "$value": { "text": "gain", "border": "gain" } },
+      "fresh_sell_cross": { "$value": { "text": "loss", "border": "loss" } },
+      "hold": { "$value": { "text": "ink2", "border": "ink3" } }
+    }
+  },
+
+  "format": {
+    "$description": "Number and data formatting rules, matching daily_review._fmt_pct and the dated report files.",
+    "percent": { "$value": "always signed, 2 decimals (+0.08%, −8.06%); true minus sign in UI" },
+    "usd": { "$value": "$ with 2 decimals ($19.88)" },
+    "quantity": { "$value": "raw broker precision, never rounded (0.09388258)" },
+    "time": { "$value": "UTC; HH:MM in table rows, full ISO-8601 in logs" },
+    "date": { "$value": "ISO YYYY-MM-DD, as in report filenames" },
+    "ticker": { "$value": "uppercase, semibold sans" },
+    "code": { "$value": "config keys and action codes in mono, verbatim from config.py" }
+  }
+}
