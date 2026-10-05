@@ -116,10 +116,13 @@ README.md's "Coverage" section).
    `research_agent.daily_digest.format_daily_digest(entries, today)`,
    and write the result to `research_agent/research_notes/<today>.md`.
 
-4. **Commit and push.** `git add research_agent/research_notes/<today>.md
-   && git commit` on the current branch, one-line message summarizing
-   the day (e.g. "Research digest 2026-09-24: 1 8-K (HUBS), CRWD reports
-   in 9 days"), then push.
+4. **Local only — do not commit.** Owner request 2026-10-05: the daily
+   digest is a local record, not a git-tracked one. Write the file and
+   stop there; never `git add`/`git commit`/`git push` it.
+   `research_agent/research_notes/*.md` is gitignored for exactly this
+   reason — see the `.gitignore` comment. (Supersedes this step's
+   earlier "commit and push" instruction; `research_log.json` remains
+   the durable structured record either way, unaffected by this change.)
 
 5. **Notify only if something material was found** — a new SEC filing
    (especially an 8-K) or an earnings date newly inside the lookahead
