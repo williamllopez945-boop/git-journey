@@ -1535,3 +1535,69 @@ ask, sell prices below the bid, a custom buffer override, and an invalid
 This does not retroactively fix the two live incidents already logged
 (2026-09-27, 2026-10-04 earlier today) - both already recorded,
 no trades reversed. It only prevents a third recurrence.
+
+## 2026-10-05 — `run_cycle.py` record/classify dedup bug fixed (`--record-only`)
+
+**Trigger**: owner shared the live Trade Ledger with Codex in
+`#voltrap-agents-work` for a deeper quant review; Codex's reply (Priority
+2 of its 5-priority plan) identified that recording an executed trade
+was coupled to re-running classification, and asked for it to be made an
+isolated operation with regression tests. Owner then asked to act on
+that specifically.
+
+**The bug**: `scanner_signals.classify()` persists each asset's
+bullish/bearish + pending/confirmed state to `scanner_state.json` on
+*every* call, with no notion of "this is the same real-world cycle as
+the last call." A trade's real fill price/quantity is only known
+*after* the order is placed, which is after this cycle's classification
+has already been read from a first `run_cycle.py` invocation - so
+attaching `--record-trade-*` flags required a *second* invocation, and
+until today that second invocation still took `--scan-file`/
+`--historicals-file`/`--quotes-file`/`--positions-file` and so still ran
+the full classification loop a second time on identical input, silently
+advancing `scanner_state.json`'s persisted state an extra tick. Observed
+live more than once this session: 2026-10-05 ~17:12 UTC, XLM showed
+`fresh_sell_cross` only on the second call of that cycle, not the first,
+on an unchanged scan snapshot (logged in `cycle_log.json` with an
+explicit note at the time); the same pattern recurred at ~19:21 UTC
+(DOGE/CRV/ZORA). Both times the live effect was contained (none of the
+affected assets were held, so the spurious/suppressed signal only
+changed a `blocked_no_position` log line, not a real action) - but it
+was luck that no held position was involved, not a property of the code.
+
+**The fix**: `run_cycle.py` gets a new `--record-only` flag. When set,
+it skips the classification loop and the protective-exit-check loop
+entirely - recording a fill that was already decided and placed from an
+earlier invocation's classification needs neither - and does not
+require `--scan-file`/`--historicals-file`/`--quotes-file`/
+`--positions-file` at all, only `--portfolio-file` (kept for the
+circuit-breaker status line, which is read-only and safe to print
+repeatedly) and the existing `--record-trade-*` flags. `--positions-file`
+changed from argparse `required=True` to conditionally required
+(mirrors the existing scan-file-vs-historicals/quotes-file validation
+pattern already in this script). `PLAYBOOK.md`'s "Recording an executed
+trade" guidance updated to require `--record-only` on that second
+invocation - the previous wording ("on the *same* `run_cycle.py`
+invocation") was aspirational and not actually achievable for a fresh
+entry/exit, since the fill isn't known until after the first
+invocation's output is acted on.
+
+5 new regression tests (`tests/test_run_cycle.py`): `--record-only`
+rejects a call with no `--record-trade-asset`; doesn't require
+scan/historicals/quotes/positions files; still writes to
+`RiskManager.trade_log`/`state.json` and `CycleLogStore`/`cycle_log.json`
+correctly (including the `--record-trade-protective` daily-cap
+exemption); and the direct regression proof - pre-seed a pending
+bearish-to-bullish flip, confirm a `--record-only` call leaves
+`scanner_state.json` byte-for-byte unchanged, then confirm the *old*
+pattern (a second plain invocation with the same `--scan-file`) still
+mutates it further on the identical input, demonstrating this is a real,
+reproducible bug the new flag actually avoids, not a hypothetical one.
+Full suite: 262/262 passing (`trading_agent/tests/` + `research_agent/tests/`).
+
+Not yet done (out of scope for this fix, flagged for a later pass):
+Codex's Priority 2 also asked for "deduplicate broker fills and process
+each symbol/timeframe/closed-candle timestamp once" and restart/failed-
+write-recovery tests - this fix addresses the classify-on-record
+coupling specifically (the mechanism actually observed live twice this
+session), not a general fill-deduplication or crash-recovery layer.

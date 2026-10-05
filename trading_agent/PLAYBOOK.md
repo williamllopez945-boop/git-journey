@@ -203,11 +203,33 @@ inline `RiskManager.record_trade()`/`CycleLogStore.record()` call kept
 a real executed trade unrecorded for several cycles): pass
 `--record-trade-asset`/`-side`/`-quantity`/`-price` (plus
 `-protective`, `-classification`, `-crossover-pct`, `-notional`,
-`-order-id` as applicable) on the *same* `run_cycle.py` invocation
-after placing the order, rather than a separate inline script — it
-inherits the same already-permitted command pattern instead of
-triggering a new permission check. See `run_cycle.py --help` for the
-full flag list.
+`-order-id` as applicable) on a `run_cycle.py` invocation after placing
+the order — it inherits the same already-permitted command pattern
+instead of triggering a new permission check.
+
+**That recording invocation must pass `--record-only` and nothing
+else data-wise — never re-pass `--scan-file`/`--historicals-file`/
+`--quotes-file`/`--positions-file`** (fixed 2026-10-05, Priority 2 of
+Codex's trade-ledger review in `#voltrap-agents-work` — see
+`CHANGELOG.md`). The real fill price/quantity is only known *after* the
+order is placed, which is *after* this cycle's classification has
+already been read from an earlier invocation - so "the same invocation"
+is not actually possible for a fresh entry/exit, only for a cycle with
+no signal to act on. Attaching `--record-trade-*` to a second plain
+invocation (re-passing the same scan/historicals/positions files)
+re-runs `scanner_signals.classify()` on identical inputs and silently
+advances its persisted pending/confirmed state a second time this
+cycle - observed live 2026-10-05 (XLM confirmed `fresh_sell_cross` only
+on the duplicate call, not the first, on unchanged scan data). Example:
+`python3 trading_agent/run_cycle.py --asset-class crypto --record-only
+--portfolio-file <portfolio.json> --record-trade-asset BTC
+--record-trade-side sell --record-trade-quantity 0.00107393
+--record-trade-price 84896.79 ...` — `--record-only` skips
+classification and the protective-exit checks entirely and needs no
+scan/historicals/quotes/positions file at all, only `--portfolio-file`
+(for the circuit-breaker status line) and the `--record-trade-*` flags.
+See `run_cycle.py --help` and its module docstring's "Recording-only
+mode" section for the full flag list and the mechanics.
 
 **`--record-trade-price` MUST be the order's real fill VWAP
 (`average_price` from `place_crypto_order`/`place_equity_order`'s

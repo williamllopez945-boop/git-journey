@@ -246,3 +246,171 @@ def test_stock_asset_class_requires_historicals_and_quotes_files():
         )
         assert result.returncode != 0
         assert "--historicals-file and --quotes-file" in result.stderr
+
+
+def test_record_only_requires_record_trade_asset():
+    with tempfile.TemporaryDirectory() as tmp:
+        portfolio_file = _write(tmp, "portfolio.json", {"data": {"total_value": "200.40"}})
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto", "--record-only",
+             "--portfolio-file", portfolio_file,
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(Path(tmp) / "scanner_state.json"),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode != 0
+        assert "--record-only has nothing to do without --record-trade-asset" in result.stderr
+
+
+def test_record_only_does_not_require_scan_or_positions_files():
+    # --record-only needs no classification/position data at all - only
+    # --portfolio-file (for the circuit-breaker status line) and the
+    # --record-trade-* flags. No --scan-file, --historicals-file,
+    # --quotes-file, or --positions-file should be required.
+    with tempfile.TemporaryDirectory() as tmp:
+        portfolio_file = _write(tmp, "portfolio.json", {"data": {"total_value": "200.40"}})
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto", "--record-only",
+             "--portfolio-file", portfolio_file,
+             "--record-trade-asset", "BTC", "--record-trade-side", "sell",
+             "--record-trade-quantity", "0.001", "--record-trade-price", "85000.0",
+             "--record-trade-classification", "fresh_sell_cross",
+             "--record-trade-crossover-pct", "-0.12",
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(Path(tmp) / "scanner_state.json"),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+        assert "circuit_breaker_halted:" in result.stdout
+        assert "--- classifications" not in result.stdout
+        assert "--- protective-exit checks" not in result.stdout
+        assert "recorded: sell 0.001 BTC @ 85000.0" in result.stdout
+
+
+def test_record_only_leaves_scanner_state_untouched():
+    # The actual bug this mode fixes: recording a fill used to require a
+    # second full invocation with the same --scan-file, which called
+    # classify() again on identical inputs and silently advanced
+    # scanner_state.json's persisted pending/confirmed state a second time
+    # this cycle (observed live 2026-10-05, e.g. XLM confirming
+    # fresh_sell_cross only on a duplicate call - see CHANGELOG.md). Prove
+    # the fix: a --record-only call makes no change to scanner_state.json
+    # at all, byte for byte - then show the old buggy pattern (a second
+    # plain invocation with the same --scan-file) DOES still mutate it
+    # further on identical inputs, so this is a real, reproducible bug
+    # --record-only actually avoids, not a hypothetical one.
+    with tempfile.TemporaryDirectory() as tmp:
+        scanner_state_path = Path(tmp) / "scanner_state.json"
+        # Pre-seed a prior bearish reading so this cycle's bullish scan
+        # data triggers a real "cross just happened" -> pending=True
+        # transition (classify()'s prev-is-None path sets pending=False
+        # immediately, which can't demonstrate the confirm-on-duplicate-
+        # call bug - a real pending state is required first).
+        scanner_state_path.write_text(json.dumps({"BTC": {"bullish": False, "crossover_pct": -1.0, "pending": False}}))
+        portfolio_file = _write(tmp, "portfolio.json", {"data": {"total_value": "200.40"}})
+        scan = {
+            "data": {"result": {"results": [
+                {"ticker": "BTC", "columns": {
+                    "Symbol": "BTC", "SMA 10 (1h)": "100", "SMA 30 (1h)": "95",
+                    "% Change": "0.01", "Relative volume": "1.2", "Last": "101",
+                }},
+            ]}}
+        }
+        positions = {"data": {"results": []}}
+        scan_file = _write(tmp, "scan.json", scan)
+        positions_file = _write(tmp, "positions.json", positions)
+
+        # First, a normal classify-only cycle detects the bearish->bullish
+        # flip and records it as pending (classification: hold).
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto",
+             "--scan-file", scan_file, "--portfolio-file", portfolio_file,
+             "--positions-file", positions_file, "--no-log",
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(scanner_state_path),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+        state_after_classify = scanner_state_path.read_text()
+        assert json.loads(state_after_classify)["BTC"]["pending"] is True
+
+        # Recording a fill for that same cycle must not touch it at all.
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto", "--record-only",
+             "--portfolio-file", portfolio_file,
+             "--record-trade-asset", "BTC", "--record-trade-side", "buy",
+             "--record-trade-quantity", "1.0", "--record-trade-price", "101.0",
+             "--record-trade-classification", "fresh_buy_cross",
+             "--record-trade-crossover-pct", "5.26",
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(scanner_state_path),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+        assert scanner_state_path.read_text() == state_after_classify
+
+        # Contrast: the old buggy pattern of re-running with --scan-file
+        # (no --record-only) DOES mutate it further on the exact same
+        # inputs - the pending flip from the first call is still there, so
+        # this duplicate call wrongly confirms it as a fresh cross.
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto",
+             "--scan-file", scan_file, "--portfolio-file", portfolio_file,
+             "--positions-file", positions_file, "--no-log",
+             "--risk-state-path", str(Path(tmp) / "state.json"),
+             "--scanner-state-path", str(scanner_state_path),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(Path(tmp) / "cycle_log.json")],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+        assert "BTC: fresh_buy_cross" in result.stdout
+        assert scanner_state_path.read_text() != state_after_classify
+        assert json.loads(scanner_state_path.read_text())["BTC"]["pending"] is False
+
+
+def test_record_only_still_records_the_trade():
+    with tempfile.TemporaryDirectory() as tmp:
+        portfolio_file = _write(tmp, "portfolio.json", {"data": {"total_value": "200.40"}})
+        risk_state_path = Path(tmp) / "state.json"
+        cycle_log_path = Path(tmp) / "cycle_log.json"
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--asset-class", "crypto", "--record-only",
+             "--portfolio-file", portfolio_file,
+             "--record-trade-asset", "ETH", "--record-trade-side", "sell",
+             "--record-trade-quantity", "0.5", "--record-trade-price", "2700.0",
+             "--record-trade-protective",
+             "--record-trade-classification", "stop_loss",
+             "--record-trade-action", "executed",
+             "--record-trade-order-id", "order-123",
+             "--risk-state-path", str(risk_state_path),
+             "--scanner-state-path", str(Path(tmp) / "scanner_state.json"),
+             "--position-state-path", str(Path(tmp) / "position_state.json"),
+             "--cycle-log-path", str(cycle_log_path)],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        assert result.returncode == 0, result.stderr
+
+        risk_state = json.loads(risk_state_path.read_text())
+        trade_log = risk_state["trade_log"]
+        assert trade_log[-1]["asset"] == "ETH"
+        assert trade_log[-1]["side"] == "sell"
+        assert trade_log[-1]["price"] == 2700.0
+        # protective=True must not consume a daily trade slot.
+        assert risk_state["trades_today"] == 0
+
+        cycle_log = json.loads(cycle_log_path.read_text())
+        assert cycle_log[-1]["asset"] == "ETH"
+        assert cycle_log[-1]["action"] == "executed"
+        assert cycle_log[-1]["order_id"] == "order-123"

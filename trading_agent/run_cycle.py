@@ -47,6 +47,40 @@ Each *-file accepts either the raw MCP tool response (e.g.
 {"data": {"result": {"results": [...]}}}) or the already-unwrapped
 payload - so a file saved automatically when a tool result overflows the
 context window can be passed straight through with no manual unwrapping.
+
+Usage (recording a fill after the fact - added 2026-10-05, see
+"Recording-only mode" below): once this cycle's classification has
+already been read from an earlier invocation and a real order has been
+placed from that signal, attach --record-trade-* flags via a SEPARATE
+--record-only invocation, never by re-running classification:
+    python3 trading_agent/run_cycle.py --record-only \\
+        --portfolio-file portfolio.json \\
+        --record-trade-asset BTC --record-trade-side sell \\
+        --record-trade-quantity 0.00107393 --record-trade-price 84896.79 \\
+        --record-trade-classification fresh_sell_cross \\
+        --record-trade-crossover-pct -0.12 --record-trade-action executed
+
+Recording-only mode (--record-only, added 2026-10-05): classify() persists
+its last-seen bullish/bearish state to scanner_state.json on every call
+(see scanner_signals.py's docstring) with no idea that two calls in the
+same real-world hour are "the same cycle" - it just sees two consecutive
+calls and advances its pending/confirmed state machine accordingly. A
+fill's real price/quantity is only known AFTER the order is placed, which
+happens AFTER this cycle's classification has already been read from a
+first invocation - so recording that fill by invoking this script again
+with the same --scan-file/--historicals-file/--quotes-file/--positions-file
+re-runs classify() on identical inputs and silently manufactures or
+suppresses signals as an artifact of the duplicate call (observed live
+2026-10-05: XLM confirmed fresh_sell_cross only on the second call of a
+cycle, not the first, on unchanged scan data - see CHANGELOG.md).
+--record-only skips the classification loop and the protective-exit-check
+loop entirely (neither is needed to record a fill that was already
+decided and placed) and does not require --scan-file/--historicals-file/
+--quotes-file/--positions-file - only --portfolio-file (for the
+circuit-breaker status line, read-only and safe to print repeatedly) plus
+the --record-trade-* flags. This makes "record a fill" a true no-op on
+scanner_state.json regardless of how many times it's called in a cycle,
+instead of relying on callers to remember not to call it twice.
 """
 
 import argparse
@@ -153,9 +187,17 @@ def main():
                          help="required for --asset-class stock (get_equity_quotes' raw response for "
                               "STOCK_WATCHLIST, supplies previous_close for pct_change)")
     parser.add_argument("--portfolio-file", required=True)
-    parser.add_argument("--positions-file", required=True)
+    parser.add_argument("--positions-file",
+                         help="required unless --record-only (recording a fill needs no position data)")
     parser.add_argument("--no-log", action="store_true",
                          help="skip logging excellent_watch entries to CycleLogStore")
+    parser.add_argument("--record-only", action="store_true",
+                         help="only record an already-executed trade (--record-trade-* flags) - skips "
+                              "classification and protective-exit checks entirely, so recording a fill "
+                              "never re-runs classify() and advances scanner_state.json a second time in "
+                              "the same cycle. Does not require --scan-file/--historicals-file/"
+                              "--quotes-file/--positions-file. See the module docstring's "
+                              "'Recording-only mode' section.")
     parser.add_argument("--risk-state-path", default=str(DEFAULT_RISK_STATE_PATH),
                          help="override for tests - defaults to the real trading_agent/state.json")
     parser.add_argument("--scanner-state-path", default=str(DEFAULT_SCANNER_STATE_PATH),
@@ -179,6 +221,11 @@ def main():
     parser.add_argument("--record-trade-order-id", default=None)
     args = parser.parse_args()
 
+    if args.record_only and not args.record_trade_asset:
+        parser.error("--record-only has nothing to do without --record-trade-asset (and friends)")
+    if not args.record_only and not args.positions_file:
+        parser.error("--positions-file is required unless --record-only")
+
     watchlist = WATCHLIST if args.asset_class == "crypto" else STOCK_WATCHLIST
 
     equity = _portfolio_equity(_load_json(args.portfolio_file))
@@ -189,85 +236,93 @@ def main():
     print(f"circuit_breaker_halted: {halted}")
     print(f"can_trade: {can_trade} (trades_today={rm.state['trades_today']}/{RISK_LIMITS['max_trades_per_day']})")
 
-    if args.asset_class == "stock":
-        if not args.historicals_file or not args.quotes_file:
-            parser.error("--asset-class stock requires --historicals-file and --quotes-file (see equity_signals.py)")
-        by_ticker = _equity_signal_columns(_load_json(args.historicals_file), _load_json(args.quotes_file))
-    else:
-        if not args.scan_file:
-            parser.error("--asset-class crypto requires --scan-file")
-        rows = _scan_rows(_load_json(args.scan_file))
-        by_ticker = {r["columns"].get("Symbol", r.get("ticker")): r["columns"] for r in rows if r.get("ticker") or r.get("columns", {}).get("Symbol")}
-
-    pss = PositionStateStore(path=Path(args.position_state_path))
     log = CycleLogStore(path=Path(args.cycle_log_path))
-    awesome_bar = RISK_LIMITS.get("awesome_trade_min_crossover_pct", 5.0)
 
-    print("--- classifications (non-hold only) ---")
-    for asset in watchlist:
-        cols = by_ticker.get(asset)
-        if cols is None:
-            print(f"{asset}: not in this cycle's scan page, skipped")
-            continue
-        sma10 = float(cols["SMA 10 (1h)"])
-        sma30 = float(cols["SMA 30 (1h)"])
-        pct_change = _numeric_or_none(cols.get("% Change"))
-        relative_volume = _numeric_or_none(cols.get("Relative volume"))
-        cls, crossover_pct = classify(asset, sma10, sma30, pct_change, path=Path(args.scanner_state_path),
-                                       relative_volume=relative_volume)
-        if cls == "hold":
-            continue
-        tag = ""
-        if cls == "fresh_buy_cross" and abs(crossover_pct) >= awesome_bar:
-            tag = " [AWESOME - qualifies for the last 25% of aggregate budget]"
-        print(f"{asset}: {cls} (crossover_pct={crossover_pct:.4f}%, pct_change={pct_change}, "
-              f"relative_volume={relative_volume}){tag}")
-        if cls == "excellent_watch" and not args.no_log:
-            log.record(asset, "excellent_watch", crossover_pct, "excellent_watch")
+    if not args.record_only:
+        # Classification and protective-exit checks are skipped entirely in
+        # --record-only mode (see the module docstring's "Recording-only
+        # mode" section) - recording a fill that was already decided and
+        # placed from an earlier invocation's classification needs neither,
+        # and running classify() again here would silently advance
+        # scanner_state.json's persisted state a second time this cycle.
+        if args.asset_class == "stock":
+            if not args.historicals_file or not args.quotes_file:
+                parser.error("--asset-class stock requires --historicals-file and --quotes-file (see equity_signals.py)")
+            by_ticker = _equity_signal_columns(_load_json(args.historicals_file), _load_json(args.quotes_file))
+        else:
+            if not args.scan_file:
+                parser.error("--asset-class crypto requires --scan-file")
+            rows = _scan_rows(_load_json(args.scan_file))
+            by_ticker = {r["columns"].get("Symbol", r.get("ticker")): r["columns"] for r in rows if r.get("ticker") or r.get("columns", {}).get("Symbol")}
 
-    positions_json = _load_json(args.positions_file)
-    positions_data = positions_json.get("data", positions_json)
-    print("--- protective-exit checks (held positions only) ---")
-    if args.asset_class == "crypto":
-        for pos in positions_data.get("results", []):
-            asset = pos["currency"]["code"]
-            qty = float(pos.get("quantity_transferable", 0))
-            if qty <= 0:
-                continue
+        pss = PositionStateStore(path=Path(args.position_state_path))
+        awesome_bar = RISK_LIMITS.get("awesome_trade_min_crossover_pct", 5.0)
+
+        print("--- classifications (non-hold only) ---")
+        for asset in watchlist:
             cols = by_ticker.get(asset)
             if cols is None:
-                print(f"{asset}: held but not in this cycle's scan page, exit check skipped")
+                print(f"{asset}: not in this cycle's scan page, skipped")
                 continue
-            price = float(cols["Last"])
-            avg_cost = _crypto_avg_cost(pos)
-            if avg_cost is None:
-                print(f"{asset}: zero cost basis from get_crypto_positions - use "
-                      f"cost_basis_fallback.average_cost_basis_from_trade_log before skipping")
+            sma10 = float(cols["SMA 10 (1h)"])
+            sma30 = float(cols["SMA 30 (1h)"])
+            pct_change = _numeric_or_none(cols.get("% Change"))
+            relative_volume = _numeric_or_none(cols.get("Relative volume"))
+            cls, crossover_pct = classify(asset, sma10, sma30, pct_change, path=Path(args.scanner_state_path),
+                                           relative_volume=relative_volume)
+            if cls == "hold":
                 continue
-            took_profit = pss.took_profit(asset)
-            reason, fraction = check_exit(current_price=price, avg_cost_basis=avg_cost,
-                                           take_profit_already_taken=took_profit)
-            pct = (price - avg_cost) / avg_cost * 100
-            print(f"{asset} exit -> {reason} {fraction} pct_change={pct:.3f}% "
-                  f"(price={price}, avg_cost={avg_cost:.6f})")
-    else:
-        for pos in positions_data.get("positions", []):
-            asset = pos["symbol"]
-            qty = float(pos.get("quantity", 0))
-            if qty <= 0:
-                continue
-            cols = by_ticker.get(asset)
-            if cols is None:
-                print(f"{asset}: held but not in this cycle's scan page, exit check skipped")
-                continue
-            price = float(cols["Last"])
-            avg_cost = float(pos["average_buy_price"])
-            took_profit = pss.took_profit(asset)
-            reason, fraction = check_exit(current_price=price, avg_cost_basis=avg_cost,
-                                           take_profit_already_taken=took_profit)
-            pct = (price - avg_cost) / avg_cost * 100
-            print(f"{asset} exit -> {reason} {fraction} pct_change={pct:.3f}% "
-                  f"(price={price}, avg_cost={avg_cost:.6f})")
+            tag = ""
+            if cls == "fresh_buy_cross" and abs(crossover_pct) >= awesome_bar:
+                tag = " [AWESOME - qualifies for the last 25% of aggregate budget]"
+            print(f"{asset}: {cls} (crossover_pct={crossover_pct:.4f}%, pct_change={pct_change}, "
+                  f"relative_volume={relative_volume}){tag}")
+            if cls == "excellent_watch" and not args.no_log:
+                log.record(asset, "excellent_watch", crossover_pct, "excellent_watch")
+
+        positions_json = _load_json(args.positions_file)
+        positions_data = positions_json.get("data", positions_json)
+        print("--- protective-exit checks (held positions only) ---")
+        if args.asset_class == "crypto":
+            for pos in positions_data.get("results", []):
+                asset = pos["currency"]["code"]
+                qty = float(pos.get("quantity_transferable", 0))
+                if qty <= 0:
+                    continue
+                cols = by_ticker.get(asset)
+                if cols is None:
+                    print(f"{asset}: held but not in this cycle's scan page, exit check skipped")
+                    continue
+                price = float(cols["Last"])
+                avg_cost = _crypto_avg_cost(pos)
+                if avg_cost is None:
+                    print(f"{asset}: zero cost basis from get_crypto_positions - use "
+                          f"cost_basis_fallback.average_cost_basis_from_trade_log before skipping")
+                    continue
+                took_profit = pss.took_profit(asset)
+                reason, fraction = check_exit(current_price=price, avg_cost_basis=avg_cost,
+                                               take_profit_already_taken=took_profit)
+                pct = (price - avg_cost) / avg_cost * 100
+                print(f"{asset} exit -> {reason} {fraction} pct_change={pct:.3f}% "
+                      f"(price={price}, avg_cost={avg_cost:.6f})")
+        else:
+            for pos in positions_data.get("positions", []):
+                asset = pos["symbol"]
+                qty = float(pos.get("quantity", 0))
+                if qty <= 0:
+                    continue
+                cols = by_ticker.get(asset)
+                if cols is None:
+                    print(f"{asset}: held but not in this cycle's scan page, exit check skipped")
+                    continue
+                price = float(cols["Last"])
+                avg_cost = float(pos["average_buy_price"])
+                took_profit = pss.took_profit(asset)
+                reason, fraction = check_exit(current_price=price, avg_cost_basis=avg_cost,
+                                               take_profit_already_taken=took_profit)
+                pct = (price - avg_cost) / avg_cost * 100
+                print(f"{asset} exit -> {reason} {fraction} pct_change={pct:.3f}% "
+                      f"(price={price}, avg_cost={avg_cost:.6f})")
 
     if args.record_trade_asset:
         rm.record_trade(args.record_trade_asset, args.record_trade_side,
