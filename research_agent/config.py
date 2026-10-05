@@ -12,7 +12,7 @@ changed twice in one day this session, and VOLTRAP's own watchlist is
 now reviewed/refreshed the same way - see CHANGELOG.md, 2026-09-26).
 
 v1 (and still, as of the 2026-09-26 watchlist work) is stocks-only:
-RobinHood's news/SEC-filing tools are equity-specific, and the owner
+RobinHood's SEC-filing/earnings tools are equity-specific, and the owner
 explicitly declined adding a web-search source that would cover crypto
 - see README.md's "Known gap: crypto" section. VOLTRAP is in scope
 DESPITE being an options strategy, not a stock one, because every
@@ -20,6 +20,19 @@ VOLTRAP candidate IS a stock or ETF underneath the option (a CSP/covered
 call is written on real shares) - the exact same equity news/SEC-filing/
 earnings tools already apply, no new data source needed. WATCHLIST
 (crypto) remains the one asset class with no research coverage.
+
+News source change (2026-09-29): `get_equity_news`, the tool this
+module's news step originally called, does not exist in this session's
+RobinHood MCP toolset (confirmed via a full tool-catalog search, not a
+transient connectivity issue) - it apparently existed when the first
+`research_log.json` "news" entries were recorded 2026-09-23/24 (they
+carry real `article_ids`) but is gone now. Owner approved (2026-09-29,
+AskUserQuestion) swapping in `WebSearch` restricted to
+NEWS_ALLOWED_DOMAINS below as the replacement - a real, deliberate scope
+change from "RobinHood's tools only, no new APIs" for the *stock* news
+source specifically. This does NOT reopen the crypto question above -
+WATCHLIST (crypto) is still out of scope; only the stocks/VOLTRAP news
+mechanism changed. See PLAYBOOK.md step 2a.
 """
 
 import sys
@@ -35,9 +48,30 @@ from trading_agent.config import STOCK_WATCHLIST, VOLTRAP_WATCHLIST  # noqa: E40
 WATCHLIST = sorted(set(STOCK_WATCHLIST) | set(VOLTRAP_WATCHLIST))
 
 LOOKBACK_DAYS = 7        # how far back to check for new SEC filings since the last run
-NEWS_LIMIT = 5           # articles per symbol per run - kept small since news is
+NEWS_LIMIT = 5           # results per symbol per WebSearch call - kept small since news is
                          # logged as one consolidated summary per symbol per cycle,
                          # not one entry per article (see PLAYBOOK.md's dedup step)
+# WebSearch's allowed_domains filter (2026-09-29) - reputable financial
+# news/wire sources only, so a symbol search doesn't surface random
+# blogs/forums as "news." Not exhaustive; add a domain here (not
+# elsewhere) if a real gap shows up in practice.
+#
+# reuters.com, wsj.com, and marketwatch.com were tried first and removed
+# the same day: WebSearch's allowed_domains fails the ENTIRE call with a
+# 400 error if even one listed domain is inaccessible to Anthropic's
+# crawler (confirmed live, all 3 named in one error together - not a
+# per-domain partial filter), not just excluded from results. All 7
+# domains below were confirmed working via a live WebSearch call before
+# being kept in this list.
+NEWS_ALLOWED_DOMAINS = [
+    "bloomberg.com",
+    "cnbc.com",
+    "businesswire.com",
+    "prnewswire.com",
+    "finance.yahoo.com",
+    "investing.com",
+    "benzinga.com",
+]
 FORM_TYPES = ["8-K", "10-Q", "10-K"]  # 8-K first - the "material event" filing type
                                        # most relevant to sudden price moves
 EARNINGS_LOOKAHEAD_DAYS = 14  # flag an upcoming earnings date within this many days -

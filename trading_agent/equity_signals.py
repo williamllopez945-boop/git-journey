@@ -21,6 +21,8 @@ using the production scan unchanged (its 49-instrument universe is well
 under the 200-row cap, so it isn't affected by this gap).
 """
 
+import math
+
 from .volume_filter import average_volume, DEFAULT_VOLUME_PERIOD
 
 
@@ -48,6 +50,26 @@ def relative_volume(volumes, period=DEFAULT_VOLUME_PERIOD):
     if avg is None or avg <= 0:
         return None
     return volumes[-1] / avg
+
+
+def whole_share_quantity(risk_sized_quantity):
+    """Floor a RiskManager.position_size() result down to a whole number
+    of shares. Added 2026-09-29 (PANW, $92.03 sized to 0.2413 shares):
+    place_equity_order only accepts fractional quantities on type=market,
+    never type=limit - and PLAYBOOK.md's equity execution policy requires
+    a marketable type=limit order for price protection (see the
+    2026-09-27 order-type-policy-gap incident, CHANGELOG.md). A fractional
+    risk-sized quantity therefore can't be placed as-is without either
+    breaking the limit-order policy or exceeding the sizing cap.
+
+    Flooring is always safe: floor(quantity) * price <= quantity * price,
+    so the resulting order can only be at or under the risk-sized budget,
+    never over it. 0.0 means the asset's per-share price alone exceeds
+    what this cycle's budget allows even one share of - the caller's
+    signal to present the signal as a recommendation instead of
+    auto-executing (never round up, and never fall back to a market
+    order to force the exact sized notional through)."""
+    return float(math.floor(risk_sized_quantity))
 
 
 def pct_change_from_quote(last_price, previous_close):

@@ -10,10 +10,11 @@ never hand-edited).
 Deduplication is the caller's job, not this store's (same philosophy as
 cycle_log.py - an append-only log doesn't second-guess what's written to
 it). research_agent/PLAYBOOK.md's steps check entries_for_asset(symbol)'s
-existing url/filing_id values before calling record() again for the same
-article or filing - get_equity_news returns "recent" articles each call,
-not just new ones since the last run, so without this check the same
-article would get re-logged every day it stays in that recent window.
+existing urls/filing_id values before calling record() again for the same
+result or filing - the news source (WebSearch, since 2026-09-29 - see
+config.py's "News source change" note) returns "recent/prominent" results
+each call, not just new ones since the last run, so without this check
+the same story would get re-logged every day it stays prominent.
 
 Baseline + deltas (2026-09-24): every entry also carries a `kind` extra
 field, either "baseline" (the first entry logged for this asset +
@@ -35,7 +36,8 @@ LOG_PATH = Path(__file__).parent / "research_log.json"
 
 # Valid `source_type` values for record().
 SOURCE_TYPES = {
-    "news",               # a news article from get_equity_news
+    "news",               # a news result from WebSearch (since 2026-09-29;
+                          # was get_equity_news - see config.py)
     "sec_filing",         # a new SEC filing from get_sec_filing_index/get_sec_filing
     "earnings_upcoming",  # an earnings report date within EARNINGS_LOOKAHEAD_DAYS
 }
@@ -57,7 +59,10 @@ class ResearchLogStore:
         """Append one finding. `extra` carries whatever's relevant to this
         source_type - kept freeform rather than a fixed schema, same as
         cycle_log.py's record():
-          news:              headline, url, published_at
+          news:              urls (list), result_count, kind
+                              (legacy entries before 2026-09-29 instead
+                              carry article_ids/article_count/published_at
+                              from the since-removed get_equity_news)
           sec_filing:        form_type, filing_id, filed_at
           earnings_upcoming: report_date, estimate_eps, timing (am/pm)
         """

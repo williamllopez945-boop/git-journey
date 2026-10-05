@@ -54,6 +54,48 @@ def test_summarize_day_counts_recommended_excellent_watch_and_protective_exits()
     assert summary["protective_exit_entries"][0]["reason"] == "stop_loss"
 
 
+def test_summarize_day_counts_protective_exits_logged_as_executed_with_reason():
+    """The current live convention (since 2026-09-28): run_cycle.py's
+    --record-trade-* flags have no --record-trade-reason option, so a
+    stop-loss/take-profit exit is logged action="executed" + a separate
+    reason="stop_loss"/"take_profit" field via a direct CycleLogStore()
+    call, not the older explicit action="protective_exit". Regression
+    test for the bug where summarize_day only matched the old format and
+    silently undercounted every protective exit logged this way."""
+    cycle_entries = [
+        _cycle("AVAX", "executed", classification=None, crossover_pct=None,
+               reason="stop_loss", entry_price=11.56, realized_pnl_pct=-5.12),
+        # a death_cross exit also carries a reason on an "executed" entry,
+        # but must NOT be counted as protective - it's a confirmed-signal
+        # trade, not the stop-loss/take-profit safety net.
+        _cycle("PEPE", "executed", classification="fresh_sell_cross", crossover_pct=-1.4,
+               reason="death_cross", entry_price=4.9e-06, realized_pnl_pct=-9.96),
+        # a gate_floor exit: also "executed" + a reason, also not protective.
+        _cycle("XLM", "executed", classification=None, crossover_pct=None, reason="gate_floor"),
+    ]
+    summary = summarize_day(cycle_entries, [], "2026-09-23")
+    assert summary["num_protective_exits"] == 1
+    assert summary["protective_exit_entries"][0]["asset"] == "AVAX"
+    # the death_cross and gate_floor exits stay counted as ordinary executed trades
+    assert len(summary["executed_entries"]) == 2
+    assert {e["asset"] for e in summary["executed_entries"]} == {"PEPE", "XLM"}
+
+
+def test_format_executive_summary_does_not_duplicate_protective_exits():
+    """A stop-loss logged action="executed" + reason="stop_loss" must
+    appear exactly once in the chronological timeline, not twice (once
+    via executed_entries, once via protective_exit_entries)."""
+    cycle_entries = [
+        _cycle("AVAX", "executed", classification=None, crossover_pct=None,
+               reason="stop_loss", realized_pnl_pct=-5.12, timestamp="2026-09-23T07:12:04+00:00"),
+    ]
+    summary = summarize_day(cycle_entries, [], "2026-09-23")
+    exec_summary = format_executive_summary(summary)
+    avax_lines = [l for l in exec_summary if "AVAX" in l]
+    assert len(avax_lines) == 1
+    assert "stop-loss" in avax_lines[0] and "-5.12%" in avax_lines[0]
+
+
 def test_summarize_day_empty_inputs_are_inert():
     summary = summarize_day([], [], "2026-09-23")
     assert summary["num_executed"] == 0

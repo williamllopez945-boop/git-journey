@@ -89,3 +89,60 @@ def test_cooldown_tracked_independently_per_asset():
     store.record_exit("PEPE", cooldown_hours=12, now=now)
     assert store.in_cooldown("PEPE", now=now + timedelta(hours=1)) is True
     assert store.in_cooldown("DOGE", now=now + timedelta(hours=1)) is False
+
+
+def test_hours_since_gate_blocked_defaults_none_when_never_blocked():
+    store = _new_store()
+    assert store.hours_since_gate_blocked("PEPE") is None
+
+
+def test_mark_gate_blocked_starts_the_clock():
+    store = _new_store()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    store.mark_gate_blocked("PEPE", now=now)
+    assert store.hours_since_gate_blocked("PEPE", now=now + timedelta(hours=5)) == 5.0
+
+
+def test_mark_gate_blocked_is_a_noop_once_already_set():
+    # Mirrors backtest.py's blocked_since_index "if None" guard - a signal
+    # blocked for several consecutive cycles keeps the ORIGINAL timestamp.
+    store = _new_store()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    store.mark_gate_blocked("PEPE", now=now)
+    store.mark_gate_blocked("PEPE", now=now + timedelta(hours=3))
+    assert store.hours_since_gate_blocked("PEPE", now=now + timedelta(hours=5)) == 5.0
+
+
+def test_clear_gate_blocked_resets_to_none():
+    store = _new_store()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    store.mark_gate_blocked("PEPE", now=now)
+    store.clear_gate_blocked("PEPE")
+    assert store.hours_since_gate_blocked("PEPE", now=now + timedelta(hours=1)) is None
+
+
+def test_clear_gate_blocked_is_a_noop_when_never_blocked():
+    store = _new_store()
+    store.clear_gate_blocked("PEPE")  # should not raise
+    assert store.hours_since_gate_blocked("PEPE") is None
+
+
+def test_gate_blocked_tracked_independently_per_asset():
+    store = _new_store()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    store.mark_gate_blocked("PEPE", now=now)
+    assert store.hours_since_gate_blocked("PEPE", now=now + timedelta(hours=1)) == 1.0
+    assert store.hours_since_gate_blocked("DOGE", now=now + timedelta(hours=1)) is None
+
+
+def test_gate_blocked_persists_across_instances():
+    fd, name = tempfile.mkstemp(suffix=".json")
+    os.close(fd)  # Windows cannot unlink an open file.
+    tmp = Path(name)
+    tmp.unlink()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    store1 = PositionStateStore(path=tmp)
+    store1.mark_gate_blocked("SOL", now=now)
+
+    store2 = PositionStateStore(path=tmp)
+    assert store2.hours_since_gate_blocked("SOL", now=now + timedelta(hours=2)) == 2.0

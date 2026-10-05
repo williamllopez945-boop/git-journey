@@ -4,6 +4,7 @@ cap. State is persisted to disk so limits hold across process restarts and
 across the scheduled cycles that drive the agent."""
 
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -135,13 +136,50 @@ class RiskManager:
             return True
         return open_position_count < max_concurrent
 
-    def can_auto_execute(self, order_value_usd):
+    def can_auto_execute(self, order_value_usd, portfolio_value):
         """Whether an order of this notional value may execute without
-        per-trade approval, per RISK_LIMITS["auto_execute_max_usd"]."""
-        return order_value_usd <= self.limits.get("auto_execute_max_usd", 0.0)
+        per-trade approval. The cap is RISK_LIMITS["auto_execute_max_pct"]
+        of current total portfolio value (2026-09-27, owner request -
+        replaces a flat dollar cap that went stale as portfolio value
+        changed; see CHANGELOG.md), so it scales automatically instead of
+        needing a manual bump every time equity moves meaningfully.
 
-    def record_trade(self, asset, side, quantity, price):
-        self.state["trades_today"] += 1
+        Uses math.isclose (2026-09-29 fix) rather than a bare <=: a caller
+        that sizes an order via position_size() and then recomputes its
+        notional as quantity * price (every real call site does this - the
+        quantity is what actually gets placed) can get a notional that is
+        off from portfolio_value * max_pct by float noise alone, since
+        division then multiplication doesn't always exactly invert. Found
+        live 2026-09-29 (LIT, $91.25): notional came back
+        91.25317997295242 against a cap of 91.25317997295241 - the same
+        value, 1.4e-14 apart, on the wrong side of a strict <=, which
+        wrongly forced a correctly-sized, in-budget order into manual
+        review. rel_tol=1e-9 absorbs float noise many orders of magnitude
+        below any real overage while still rejecting a genuinely
+        oversized order."""
+        max_pct = self.limits.get("auto_execute_max_pct", 0.0)
+        cap = portfolio_value * max_pct
+        return order_value_usd <= cap or math.isclose(order_value_usd, cap, rel_tol=1e-9)
+
+    def record_trade(self, asset, side, quantity, price, protective=False):
+        """Log a real trade to trade_log (always) and count it toward
+        today's trades_today cap (unless protective=True).
+
+        protective=True is for stop-loss/take-profit exits only (2026-09-28,
+        owner request) - "non-negotiable trades that will execute and does
+        not count towards our daily trades." They already bypass can_trade()/
+        the circuit breaker entirely (see exit_criteria.py) since reducing
+        existing risk should never be held back the way taking on new risk
+        is; this closes the other half of that gap - a protective exit
+        could previously still burn a trade slot a later, real signal
+        needed that same day, even though the exit itself was never
+        blockable. death_cross and the profit-gate floor forcing a
+        stuck sell through both still count normally (they're SMA-signal
+        exits, not the stop-loss/take-profit safety net this covers) -
+        unchanged, matches PLAYBOOK.md's existing can_trade() gate on a
+        plain fresh_sell_cross."""
+        if not protective:
+            self.state["trades_today"] += 1
         self.state["trade_log"].append({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "asset": asset,

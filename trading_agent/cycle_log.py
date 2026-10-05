@@ -25,8 +25,8 @@ LOG_PATH = Path(__file__).parent / "cycle_log.json"
 # classifications, exit_criteria.check_exit's reason strings, etc.).
 ACTIONS = {
     "executed",             # a new-entry order was auto-executed
-    "recommended",          # a new-entry signal exceeded auto_execute_max_usd,
-                             # presented for approval instead
+    "recommended",          # a new-entry signal exceeded auto_execute_max_pct
+                             # of portfolio value, presented for approval instead
     "blocked_cooldown",     # fresh_buy_cross skipped - PositionStateStore().in_cooldown
     "blocked_concurrent_cap",   # fresh_buy_cross skipped - max_concurrent_positions reached
     "blocked_aggregate_cap",    # fresh_buy_cross sized to 0 - max_aggregate_position_pct reached

@@ -66,8 +66,18 @@ not the whole watchlist) if one is ever added.
    `trading_agent/risk_manager.py` with `RISK_LIMITS`. Call
    `start_of_day(equity)` with the portfolio equity from step 2 (no-op if
    already recorded today). Call `check_circuit_breaker(equity)` — if it
-   returns `True`, stop here for the rest of the cycle. Do not place any
-   orders. Log that trading is halted for the day and why.
+   returns `True`, stop here for the rest of the cycle: skip all new-signal
+   evaluation and do not place any new-entry orders. **This does NOT skip
+   "Per-position exit rules" (stop-loss/take-profit)** — those still run
+   for every open position this cycle regardless (see the Hard rules
+   section: protective exits bypass the circuit breaker by design). Log
+   that trading is halted for the day and why. (2026-09-28 audit: the
+   live hourly Routine's own scheduled prompt previously said a halt
+   means "no crypto or stock evaluation" with no carve-out, contradicting
+   this section's Hard Rule below — a real cycle skipped the stop-loss
+   check while halted as a result, luck rather than correctness kept the
+   position safe. Routine prompt corrected the same day; this note stays
+   as a reminder of why the carve-out above is explicit.)
 
 4. **Check the daily trade cap.** Call `can_trade()`. If `False` (cap
    already hit, or the circuit breaker just tripped), stop — do not place
@@ -150,7 +160,8 @@ not the whole watchlist) if one is ever added.
       below: if `DRY_RUN` is `True`, never place an order — log what
       would have been ordered and move on. If `DRY_RUN` is `False`, place
       the order automatically only when `RiskManager.can_auto_execute`
-      says the notional is at/under `auto_execute_max_usd`, then notify
+      says the notional is at/under `auto_execute_max_pct` of current
+      total portfolio value, then notify
       the owner after the fact; otherwise present it as a recommendation
       and wait for explicit per-trade approval before calling
       `place_crypto_order`.
@@ -185,9 +196,58 @@ strong enough to qualify for the "awesome trade" aggregate-cap override
 the hand-written per-cycle Python this playbook used to require. It is
 read-only otherwise: it never calls a RobinHood tool or places an order.
 Acting on what it reports — cooldown/concurrent-cap checks, sizing,
-`preview_crypto_order`/`place_crypto_order`, `RiskManager.record_trade`,
-and logging the outcome (`executed`/`blocked_cooldown`/etc.) — is still
-done by hand, exactly as described below.
+`preview_crypto_order`/`place_crypto_order` — is still done by hand,
+exactly as described below. **Recording the outcome is not done by
+hand** (added 2026-09-29, after a session-permission block on an
+inline `RiskManager.record_trade()`/`CycleLogStore.record()` call kept
+a real executed trade unrecorded for several cycles): pass
+`--record-trade-asset`/`-side`/`-quantity`/`-price` (plus
+`-protective`, `-classification`, `-crossover-pct`, `-notional`,
+`-order-id` as applicable) on a `run_cycle.py` invocation after placing
+the order — it inherits the same already-permitted command pattern
+instead of triggering a new permission check.
+
+**That recording invocation must pass `--record-only` and nothing
+else data-wise — never re-pass `--scan-file`/`--historicals-file`/
+`--quotes-file`/`--positions-file`** (fixed 2026-10-05, Priority 2 of
+Codex's trade-ledger review in `#voltrap-agents-work` — see
+`CHANGELOG.md`). The real fill price/quantity is only known *after* the
+order is placed, which is *after* this cycle's classification has
+already been read from an earlier invocation - so "the same invocation"
+is not actually possible for a fresh entry/exit, only for a cycle with
+no signal to act on. Attaching `--record-trade-*` to a second plain
+invocation (re-passing the same scan/historicals/positions files)
+re-runs `scanner_signals.classify()` on identical inputs and silently
+advances its persisted pending/confirmed state a second time this
+cycle - observed live 2026-10-05 (XLM confirmed `fresh_sell_cross` only
+on the duplicate call, not the first, on unchanged scan data). Example:
+`python3 trading_agent/run_cycle.py --asset-class crypto --record-only
+--portfolio-file <portfolio.json> --record-trade-asset BTC
+--record-trade-side sell --record-trade-quantity 0.00107393
+--record-trade-price 84896.79 ...` — `--record-only` skips
+classification and the protective-exit checks entirely and needs no
+scan/historicals/quotes/positions file at all, only `--portfolio-file`
+(for the circuit-breaker status line) and the `--record-trade-*` flags.
+See `run_cycle.py --help` and its module docstring's "Recording-only
+mode" section for the full flag list and the mechanics.
+
+**`--record-trade-price` MUST be the order's real fill VWAP
+(`average_price` from `place_crypto_order`/`place_equity_order`'s
+response), never the order's requested/entered/limit price** (found
+2026-09-29, full-system audit: a live cycle recorded a LINK stop-loss's
+`limit_price` of 14.50 instead of its real `average_price` of
+14.5557783 — the sixth time this exact mistake has happened, after five
+supposedly-fixed instances on 2026-09-28 alone; LINK/CRV/AVAX/DOGE/SOL
+before it. This has never actually been fixed at the root, only patched
+after the fact each time - treat this line as the fix.). A market order
+in particular can fill meaningfully away from its quoted price; a
+marketable limit order fills at its limit or better, so its
+`average_price` is *at least as good as*, and often different from,
+the `limit_price` passed to place the order. Always re-read the order's
+own response (or a follow-up `get_crypto_orders`/`get_equity_orders`
+call with that order's id) for `average_price` before recording -
+never reuse the price you originally computed to size or place the
+order.
 
 1. Run the saved scan (`run_scan`, scan_id `8f2ca450-1f7f-4e69-b015-daafe494c14e`
    — "Crypto SMA(10,30) 1h Crossover — Strategy Screener"), which returns
@@ -248,17 +308,42 @@ done by hand, exactly as described below.
      `excellent_watch`'s "worth discussing" framing — it needs no
      notification, since there's no decision for the owner to make about
      a position that doesn't exist. If `quantity_transferable > 0`, this
-     is a real exit: no cooldown check (cooldown only blocks new
-     entries, never exits). The order quantity is the **full held
-     `quantity_transferable`** — not `RiskManager.position_size(...)`,
+     is a real exit candidate: no cooldown check (cooldown only blocks
+     new entries, never exits). **Profitability gate (added 2026-09-28,
+     owner-approved after a real DOGE/SOL exit both closed at a loss
+     this check would have caught — see
+     `backtest_2026-09-28_sell_cross_profit_gate.md`):** before doing
+     anything else, get the position's average cost basis (same
+     `cost_basis_fallback.average_cost_basis_from_trade_log` fallback
+     used in "Per-position exit rules" whenever `get_crypto_positions`
+     reports a zero cost basis) and the current mark price
+     (`get_crypto_quotes`), then call
+     `profit_gate.blocks_sell_cross(current_price, avg_cost_basis, profit_gate.MIN_SELL_PROFIT_PCT)`.
+     If `True` (the position is below breakeven — `MIN_SELL_PROFIT_PCT`
+     is `0.0`), **hold**: log
+     `CycleLogStore().record(asset, "fresh_sell_cross", crossover_pct,
+     "blocked_unprofitable", price=current_price, avg_cost_basis=avg_cost_basis)`,
+     call `PositionStateStore().mark_gate_blocked(asset)` (a no-op if
+     already blocked from an earlier cycle — see "Per-position exit
+     rules" below for the every-cycle floor check this starts), and move
+     on to the next asset — do not preview or place any order.
+     This never overrides stop-loss: "Per-position exit rules" below
+     still runs every cycle regardless of this gate, so a position held
+     back here remains fully protected from a further decline. Only when
+     the gate does *not* block (position at or above breakeven) does
+     this become a real exit to act on. The order quantity is the
+     **full held `quantity_transferable`** — not `RiskManager.position_size(...)`,
      which sizes a *buy* against `max_position_pct` and has no meaning
      for a sell; compute notional as quantity × current price instead.
      **Auto-execution policy (owner-authorized 2026-09-22, see
      `config.py`):** if `DRY_RUN` is `False` and
-     `RiskManager.can_auto_execute(order_notional_usd)` is `True` (i.e.
-     the order is at or under `RISK_LIMITS["auto_execute_max_usd"]`),
-     preview the order with `preview_crypto_order`, place it with
-     `place_crypto_order`, call `RiskManager.record_trade(...)` with the
+     `RiskManager.can_auto_execute(order_notional_usd, portfolio_value)` is
+     `True` (i.e. the order is at or under
+     `RISK_LIMITS["auto_execute_max_pct"]` of current total portfolio
+     value, from this cycle's `get_portfolio` call), preview the order
+     with `preview_crypto_order`, place it with
+     `place_crypto_order`, record it via `run_cycle.py`'s
+     `--record-trade-*` flags (see "Per-cycle helper" above) with the
      actual filled quantity/price, and then **notify the account owner
      after the fact** with what was executed — do not ask first, this is
      the pre-authorized automatic path. If the order is larger than the
@@ -266,7 +351,25 @@ done by hand, exactly as described below.
      instead — asset, direction, current price, suggested size — and
      stop; do not call `place_crypto_order` until the owner explicitly
      approves that specific trade. Use `preview_crypto_order` to show
-     them exact cost/fee first in that case too. **Order type (changed
+     them exact cost/fee first in that case too.
+     **Exception: a profitable death-cross exit always auto-executes,
+     regardless of notional size (owner-confirmed as a standing rule,
+     2026-10-04 — see the BCH case, `CHANGELOG.md`).** The size cap
+     above exists to bound how much *new* exposure a buy takes on in
+     one shot; a `fresh_sell_cross` that has already cleared the
+     profitability gate just above (`blocks_sell_cross` returned
+     `False` — the position is at or above breakeven) is pure risk
+     reduction on a position that already exists, not new exposure, so
+     gating it on dollar size serves no purpose the cap was built for
+     and only delays locking in a real gain. `RiskManager.can_auto_execute`
+     is not consulted for this one case — skip straight to
+     preview/place/record/notify as below. This exception applies
+     **only** to a `fresh_sell_cross` that cleared the gate: it does
+     **not** apply to a fresh *buy*, to a gate-floor-forced exit (which
+     fires precisely because the position is *not* at breakeven), or to
+     a stop-loss/take-profit exit (those are already unconditional and
+     never went through this check in the first place).
+     **Order type (changed
      2026-09-24, owner request - "limit orders to the best price from
      our analysis"): use a marketable limit order (`type=limit`,
      `limit_price` at or slightly above the current ask for a buy / at
@@ -283,6 +386,29 @@ done by hand, exactly as described below.
      routine places: fresh-cross entries and exits here, and the
      protective stop-loss/take-profit exits in "Per-position exit
      rules" below - all of them switch from market to marketable limit.
+     **Compute the limit price with `order_pricing.marketable_limit_price(side, bid, ask)`
+     (added 2026-10-04, see `CHANGELOG.md`'s two order-type-policy-gap
+     incidents — 2026-09-27 and 2026-10-04 — this project's policy
+     lapsed back to `type=market` live, twice, despite being written
+     down here both times) — never hand-pick the limit price or decide
+     `type=market`/`type=limit` from memory; call this function with
+     the fresh `get_crypto_quotes` bid/ask every time, pass its result
+     as `limit_price`, and always pass `type=limit`.**
+     **If placing by `quantity` is rejected for excess decimal
+     precision ("Your order quantity has too much precision"), switch
+     the sizing input to `dollar_amount` - never switch `type` to
+     `market` as part of that same fix.** `dollar_amount` is fully
+     supported with `type=limit` (`preview_crypto_order`'s own schema:
+     quantity is derived from `dollar_amount` at `limit_price` when the
+     order is placed), so a precision rejection is never a reason to
+     drop the limit-order policy. This exact confusion caused a real
+     deviation on 2026-09-27: a precision-rejection workaround swapped
+     both the sizing method *and* the order type at once, so 5 of that
+     day's 6 crypto orders (CRV, DOGE, AVAX, SOL, LINK) went out as
+     `type=market` with no collar protection, undetected until that
+     day's after-action review cross-checked against real Robinhood
+     order records. All fills happened to land favorably that day, but
+     that was luck, not the policy working - see `CHANGELOG.md`.
    - `excellent_watch`: not a strategy-confirmed signal, never
      auto-executed regardless of size. Alert the account
      owner with the asset, its crossover_pct/% change, and why it didn't
@@ -340,13 +466,28 @@ scope: extended-hours trading is not implemented.
      `account_number` `581911765`, not `rhs_account_number`); no crypto
      `symbol`-as-pair resolution - just the plain ticker.
    - Order type: use a **marketable limit order** (`type=limit`,
-     `limit_price` at or slightly above the current ask for a buy / at or
-     slightly below the current bid for a sell, `market_hours=regular_hours`),
+     `limit_price` from `order_pricing.marketable_limit_price(side, bid, ask)`
+     (added 2026-10-04) using the current `get_equity_quotes` bid/ask,
+     `market_hours=regular_hours`),
      not `type=market` - the account owner has not been asked about
      accepting plain market-order slippage on equities the way the crypto
      path already does, and a marketable limit gets the same effective
      fill during regular hours with explicit price protection. Use
-     `quantity` (shares), not `dollar_amount`.
+     `quantity` (shares), not `dollar_amount` - `place_equity_order` only
+     accepts a fractional `quantity` on `type=market`, never `type=limit`
+     (confirmed live 2026-09-29, PANW: a $92.03-sized order came out to
+     0.2413 shares, which a marketable limit order can't place at all).
+     **Always run `RiskManager.position_size(...)`'s result through
+     `equity_signals.whole_share_quantity(...)` before sizing/placing an
+     equity order** - it floors to a whole share, which can only put the
+     order at or under the risk-sized budget, never over it. If that
+     floors to `0.0`, the per-share price alone exceeds this cycle's
+     budget: log `"recommended"` and wait for approval, the same as any
+     order over `auto_execute_max_pct` - never round up over the cap and
+     never fall back to `type=market` to force the exact fractional
+     quantity through (see the 2026-09-27 order-type-policy-gap incident,
+     `CHANGELOG.md` - a market order dropped the price-protection collar
+     it was never authorized to drop).
    - `open_position_count` / `total_open_position_value`: the **same
      shared counters** from step 2 above, not separate ones - a stock
      entry and a crypto entry draw from the same concurrent-positions cap
@@ -354,9 +495,22 @@ scope: extended-hours trading is not implemented.
    - Cooldown and concurrent-cap checks (`PositionStateStore`,
      `RiskManager.can_open_new_position`) work identically - both are
      keyed by asset symbol / a shared counter, neither assumes crypto.
+   - Profitability gate on `fresh_sell_cross` (see the crypto cycle's
+     step 3 above): identical `profit_gate.blocks_sell_cross` check, but
+     the average cost basis comes directly from `get_equity_positions`'s
+     `average_cost` field — no `cost_basis_fallback` needed on the
+     equity side, same as "Per-position exit rules" below already notes
+     (none has been observed there either).
    - Auto-execution policy is identical: `RiskManager.can_auto_execute`
      doesn't distinguish asset class, so a confirmed stock signal at/under
-     `auto_execute_max_usd` auto-executes exactly like a crypto one.
+     `auto_execute_max_pct` of current total portfolio value auto-executes
+     exactly like a crypto one. The profitable-death-cross-exit exception
+     (see the crypto cycle's step 3 above, owner-confirmed standing rule,
+     2026-10-04) applies here too, identically — a `fresh_sell_cross` on
+     a stock position that cleared the profitability gate always
+     auto-executes regardless of notional size. Compute its limit price
+     the same way, with `order_pricing.marketable_limit_price(side, bid, ask)`
+     from the current `get_equity_quotes`/`get_equity_price_book` bid/ask.
    - `excellent_watch` and `hold` handling: identical to the crypto cycle.
    - **Research context on recommendations only (added 2026-09-23, see
      `research_agent/README.md`):** when a stock signal is presented as a
@@ -414,20 +568,19 @@ positions.
    `PositionStateStore().took_profit(asset)` from
    `trading_agent/position_state.py`.
 3. Call `exit_criteria.check_exit(current_price, avg_cost_basis, took_profit)`
-   from `trading_agent/exit_criteria.py` (no `peak_price_since_take_profit`/
-   `trailing_stop_pct` or `peak_price_since_entry`/`profit_lock_trigger_pct`/
-   `profit_lock_stop_pct` arguments live - both the trailing-stop and
-   profit-lock mechanisms exist and are tested, but `TRAILING_STOP_PCT`
-   and `PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` default to `None`
-   (disabled); see `backtest_2026-09-24_trailing_stop.md` and
-   `backtest_2026-09-25_profit_lock.md` for why neither was turned on -
-   both consistently hurt returns, sometimes severely, across real-series
-   backtests, for the same underlying reason: clipping a position before
-   a strong trend fully plays out costs more than it protects). It
-   returns one of:
-   - `("stop_loss", 1.0)` — price is 10%+ below cost basis. Sell the
+   from `trading_agent/exit_criteria.py`. (A trailing-stop and a
+   profit-lock mechanism were both built and backtested in earlier
+   sessions - see `backtest_2026-09-24_trailing_stop.md` and
+   `backtest_2026-09-25_profit_lock.md` - but consistently hurt returns,
+   sometimes severely, across real-series backtests, for the same
+   underlying reason: clipping a position before a strong trend fully
+   plays out costs more than it protects. Never adopted, and removed
+   entirely 2026-09-28 - owner request, "keep it simple" - rather than
+   kept as disabled dead code; see those docs and `exit_criteria.py`'s
+   git history if either is revisited.) It returns one of:
+   - `("stop_loss", 1.0)` — price is 4%+ below cost basis. Sell the
      **entire** position (`quantity_transferable`).
-   - `("take_profit", 0.70)` — price is 20%+ above cost basis and profit
+   - `("take_profit", 0.70)` — price is 8%+ above cost basis and profit
      hasn't been taken yet. Sell **70%** of `quantity_transferable`
      (round down to the pair's `min_order_quantity_increment` from
      `get_currency_pairs`), then call
@@ -435,25 +588,77 @@ positions.
      re-trigger next cycle on the remaining 30%.
    - `(None, 0.0)` — no protective exit fires this cycle; the SMA
      death-cross check above still applies independently.
-4. **These exits bypass `can_trade()`, the daily trade cap, the circuit
-   breaker, and `auto_execute_max_usd`** — protective exits are never
-   blocked by the gates that limit new risk-taking. The only gate that
-   still applies is `DRY_RUN`: while `True`, log what would have been
-   sold and take no action; while `False`, place the sell immediately -
-   **`place_crypto_order`, `side=sell`, `type=limit`, `limit_price` at
-   or slightly below the current bid (same marketable-limit reasoning
-   as the scanner-cycle order type note above - not `type=market`,
-   changed 2026-09-24)** - call `RiskManager.record_trade(...)`, and
-   notify the account owner immediately with the reason (stop_loss/
-   take_profit), quantity, price, and resulting P/L.
-5. When a position's `quantity_transferable` reaches 0 (fully closed, by
-   any combination of SMA exits and these protective exits), call both
-   `PositionStateStore().reset(asset)` (clears the take-profit flag, so a
-   future fresh entry starts without a stale one) AND
+4. **Gate floor (added 2026-09-28, owner-approved — "should the gate come
+   with a floor so it can't hold forever" — see
+   `backtest_2026-09-28_gate_floor_and_tighter_stops.md`):** unlike step 5
+   below, this step is **not** exempt from the daily-cap/circuit-breaker
+   gate ("Check the daily trade cap" above) — it's a same-substance
+   stand-in for the ordinary `fresh_sell_cross` death-cross exit it forces
+   through, not a protective safety net, so skip this step entirely for
+   the rest of the cycle if that earlier check already stopped it (same
+   as any other non-protective exit). Otherwise: if step 3 didn't already
+   close the position, and
+   `PositionStateStore().hours_since_gate_blocked(asset)` is not `None`
+   (this asset's `fresh_sell_cross` is currently being held by the
+   profitability gate — see that section above), do the following every
+   cycle for as long as the block lasts, independent of whether a fresh
+   sell signal is present this cycle (`blocks_sell_cross` only fires once,
+   at the bar the signal itself occurs — see `profit_gate.py`'s
+   docstring):
+   - If `current_price` has recovered to `avg_cost_basis` (unrealized P&L
+     at or above `profit_gate.MIN_SELL_PROFIT_PCT`), call
+     `PositionStateStore().clear_gate_blocked(asset)` and stop — no forced
+     exit, the position is simply no longer gated (a future
+     `fresh_sell_cross` will re-evaluate the gate fresh next time one fires).
+   - Otherwise call
+     `profit_gate.gate_floor_should_force_exit(current_price, avg_cost_basis,
+     bars_since_blocked=hours_since_gate_blocked, max_hold_bars=profit_gate.GATE_MAX_HOLD_HOURS)`
+     (a companion price floor was backtested the same day, found
+     redundant once `STOP_LOSS_PCT` is this tight, and removed entirely
+     2026-09-28 rather than kept disabled — only the 24h time floor
+     exists). If `True`, sell the **entire** position (`quantity_transferable`) the
+     same way as a `stop_loss` exit in step 5 below, logging
+     `reason="gate_floor"` instead. **This is NOT a protective exit** —
+     unlike stop-loss/take-profit, record it via `run_cycle.py`'s
+     `--record-trade-*` flags **without** `--record-trade-protective` and
+     it still counts toward `trades_today` (same as the `fresh_sell_cross`
+     death-cross exit it stands in for — see the note on this in step 5
+     below).
+5. **These exits bypass `can_trade()`, the daily trade cap, the circuit
+   breaker, and `auto_execute_max_pct`** — protective exits are never
+   blocked by the gates that limit new risk-taking, and (2026-09-28,
+   owner request — "non-negotiable trades... does not count towards our
+   daily trades") never **consume** the daily trade cap either, so a
+   stop-loss/take-profit firing earlier in the day can never crowd out a
+   later real signal. The only gate that still applies is `DRY_RUN`:
+   while `True`, log what would have been sold and take no action; while
+   `False`, place the sell immediately - **`place_crypto_order`,
+   `side=sell`, `type=limit`, `limit_price` from
+   `order_pricing.marketable_limit_price("sell", bid, ask)` (same
+   marketable-limit reasoning and helper as the scanner-cycle order
+   type note above - not `type=market`, changed 2026-09-24, helper
+   added 2026-10-04)** -
+   record it via `run_cycle.py`'s `--record-trade-*` flags with
+   `--record-trade-protective` set (still fully logged to `trade_log`
+   for cost-basis/daily-review purposes, just exempt from
+   `trades_today`), and notify the account owner immediately
+   with the reason (stop_loss/take_profit), quantity, price, and
+   resulting P/L. The `fresh_sell_cross` death-cross exit and a
+   gate-floor-forced exit (see the profitability gate section) are NOT
+   protective in this sense — both still record via the same flags
+   without `--record-trade-protective` and still count toward `trades_today`, same
+   as before; only the two safety-net exits above are exempt.
+6. When a position's `quantity_transferable` reaches 0 (fully closed, by
+   any combination of SMA exits, a gate-floor exit, and these protective
+   exits), call `PositionStateStore().reset(asset)` (clears the
+   take-profit flag, so a future fresh entry starts without a stale one),
    `PositionStateStore().record_exit(asset)` (starts the whipsaw
    cooldown — `DEFAULT_COOLDOWN_HOURS`, 4h by default — blocking a new
    entry into this asset until it expires, even if a fresh buy signal
-   fires in the meantime). Both calls are needed; they track independent
+   fires in the meantime), AND `PositionStateStore().clear_gate_blocked(asset)`
+   (so a future block on a future position in this asset starts its own
+   fresh clock, rather than inheriting a stale timestamp — a no-op if this
+   position was never gate-blocked). All three calls are needed; they track independent
    state and `reset` does not clear the cooldown.
 
 ## Hard rules
@@ -507,8 +712,14 @@ positions.
   that falls inside market hours. Crypto is unaffected (24/7, unchanged).
 - Auto-execution is bounded and narrow, not a general license: only a
   `fresh_buy_cross` / `fresh_sell_cross` signal, only when `DRY_RUN` is
-  `False`, only when `RiskManager.can_auto_execute(order_notional_usd)` is
-  `True` (at/under `RISK_LIMITS["auto_execute_max_usd"]`, owner-set).
+  `False`, only when
+  `RiskManager.can_auto_execute(order_notional_usd, portfolio_value)` is
+  `True` (at/under `RISK_LIMITS["auto_execute_max_pct"]` of current total
+  portfolio value, owner-set) —
+  **except a `fresh_sell_cross` that already cleared the profitability
+  gate (position at/above breakeven), which always auto-executes
+  regardless of notional size (owner-confirmed standing rule, 2026-10-04 —
+  see the scanner cycle's step 3 and `CHANGELOG.md`'s BCH case).**
   `excellent_watch` is never auto-executed regardless of size. Anything
   outside those conditions is a recommendation requiring the account
   owner's explicit, per-trade approval before `place_crypto_order` is
@@ -523,9 +734,23 @@ positions.
   immediately regardless of order size, `can_trade()`, or the circuit
   breaker, per the "Per-position exit rules" section — reducing existing
   risk is never held back the way taking on new risk is. `DRY_RUN` itself
-  still gates them same as everything else.
+  still gates them same as everything else. They're also exempt from
+  **consuming** `max_trades_per_day` (2026-09-28, owner request —
+  `RiskManager.record_trade(..., protective=True)`): a stop-loss/take-profit
+  firing earlier in the day never crowds out a later real signal's slot.
+  A `fresh_sell_cross` death-cross exit and a gate-floor-forced exit are
+  ordinary trades for this purpose — both still consume a slot, only the
+  two safety-net exits above are exempt.
 - This agent is long-only: it buys and exits, it never shorts or uses
   margin/leverage.
+- The profitability gate (`profit_gate.blocks_sell_cross`, added
+  2026-09-28) only ever holds a `fresh_sell_cross` exit — it never holds
+  back a stop-loss or take-profit, and it never applies to anything
+  other than a plain `fresh_sell_cross`/death-cross signal. Always run
+  "Per-position exit rules" (stop-loss/take-profit) for every open
+  position every cycle regardless of whether this gate blocked a
+  death-cross the same cycle — the two checks are independent, and a
+  position held back here remains fully exposed to a real stop-loss.
 - Never skip the cooldown check on a new-entry signal (`fresh_buy_cross`,
   either detection path). `PositionStateStore().in_cooldown(asset)` must
   be checked before computing order size or presenting a recommendation —
@@ -573,17 +798,68 @@ on both the polling and scanner paths, so the end-of-day review
 | Event | `action` | Notes |
 |---|---|---|
 | Auto-executed new entry | `"executed"` | include `price`, `quantity`, `notional`, `order_id` |
-| New entry above `auto_execute_max_usd`, awaiting approval | `"recommended"` | include the suggested `price`/`quantity`/`notional` |
+| New entry above `auto_execute_max_pct` of portfolio value, awaiting approval | `"recommended"` | include the suggested `price`/`quantity`/`notional` |
 | `fresh_buy_cross` skipped — in cooldown | `"blocked_cooldown"` | |
 | `fresh_buy_cross` skipped — `max_concurrent_positions` reached | `"blocked_concurrent_cap"` | |
 | `fresh_buy_cross` sized to 0 — `max_aggregate_position_pct` reached | `"blocked_aggregate_cap"` | |
 | Confirmed cross downgraded to `"hold"` inside `classify()` by the volume gate | `"blocked_volume"` | log this even though `classify()` itself returned `"hold"`, not `fresh_buy_cross` — the whole point is capturing what got filtered out |
 | `excellent_watch` | `"excellent_watch"` | |
 | `fresh_sell_cross` on an asset with no open position (nothing to sell — see the hard rule above) | `"blocked_no_position"` | no owner notification needed, nothing for them to decide |
+| `fresh_sell_cross` on a real held position, but the profitability gate held it (position below breakeven — added 2026-09-28) | `"blocked_unprofitable"` | include `price`, `avg_cost_basis` — the exit is only deferred, not skipped for good: stop-loss still protects the position every cycle, and a later cycle may see it clear the gate or hit stop-loss/take-profit instead |
 | Stop-loss or take-profit fired | `"protective_exit"` | include `reason` (`"stop_loss"`/`"take_profit"`), `price`, `avg_cost_basis`, resulting P/L |
+| Gate floor forced an exit the profitability gate had been holding (added 2026-09-28) | `"executed"` | include `reason="gate_floor"`, `price`, `avg_cost_basis`, `quantity`, resulting P/L — not protective, counts toward `trades_today` like any other exit (see "Per-position exit rules" step 4) |
 
 A plain `"hold"` with nothing else notable is not logged — this is an
 event log of what needed a decision, not a full cycle trace.
+
+## Slack notifications (added 2026-09-27, owner request; channel corrected same day; narrowed to notable-only same day)
+
+The hourly trading cycle and the daily after-action review both also
+post to Slack channel `#voltrap-agents-work` (`channel_id
+C0C49LR128P`) via `slack_send_message`, alongside `PushNotification`.
+(The original channel this was set up on,
+`#votrap-agent-collaboration`/`C0C4P136JFQ`, was archived the same day
+the owner set it up and replaced with this public channel — if
+`slack_send_message` ever fails against `C0C49LR128P`, re-check with
+`slack_list_user_channels` rather than assuming the old ID.)
+
+**Hourly cycle:** posts **only when there's something pertinent** —
+the same trigger condition as `PushNotification` (an executed trade, a
+protective exit, a recommendation awaiting approval, or a blocked
+signal worth noting). No "all quiet" line on a plain hold cycle. This
+channel has Codex (a separate coding agent the owner may use for
+backend work on this same repo) connected to it — the goal is a clean,
+high-signal record Codex can pick up real context from, not an hourly
+noise stream (this replaced an earlier "post every cycle regardless"
+design from the same day, which the owner asked to narrow).
+
+**Message format (added 2026-10-01, owner request: "recommendations in
+a separate line with a bullet or number next to it, cleaner concise
+reporting").** Both the Slack post and the chat-visible cycle summary
+follow this shape:
+
+- One bolded status line: `*<time> UTC cycle* — <circuit breaker/trade
+  cap state in a few words>.`
+- One bullet per asset class or notable item (`•`), each a single
+  short line - lead with the asset/ticker, state, and the one number
+  that matters (price delta, crossover strength, P/L). No paragraphs.
+- **Any `"recommended"` entry (awaiting owner approval) gets its own
+  bullet, never folded into a narrative sentence**, prefixed so it's
+  scannable at a glance, e.g. `• **Recommendation:** buy PTC — ...`.
+  Multiple recommendations in one cycle each get their own bullet, not
+  a combined paragraph.
+- Research context (when pulled per step 7) is its own short bullet
+  under the relevant recommendation, not inline with it.
+- Skip routine/quiet detail (e.g. `blocked_no_position` on an
+  unheld asset) rather than padding the message - this section's
+  existing notable-only trigger still decides whether to post at all;
+  this only governs the shape once something is worth posting.
+
+**Daily after-action review:** posts every day regardless (same as its
+`PushNotification`) — a once-a-day substantive summary is inherently
+pertinent, not noise, so it keeps the original always-on behavior. It
+posts the fuller executive-summary/observations content (Slack has no
+200-char limit, unlike `PushNotification`).
 
 ## Weekly watchlist review
 
@@ -777,3 +1053,60 @@ decisions, never a side effect of an automated cycle); never place a
 naked option (every put is cash-secured, every call is covered — no
 exceptions, no margin leverage beyond what's already reserved as
 collateral).
+
+### VOLTRAP dry-run (paper — owner request, 2026-09-30)
+
+**Separate from the real (unfunded, still gated) VOLTRAP above.** The
+owner wants to see the mechanism work against real live market data
+before committing real funds. This dry-run Routine is **read-only with
+respect to money**: it never calls `place_option_order`, never touches
+`VOLTRAP_RISK_LIMITS`/`VOLTRAP_WATCHLIST`/`VOLTRAP_AUTO_EXECUTE`, and
+never changes the real go-live gate above. See
+`voltrap_dryrun_2026-09-30.md` for the first run's full worked example
+and findings.
+
+Per firing (weekly, Monday shortly after open — matching the real
+design's intended cadence; a mid-week entry was found live to leave too
+little time for clean delta granularity near a 2-day expiration, see
+the dry-run doc):
+
+1. Use a **hypothetical portfolio value of $5,000** (owner-specified
+   2026-09-30) wherever the real procedure above would read
+   `get_portfolio` — do not touch the real account balance for this.
+2. Reserved collateral ceiling = $5,000 × `VOLTRAP_RISK_LIMITS["max_voltrap_pct"]`
+   (the real, already-confirmed 0.25) = $1,250.
+3. Assume **2 concurrent positions** (not a documented VOLTRAP config
+   value — a reasonable small-book default; max_collateral_per_contract
+   = $1,250 / 2 = $625) unless the owner has since specified otherwise.
+4. Run the real candidate screen (`run_scan`, scan_id
+   `e3983260-740b-4a84-8369-54420cbeafdd`) → `voltrap_candidates.rank_by_voltrap_fit`
+   with the hypothetical `max_collateral_per_contract` and the real
+   `min_avg_options_volume`/`min_open_interest` from
+   `VOLTRAP_RISK_LIMITS` → for the top 1-3 survivors: `get_option_chains`
+   → `get_option_instruments` (nearest Friday with at least ~5+ calendar
+   days out, not the very next Friday if that's only 1-2 days away) →
+   `get_option_quotes` → `voltrap_candidates.pick_strike_by_delta` with
+   the real `target_delta_min`/`target_delta_max` → `review_option_order`
+   for real collateral/fee/probability numbers.
+5. **Never call `place_option_order` or `place_equity_order` from this
+   Routine under any circumstance** — this is the one hard line that
+   makes it safe to run unattended. If a step would require placing an
+   order to continue (it shouldn't), stop and log why instead.
+6. Log the cycle's findings to a dated file
+   `trading_agent/voltrap_dryrun_<date>.md` (same format as the first
+   run) — ranked candidates, the walked-through strike pick(s), real
+   collateral/premium/probability numbers, any new observations (e.g.
+   if watchlist names now fit, if liquidity/IV shifted materially).
+   Commit and push that file (same branch as this session).
+7. Send one `PushNotification` (<200 chars) summarizing the cycle's top
+   pick(s) and the headline numbers (strike, premium, collateral,
+   chance of profit) — clearly labeled "VOLTRAP dry-run (paper)" so it's
+   never confused with a real trading notification.
+
+Hard rules (same posture as everywhere else in this file): never modify
+`VOLTRAP_RISK_LIMITS`, `VOLTRAP_WATCHLIST`, `VOLTRAP_AUTO_EXECUTE`, or
+`RISK_LIMITS`/`WATCHLIST`/`DRY_RUN` from within this Routine; never place
+any real order of any kind; the $5,000/2-concurrent-position assumptions
+live only in this Routine's own prompt and this PLAYBOOK section, never
+in `config.py`, so there's no risk of them leaking into the real,
+still-gated VOLTRAP path.

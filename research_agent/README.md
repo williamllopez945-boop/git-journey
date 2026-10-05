@@ -20,12 +20,19 @@ decisions" — a loose, file-based coupling, not a trade gate.
 | `research_log.py` | `ResearchLogStore` — append-only log of findings (news/SEC filings/upcoming earnings), persisted to `research_log.json`. Modeled directly on `trading_agent/cycle_log.py`'s `CycleLogStore` |
 | `daily_digest.py` | Assembles the daily research digest markdown from a day's logged findings, grouped by asset |
 | `PLAYBOOK.md` | Step-by-step runbook the daily research Routine follows |
-| `research_notes/*.md` | Daily digests, one per weekday — durable, versioned record (not gitignored) |
+| `research_notes/*.md` | Daily digests, one per weekday — local record only, gitignored (owner request 2026-10-05; `research_log.json` is the durable structured record) |
 | `tests/` | Unit tests for the log store and digest formatting |
 
-## Data sources (v1: RobinHood's existing tools only, no new APIs)
+## Data sources
 
-- `get_equity_news` — recent news articles per symbol
+- **News**: `WebSearch`, restricted to `config.NEWS_ALLOWED_DOMAINS`
+  (reputable financial news/wire sites only). Originally `get_equity_news`
+  (RobinHood's own tool, "v1: RobinHood's existing tools only, no new
+  APIs") - that tool does not exist in this session's toolset (confirmed
+  2026-09-29, not a connectivity issue) and was replaced with owner
+  approval. A real, deliberate scope change for the news source
+  specifically - see `config.py`'s "News source change" note. Does not
+  reopen the crypto-coverage question below.
 - `get_sec_filing_index` / `get_sec_filing` — filing discovery and
   section text, prioritizing 8-Ks (material events)
 - `get_earnings_results` — upcoming earnings report dates, to flag

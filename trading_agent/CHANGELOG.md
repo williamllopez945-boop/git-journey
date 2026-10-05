@@ -650,3 +650,1020 @@ fine in H2 alone - the exact overfitting shape this project's
 split-window check exists to catch). **No change made** -
 `max_trades_per_day` stays at 3. See
 `backtest_2026-09-26_trade_cap_recheck.md`.
+
+## 2026-09-27 — Slack connected: cycle notifications + Codex/Claude handoff channel
+
+Owner connected the Slack workspace and asked for two things: route
+trading-cycle notifications there, and use it for Codex/Claude Code
+collaboration handoffs. Both point at the same existing private
+channel, `#votrap-agent-collaboration` (`C0C4P136JFQ`), which Codex is
+also connected to.
+
+**Notifications:** the hourly trading Routine and the daily
+after-action review Routine both now also call `slack_send_message` to
+that channel every firing (see `PLAYBOOK.md`'s new "Slack
+notifications" section) — unlike `PushNotification`, which stays quiet
+on a plain hold, the Slack post always fires, since the point is a
+standing shared audit trail for the owner and Codex, not a
+noise-reduced phone alert. The weekly watchlist review and the
+research agent's daily scan were left on push-only for now (narrower
+scope, lower cadence) — can be extended the same way on request.
+
+**Codex/Claude handoff:** independently verified Codex's
+`codex/collaboration-setup` branch (`COLLABORATION.md`, `AGENTS.md`,
+`CLAUDE.md`, `docs/handoffs/`) this same day — 215/215 tests pass in a
+clean worktree, diff scoped to test files + docs only (no production
+code touched), and one genuinely valuable fix confirmed by hand
+(`test_run_cycle.py`'s missing-args test previously ran against this
+checkout's *real* `state.json` before hitting its intended CLI
+validation error — verified via hash comparison that no corruption
+occurred, but it was a real latent risk, not cosmetic). No blocking
+findings; awaiting the owner's go-ahead to merge into `main`. Posted a
+status message to the Slack channel so Codex has the same picture.
+
+## 2026-09-27 (later, same day) — Slack channel corrected: `#votrap-agent-collaboration` -> `#voltrap-agents-work`
+
+The private channel this was wired up on that morning
+(`#votrap-agent-collaboration`, `C0C4P136JFQ`) was archived by the
+owner later the same day and replaced with a new public channel,
+`#voltrap-agents-work` (`C0C49LR128P`), which already had both a
+Codex/ChatGPT Slack app and a Claude-for-Slack app added. Caught this
+independently (checked `slack_list_user_channels` rather than assuming
+the earlier setup still held) before it caused a cycle to silently fail
+to post. Updated both Routines' prompts (hourly trading, daily
+after-action review) and `PLAYBOOK.md`'s "Slack notifications" section
+to the new `channel_id`. No functional/strategy change — infrastructure
+correction only.
+
+## 2026-09-27 (later still, same day) — Slack narrowed to notable-only
+
+Owner asked to only send pertinent information to Slack, since Codex
+(connected to `#voltrap-agents-work`) may be used to build backend work
+off this repo and shouldn't have to wade through hourly noise to find
+real signal. Changed the hourly trading Routine's Slack post from
+"every cycle regardless" to the same trigger condition as
+`PushNotification` — executed trade, protective exit, recommendation
+awaiting approval, or a worth-noting blocked signal only, silent on a
+plain hold. The daily after-action review's Slack post is unchanged
+(already once-a-day and substantive, not noise). Updated
+`PLAYBOOK.md`'s "Slack notifications" section to match.
+
+## 2026-09-27 (later still) — Relative-strength entry gate: tested deeper, not adopted
+
+Owner shared a "top 5 trading strategies" research summary (posted to
+Slack via Codex/ChatGPT) and asked whether relative-strength ranking -
+biasing entries toward the watchlist's current leaders - could improve
+the strategy. A first pass on the 90-day hourly 12-series test bed
+looked promising (+0.87pp worst-case, split-window, one config). Owner
+asked for deeper multi-regime validation before shipping anything.
+
+Tested against two real, longer-history crypto-ETF groups (interpolated
+placeholder bars excluded, bar-aligned by date): IBIT+ETHA (2.15 years
+real daily, forced to pick the relatively stronger of the two) lost
+-6.87% to -12.50% worst-case across every lookback tested - clearly
+negative, bigger than the original positive result. A shorter 4-way
+group (GBTC+VSOL+BSOL+GSOL, ~7 months real daily) was only marginally
+positive (+0.08% to +0.37%). The original finding was a narrow,
+single-period artifact. **Not adopted** - see
+`backtest_2026-09-27_relative_strength.md`.
+
+## 2026-09-27 (later still) — 15-minute ORB evaluation for VOLTRAP: interim, not adopted
+
+Owner asked to run the detailed 15-minute Opening Range Breakout (ORB)
+evaluation brief posted to Slack (attributed to ChatGPT/Codex). Read
+`config.py`/`PLAYBOOK.md` fresh: VOLTRAP has no dollar-risk-per-trade
+sizing field (its entire model is percent-of-portfolio options
+collateral), runs weekly rather than intraday, and trades premium, not
+shares - three structural fit problems independent of any backtest
+result. Confirmed Robinhood's pre-listing history for these symbols is
+synthetic placeholder data (`interpolated: true`, flat price, zero
+volume), and `interval=5minute` requests cap at ~5000 bars (~3 months) -
+too thin for the brief's required trending/sideways/volatile regime
+split on its own.
+
+Implemented the exact baseline rules against the ~3 months of real
+5-minute data Robinhood does have (all 8 `VOLTRAP_WATCHLIST` names,
+July vs. Aug-Sep split): combined worst-case-first result is
+breakeven-to-marginally-positive (avg R 0.00 to +0.03, profit factor
+1.01-1.12) - not a demonstrated edge, and driven almost entirely by the
+11:00 ET time-exit rather than the designed stop/target (2R target hit
+only 5 times out of 352 total trades). **Interim verdict: reject / do
+not implement** - see `backtest_2026-09-27_orb_evaluation.md`. Deeper
+multi-regime data is in progress via Codex's Alpaca connector
+(`codex/orb-alpaca-data` handoff); this evaluation will be re-run once
+that lands before any different conclusion is drawn. No code or config
+changed.
+
+## 2026-09-27 (later still) — 15-minute ORB evaluation for VOLTRAP: final verdict, reject
+
+Codex delivered the Alpaca 5-minute dataset (8 symbols, 3.7-10.7 years
+real history each, 956,660 rows total) via a git bundle over Slack
+(GitHub branch writes were blocked on Codex's end; Codex then ran out of
+tokens, so the owner downloaded and attached the bundle directly).
+Verified independently before use - row counts, SHA-256 hashes,
+timestamp integrity, and OHLCV bounds across all 956,660 rows, full test
+suite 215/215 - see `docs/handoffs/orb-alpaca-data.review-claude.md` on
+`claude/review-orb-alpaca-data` (no findings). Both `codex/orb-alpaca-data`
+(Codex's original, unmodified commits) and the review branch were pushed
+to GitHub, unblocking Codex's publication. Data merged into this branch
+as `research_agent/data/orb_5min/*.csv` (data-only merge, no
+`trading_agent/` file touched).
+
+Re-ran the same exact baseline ORB rules against this real multi-year,
+multi-regime data (chronological per-symbol dev/OOS split), fixing one
+real bug found in the interim script (a hardcoded UTC-4/EDT session-time
+offset, correct only for its single July-Sept window - this re-run uses
+real `America/New_York` local time via `zoneinfo`, handling DST correctly
+across years). Result reverses the interim finding: **both chronological
+splits are net losers** (avg R -0.027 dev / -0.010 OOS, profit factor
+0.90 / 0.96), not merely a non-edge - 6 of 8 symbols negative on both
+halves, and the 2R target is hit only ~2.4% of the time (8,774 total
+trades) - the same time-exit-dominance mechanical pattern the interim
+pass found, now confirmed at 25x the sample size across real regimes.
+
+**Final verdict: reject.** Combined with the structural fit problems
+already flagged (no dollar-risk-budget field, weekly cadence, options ≠
+stock profitability), this closes the ORB evaluation - not adopted, not
+paper-tested. See `backtest_2026-09-27_orb_evaluation.md` for the full
+write-up (interim findings preserved, not overwritten). No
+`trading_agent/` code or config changed at any point in this evaluation.
+
+## 2026-09-27 (later still) — auto_execute_max_usd -> auto_execute_max_pct
+
+Owner request, prompted by this hour's cycle: account equity jumped
+$200.40 -> $578.35 (a deposit, not a market move), which made the
+existing flat-dollar `auto_execute_max_usd` ($100) stale again - the
+exact problem flagged in the 2026-09-24 audit note on this same setting.
+Owner asked for the cap to scale with capital instead of needing a
+manual bump every time equity changes materially.
+
+Replaced `RISK_LIMITS["auto_execute_max_usd"]` (flat $100) with
+`RISK_LIMITS["auto_execute_max_pct"]` (0.20 = 20%), checked against
+current total portfolio value (`get_portfolio`'s `total_value`) instead
+of a fixed number. Set equal to `max_position_pct` (also 20%, owner
+choice) so a properly-sized confirmed entry always auto-executes and
+approval stays the exception (oversized or unconfirmed signals only) -
+the original 2026-09-22 design intent, now self-maintaining as equity
+moves instead of drifting stale.
+
+`RiskManager.can_auto_execute` signature changed:
+`can_auto_execute(order_value_usd)` -> `can_auto_execute(order_value_usd,
+portfolio_value)`, threshold = `portfolio_value * auto_execute_max_pct`.
+Every call site (the hourly cycle, both crypto and stock) already fetches
+current portfolio value in step 0 for the shared position-sizing
+counters, so no new data fetch is needed - just pass it through.
+
+This is an automation/approval-gate parameter, not a strategy parameter
+- it doesn't change which signals fire or how positions are sized, only
+whether a properly-sized order needs a human okay first. Historical
+backtesting (which assumes every signal executes) doesn't model an
+approval workflow, so none was run for this change, unlike a real
+strategy-parameter change. Updated `config.py`, `risk_manager.py`,
+`PLAYBOOK.md`, `README.md`, `cycle_log.py`, `daily_review.py`,
+`exit_criteria.py` (comments only), and `tests/test_risk_manager.py`.
+Full suite green after the change (see verification below).
+
+## 2026-09-27 (later still) — max_trades_per_day: 3 -> 4
+
+Owner asked to raise the daily trade cap "to allow for more room."
+Unlike `auto_execute_max_pct` above, this genuinely is a strategy/risk
+parameter (it was backtest-validated at 3 on 2026-09-24), so re-tested
+before changing it rather than bumping the number directly.
+
+Re-ran the original stock-only cap sweep on the CURRENT
+`STOCK_WATCHLIST` (`CRDO`/`PYPL` replaced `CHKP`/`HUBS` since the
+original test) with fresh 90-day real hourly data - confirmed cap=3 is
+still split-window-robust and best worst-case on this watchlist
+(worst +2.70% vs. cap=4's +0.28%, cap=5's -1.35%).
+
+Cross-checked against a second, real, deeper dataset for extra
+robustness: Codex's Alpaca-sourced 5-minute data (archived
+`archive/orb-alpaca-data-2026-09-27`, 8 different symbols, 3.7 years
+common history, aggregated to hourly). Result **reversed direction**:
+on this more volatile, multi-year universe, worst-case return rises
+monotonically with the cap (cap=3 worst +3.77%, cap=4 +5.82%, saturating
+around 7+ at +7.66%) - a tight cap cuts off real winning signals on
+active days here, the opposite failure mode from the calm-large-cap
+result.
+
+**Raised to 4** - the one value with a positive worst-case on *both*
+real test beds (giving up +2.42pp vs. staying at 3 on the calm stock
+data, gaining +2.05pp vs. staying at 3 on the volatile data), not the
+peak on either individually. This is a judgment call between two
+disagreeing real results, not a clean win - the crypto side of the
+shared cap remains untested (no historicals tool for it), which is
+exactly why the disagreement matters. Full writeup, including why the
+two datasets disagree: `backtest_2026-09-27_trade_cap_recheck.md`.
+`config.py`, `README.md` updated. Full suite green.
+
+## 2026-09-27 (later still) — Order-type policy gap closed: precision workaround was dropping to market orders
+
+Same-day after-action review (`daily_logs/2026-09-27.md`) cross-checked
+`trade_log` against real Robinhood order records and found 5 of that
+day's 6 crypto orders (CRV, DOGE, AVAX, SOL, LINK) executed as
+`type=market`, not the marketable-limit-order policy adopted
+2026-09-24. Only the day's DOT exit used a real `type=limit` order.
+
+Root cause: no code in this repo ever places an order (`run_cycle.py`
+only fetches data and classifies signals - see its own docstring);
+every live order this project places is a real MCP tool call made
+directly from `PLAYBOOK.md`'s instructions each cycle. Earlier this
+session, a `quantity`-based limit order was rejected for excess decimal
+precision ("Your order quantity has too much precision"), and the fix
+applied switched *both* the sizing input (`quantity` -> `dollar_amount`)
+*and* the order type (`limit` -> `market`) at once, when only the
+sizing input needed to change - `preview_crypto_order`'s own schema
+confirms `dollar_amount` is fully supported with `type=limit`.
+
+No trades were reversed (this is a policy-adherence gap, not a risk
+error - every fill that day happened to land favorably vs. its
+reference price, by luck, not because the missing collar protection
+didn't matter). Fixed by making `PLAYBOOK.md`'s order-type policy
+paragraph explicit that a precision rejection is only ever a reason to
+switch the sizing input, never the order type. No code changed (there
+was none to change); `PLAYBOOK.md` updated only.
+
+## 2026-09-28 — Profitability gate on death-cross exits: built, backtested, not adopted (owner proposal)
+
+Owner request, after a real DOGE and SOL exit both closed at a loss the
+strategy never checked for (-$95.71 and -$78.23 realized, confirmed
+against Robinhood's own P&L records - both losses were larger than what
+this project's own records showed at the time, because the DOGE/SOL
+positions' reconciled cost bases from the 2026-09-26 transfer-in were
+themselves wrong, a separate finding surfaced the same day).
+
+Built `profit_gate.py` (new, `blocks_sell_cross`) and wired it into
+`backtest.py`/`portfolio_backtest.py` as a new `min_sell_profit_pct`
+parameter, default `None` (disabled, unchanged current behavior) -
+holds a death-cross/`fresh_sell_cross` exit instead of executing it
+while the position's unrealized P&L is below the threshold.
+Stop-loss/take-profit (`exit_criteria.py`) are completely unaffected -
+they still run first, every bar, regardless of this gate.
+
+Backtested against the same real 90-day hourly data (`STOCK_WATCHLIST`
++ IBIT/ETHA proxies) and production risk settings used throughout this
+project, worst-case first, multiple gate values (0%/-2%/+2%) to rule
+out a single lucky point, both in isolation and combined
+(`portfolio_backtest.py`, since an isolated single-asset test already
+reversed once this week on RVMD vs. MAIR). **Isolated result: mixed**
+(7/12 series helped, 3 hurt, 2 flat on worst-case; MAIR's worst case
+got meaningfully worse, -9.45% -> -16.44%, a real mechanistic cost on a
+persistently declining asset that keeps re-entering and re-stopping-out
+instead of exiting once, earlier, smaller). **Combined portfolio
+result: clearly favorable** at the 0% threshold - the concurrent-
+position/aggregate-cap dynamics dilute MAIR's isolated damage the same
+way they reversed RVMD/MAIR two days ago: worst-case give-up is 0.11pp
+on stocks, and every crypto-proxy window improves. `-2%` is rejected -
+it underperforms `0%` at the portfolio level in the worst window
+tested (-4.09% vs +0.17%), confirmed non-monotonic in both passes.
+
+**Not adopted - proposal only, awaiting owner approval.**
+`min_sell_profit_pct` stays `None` everywhere; `PLAYBOOK.md`'s live
+`fresh_sell_cross` procedure is unchanged. Full writeup:
+`backtest_2026-09-28_sell_cross_profit_gate.md`. `README.md` updated
+(new module row). Full suite green (216/216, 11 new tests).
+
+## 2026-09-28 (later) — Profitability gate on death-cross exits: adopted
+
+Owner approved the proposal above at the recommended 0% (breakeven)
+threshold. `profit_gate.py` now defines `MIN_SELL_PROFIT_PCT = 0.0` as
+the tuned live value; `backtest.py`/`portfolio_backtest.py`'s
+`min_sell_profit_pct` parameter defaults to it (pass `None` explicitly
+to get the old, ungated behavior for comparison). No `RISK_LIMITS`/
+`config.py` change - this tunable lives in `profit_gate.py`, matching
+`exit_criteria.py`'s own pattern for `STOP_LOSS_PCT`/`TAKE_PROFIT_PCT`.
+
+`PLAYBOOK.md` updated: the crypto and stock `fresh_sell_cross`
+procedures now call `profit_gate.blocks_sell_cross` before treating a
+real held position's death-cross as an exit to act on - blocked, it
+logs `"blocked_unprofitable"` (new row in the Cycle logging table) and
+moves on; not blocked, the exit proceeds exactly as before. A new hard
+rule makes explicit that this gate never holds back stop-loss/
+take-profit, which still run independently every cycle regardless.
+`README.md`'s exit-triggers list and module table updated to match.
+
+Two pre-existing tests (`test_backtest.py`/`test_portfolio_backtest.py`)
+that relied on the previous implicit "no gate" default now pass
+`min_sell_profit_pct=None` explicitly to keep testing that path; one new
+test per file confirms the new default (no argument passed) now gates.
+Full suite green (217/217).
+
+## 2026-09-28 — Audit finding: circuit breaker halt was skipping protective exits
+
+Owner-requested audit of the live system. The 09:09 UTC cycle today
+correctly tripped the circuit breaker (a real 3.12% trading drawdown
+from the CRV/AVAX/XLM sell-off, distinct from the earlier same-day
+transfer-caused halt) and, per the hourly Routine's own scheduled
+prompt at the time, stopped "the entire cycle - no crypto or stock
+evaluation" with no carve-out. That contradicts this file's own Hard
+Rules section, which has always stated protective exits (stop-loss/
+take-profit) bypass `can_trade()`, the daily trade cap, AND the circuit
+breaker - "reducing existing risk is never held back the way taking on
+new risk is." The Routine's prompt was the more permissive/dangerous of
+the two documents and is what actually executed, so the stop-loss check
+was genuinely skipped that cycle.
+
+Checked immediately: no position had actually crossed `STOP_LOSS_PCT`
+(-10%) at the time (CRV closest, -8.20%) - the gap did not cause a real
+missed exit, but it was a live, uncontrolled risk, not a theoretical
+one. See `backtest_2026-09-28_sell_off_gate_review.md` for the same
+positions' broader context.
+
+**Fixed same day:** the hourly Routine's prompt (step -1) now explicitly
+carves out protective exits - a circuit-breaker halt still runs the
+per-position stop-loss/take-profit check on both asset classes every
+cycle, only new-signal evaluation and new orders are skipped. This
+`PLAYBOOK.md` section's own wording (step 3) was clarified with the same
+explicit carve-out and a note explaining why, to prevent the Routine's
+prompt and this doc from drifting apart again. No `RISK_LIMITS`/
+`config.py`/strategy-parameter change - this is a runbook/automation
+correctness fix, not a new backtested behavior.
+
+## 2026-09-28 (later) — Audit finding: 5 trade_log entries had the wrong fill price; circuit breaker overridden again
+
+Same audit as above. Cross-checked real order fills (`get_crypto_orders`,
+`average_price`) against `state.json`'s `trade_log` and found 5 trades -
+all market orders placed 2026-09-27, the same batch already flagged for
+the order-type policy gap - were logged with the order's entered/
+reference price instead of the real fill VWAP:
+
+| Trade | Recorded | Real fill (`average_price`) |
+|---|---|---|
+| CRV buy | 0.3543 | 0.3507059 |
+| AVAX buy (8.6006 units) | 11.28 | 11.17084012 |
+| DOGE buy 49.64 (already closed) | 0.099893 | 0.09873026 |
+| SOL sell (already closed) | 113.47 | 119.45380832 |
+| LINK sell (already closed) | 13.27 | 13.97131531 |
+
+Every limit order that same day, and one market order (HBAR sell), were
+recorded correctly - the exact cause of the split wasn't confirmed,
+plausibly related to the same market-order handling gap behind the
+order-type policy fix. This matters live: `get_crypto_positions` reports
+0/0 direct cost basis for CRV/AVAX, so `cost_basis_fallback.py` derives
+their `avg_cost_basis` straight from `trade_log`'s price field - the
+wrong price fed directly into the live protective-exit/profit-gate
+checks. Owner approved the fix; `state.json`'s 5 entries corrected to
+`average_price`, each with an explanatory note. Corrected cost bases
+make both currently-held positions look *better* than previously
+recorded (CRV -7.26% vs the earlier-reported -8.05%/-8.20%; AVAX -6.21%
+vs -6.89%/-6.97%) - no gate/stop-loss decision changes as a result, but
+`backtest_2026-09-28_sell_off_gate_review.md` got a correction note since
+its percentage figures (not its dollar figures - those were unaffected)
+were built on the wrong basis.
+
+Same session, owner also explicitly authorized overriding today's
+circuit-breaker halt (see the entry above - this one a REAL trading
+drawdown, not the earlier transfer). Unlike a bare "clear `halted`" (which
+would immediately re-trip against the unchanged, still-breached original
+`starting_equity`), `starting_equity` was reset to the current live
+equity (463.775001544724) as the day's new baseline, matching the
+mechanism used for the morning's transfer-caused override. `can_trade()`
+confirmed `True` afterward. No `RISK_LIMITS`/`config.py` change.
+
+## 2026-09-28 (later still) — Owner-directed manual sell: XLM/CRV/AVAX, overriding the profit gate
+
+Same session. XLM, CRV, and AVAX (all three positions from the sell-off
+review above) were still in a confirmed death-cross (SMA10 below SMA30)
+when re-checked via `scanner_signals.classify` against a fresh production
+scan - `classify()` itself won't re-emit the literal `"fresh_sell_cross"`
+string a second time for a signal that already fired and was handled
+(it's a one-time transition event, tracked via `scanner_state.json`'s
+persisted bullish/pending flags, not a recurring state), but the
+underlying condition it fired on (still bearish, still below the SMA) was
+unchanged. Owner explicitly directed selling all three given this, a
+one-time manual override of `profit_gate.blocks_sell_cross` for these
+specific positions - not a change to `MIN_SELL_PROFIT_PCT` or
+`PLAYBOOK.md` policy, same category of override as the CRV trade-cap
+override earlier this week.
+
+Sold via marketable limit orders (real fill `average_price`, not the
+entered price, learned from the trade_log bug above): XLM 438.33 @
+0.210026 (-$2.80, -2.95%), CRV 213.28 @ 0.326275975 (-$5.21, -6.97%),
+AVAX 10.3848 @ 10.44489346 (-$6.52, -5.67%) - total realized -$14.53.
+All three positions fully closed (`get_crypto_positions` confirmed
+empty). Logged to `state.json`'s `trade_log` (via `RiskManager.record_trade`),
+`position_state.json` (`reset` + `record_exit`, starting the whipsaw
+cooldown), and `cycle_log.json` (`"executed"`, with the override reason).
+
+This is trade 5 of the day against `max_trades_per_day` (4) -
+`can_trade()` now returns `False`, so automated trading is paused for
+the rest of today's UTC day, same as any other day the cap is hit.
+Owner notified via push and Slack. No `RISK_LIMITS`/`config.py` change.
+
+## 2026-09-28 (later still) — Owner-directed trade cap reset for today's market session
+
+Same session. `trades_today` was 5 against `max_trades_per_day` (4),
+hit earlier today from the manual XLM/CRV/AVAX sell before market open,
+which left `can_trade()` `False` and blocked the automated system from
+acting on any real stock signal during today's 9:30-16:00 ET session.
+Owner explicitly directed resetting the counter for today's trading
+time. `trades_today` reset to 0 in `state.json`, logged as an explicit
+override (`overrides` list, same pattern as the two circuit-breaker
+overrides earlier today) and in `cycle_log.json`. `can_trade()` confirmed
+`True` afterward. `RISK_LIMITS["max_trades_per_day"]` itself is
+unchanged (still 4) - this resets today's counter only, not the limit,
+and the cap will apply normally to whatever trades happen for the rest
+of today.
+
+## 2026-09-28 (later still) — Protective exits no longer consume a daily trade slot
+
+Owner request: "The TP and SL are non negotiable trades that will
+execute and does not count towards our daily trades." Stop-loss/
+take-profit exits already bypassed `can_trade()`/the circuit breaker
+entirely (never blockable) - this closes the other half of that gap:
+they previously still incremented `trades_today` once executed, so a
+protective exit earlier in the day could still burn a slot a later,
+real signal needed that same day, even though the exit itself was never
+blockable.
+
+`RiskManager.record_trade(...)` gets a new `protective=False` parameter
+- `True` still appends to `trade_log` (needed for cost-basis tracking/
+daily review) but skips the `trades_today` increment.
+`portfolio_backtest.py`'s `max_trades_per_day` modeling updated to
+match (stop-loss/take-profit no longer increment its internal
+`trades_today`; `backtest.py` has no `max_trades_per_day` concept to
+begin with, so nothing to change there). `PLAYBOOK.md`'s "Per-position
+exit rules" and Hard Rules sections updated, and the live hourly
+Routine's own scheduled prompt updated to match (steps 2 and 6 now call
+`record_trade(..., protective=True)`).
+
+Scope: this covers stop-loss and take-profit only, per the owner's own
+wording ("TP and SL"). A `fresh_sell_cross` death-cross exit and a
+gate-floor-forced exit (`backtest_2026-09-28_gate_floor_and_tighter_stops.md`,
+not yet adopted) are unaffected - both are SMA-signal-driven exits, not
+the stop-loss/take-profit safety net this covers, and both still count
+toward `trades_today` as before.
+
+3 new tests (2 in `test_risk_manager.py`, 1 in `test_portfolio_backtest.py`
+- the latter proves the exemption end-to-end: asset A buys then
+stop-losses out, and a same-day `max_trades_per_day=2` cap still lets
+asset B's later fresh_buy_cross through, which it would not have before
+this change). Full suite green (242/242). No `RISK_LIMITS`/`config.py`
+change - `max_trades_per_day` itself is unchanged, this only changes
+what counts against it.
+
+## 2026-09-28 (later still) — Gate floor + tighter stop-loss/take-profit: adopted
+
+Owner request: "Should the gate come with a floor so it can't hold
+forever? ... let's modify the take profit and stop loss" - answered
+"do whichever is best from backtesting" (floor design) and "tighter
+(smaller moves)" (SL/TP direction). The backtest proposal from earlier
+today (`backtest_2026-09-28_gate_floor_and_tighter_stops.md`) is now
+live, per explicit owner approval.
+
+**`exit_criteria.py`: `STOP_LOSS_PCT` 10% → 4%, `TAKE_PROFIT_PCT` 20% →
+8%** (keeps the existing 1:2 risk/reward ratio). An initial sweep looked
+best at 5%/10%; extending it further (checking neighbors, not trusting
+the first improvement) found 4%/8% as the true worst-case-optimal point
+- below it, whipsaw losses on otherwise-fine assets (TWLO, IBIT) start
+to dominate and the relationship reverses.
+
+**`profit_gate.py`: new `gate_floor_should_force_exit` wired live**,
+via two new constants - `GATE_MAX_HOLD_HOURS = 24` (adopted) and
+`GATE_PRICE_FLOOR_PCT = None` (not adopted - a price floor was tested at
+the new 4%/8% baseline and found redundant: byte-identical backtest
+output to the stop-loss alone once the stop-loss is already this tight).
+A position the profitability gate has been holding for a full day now
+force-exits regardless of P&L, so the gate can no longer hold
+indefinitely - the exact problem the owner asked about.
+
+**`position_state.py`: new `gate_blocked_since` tracking** -
+`mark_gate_blocked`/`clear_gate_blocked`/`hours_since_gate_blocked`, the
+live (wall-clock) equivalent of `backtest.py`'s bar-counted
+`blocked_since_index`. `mark_gate_blocked` is a no-op once already set
+(mirrors the backtest's "if None" guard - a signal blocked for several
+consecutive cycles keeps its original timestamp, not the most recent
+one).
+
+**`PLAYBOOK.md`**: the `fresh_sell_cross` profitability-gate step now
+calls `mark_gate_blocked` when it holds a sell; "Per-position exit
+rules" gets a new step 4 (gate floor - clears on recovery to breakeven,
+otherwise force-exits at the 24h floor) between the stop-loss/take-profit
+check and the protective-exit exemption note; the position-close step
+now also calls `clear_gate_blocked`. New Cycle logging table row for
+`reason="gate_floor"`. Scope, unchanged from the earlier same-day
+protective-exit entry: the gate floor is explicitly **not** protective -
+it's a same-substance stand-in for an ordinary `fresh_sell_cross`
+death-cross exit, so it's still subject to `can_trade()`/the circuit
+breaker and still counts toward `trades_today`.
+
+11 tests updated/added: `test_exit_criteria.py` (2 threshold tests
+retargeted to 4%/8%, 1 test given an explicit `take_profit_pct`
+override to stay isolated from the new tighter default), 5 gate-floor
+tests in `test_backtest.py`/`test_portfolio_backtest.py` given an
+explicit `stop_loss_pct=0.10` override for the same isolation reason
+(their fixtures were built around the old 10% floor), 8 new
+`position_state.py` tests for the new tracking methods. Full suite
+green (249/249). `README.md` updated (Strategy/Exit-criteria/module
+table) to match the new live values.
+
+No `RISK_LIMITS`/`config.py` change - this only touches `exit_criteria.py`
+and `profit_gate.py`'s own module-level constants, per this project's
+existing convention for strategy-parameter tuning.
+
+## 2026-09-28 (later still) — Removed trailing-stop, profit-lock, and the gate price floor
+
+Owner request: "I may be over complicating everything, keep it simple" ->
+"reduce the number of exit/entry gates" -> asked to identify what's
+pulling its weight. Inventory: three mechanisms existed purely as
+disabled code paths, never firing in production because they were built,
+backtested, and explicitly rejected in earlier sessions:
+
+- **Trailing stop** on the post-take-profit remainder (`TRAILING_STOP_PCT`,
+  2026-09-24 request) - every variant tested hurt more than it helped
+  (`backtest_2026-09-24_trailing_stop.md`).
+- **Profit-lock stop** tightening the pre-take-profit floor once a
+  position's peak gain cleared a trigger (`PROFIT_LOCK_TRIGGER_PCT`/
+  `PROFIT_LOCK_STOP_PCT`, 2026-09-25 request) - same result at the
+  requested level plus two neighbors (`backtest_2026-09-25_profit_lock.md`).
+- **Gate price floor** (`GATE_PRICE_FLOOR_PCT`, built earlier today) -
+  confirmed redundant once `STOP_LOSS_PCT` tightened to 4%.
+
+All three stayed `None` (disabled) since adoption - dead code paths and
+parameters with zero live behavioral effect, kept around mainly as
+tested-and-rejected history. Everything the owner actually uses (the
+4%/8% stop-loss/take-profit and the 24h gate time floor, both adopted
+earlier today) is untouched - this is a pure code-simplification pass,
+not a strategy change. Live behavior is identical before and after.
+
+Removed: `exit_criteria.check_exit`'s `peak_price_since_take_profit`/
+`trailing_stop_pct`/`peak_price_since_entry`/`profit_lock_trigger_pct`/
+`profit_lock_stop_pct` parameters and the `TRAILING_STOP_PCT`/
+`PROFIT_LOCK_TRIGGER_PCT`/`PROFIT_LOCK_STOP_PCT` constants;
+`profit_gate.gate_floor_should_force_exit`'s `price_floor_pct` parameter
+and `GATE_PRICE_FLOOR_PCT`; the matching pass-through parameters and
+peak-tracking state in `backtest.py`/`portfolio_backtest.py`.
+`PLAYBOOK.md`/`README.md` updated to describe the simpler `check_exit`/
+`gate_floor_should_force_exit` signatures and point to the rejection
+backtests (still on disk, unchanged) for either idea's full history if
+revisited. 18 tests removed (they tested only the removed mechanisms);
+full suite green (231/231).
+
+## 2026-09-29 — Audit finding: all-time realized P&L was -$189.10, not
+what daily reporting showed; two `trade_log` cost-basis entries stale
+
+Owner asked whether the account was really down ~$185. Reconciled
+against Robinhood's own authoritative record (`get_realized_pnl`,
+`get_pnl_trade_history`, `span=all`) rather than local `daily_logs/*.md`
+running totals: **-$189.10 realized, all-time, across 10 closing
+trades** - confirmed and slightly exceeded the owner's estimate. Full
+write-up: `pnl_reconciliation_2026-09-29.md`.
+
+Root cause of the gap between that figure and local day-to-day
+reporting: two 2026-09-26 transfer-in `trade_log` entries (DOGE, SOL)
+were never given a real cost basis - both used placeholders (a
+detection-time mark price for DOGE, the owner's stated figure for SOL)
+that were never reconciled against the real closing-sale realized gain
+once each position fully closed. SOL's gap was already flagged in
+`daily_logs/2026-09-27.md` but the `trade_log` entry itself was never
+corrected; DOGE's was never checked against `get_pnl_trade_history` at
+all. Derived corrections (same back-calculation method as the
+2026-09-28 VWAP-price audit): DOGE transfer-in leg 0.098310635 ->
+0.180421/unit; SOL transfer-in leg 130.0 -> 166.549955/unit.
+
+**Correction not yet applied** - the `state.json` write was blocked by
+this session's own permission system ("Modify Shared Resources"), even
+though this is an owner-approved, same-session correction. Derived
+values are ready; applying them needs either explicit re-authorization
+of that write or the owner applying them directly. No open position
+depends on either cost basis (both fully closed 2026-09-27/28); no
+`RISK_LIMITS`/`DRY_RUN`/`WATCHLIST`/`STOCK_WATCHLIST`/strategy-parameter
+change as a result.
+
+## 2026-09-29 (later) — Profitability gate re-tested at current settings, net of costs: re-confirmed, not changed
+
+ChatGPT second-opinion review flagged two real gaps in the original gate
+backtest (`backtest_2026-09-28_sell_cross_profit_gate.md`): it ran at the
+superseded 10%/20% stop-loss/take-profit (before 4%/8% + the 24h gate
+floor were adopted later that same day), and modeled no transaction
+costs at all. Added `fee_pct` (round-trip friction, default `0.0`) to
+`backtest.py`/`portfolio_backtest.py` and re-ran the full gate-on/gate-off
+A/B comparison at current production settings, at three fee levels
+(0%/0.05%/0.15% per fill). Full write-up:
+`backtest_2026-09-29_gate_ab_test_with_costs.md`.
+
+**Result reinforces the original decision, doesn't overturn it**: at
+4%/8%, the gate now wins on worst-case (H1) in the stock portfolio too
+(+5.76% vs -4.07% at 0% fee, holding to +4.58% vs -5.17% at the highest
+fee tested) - a cleaner win than the original 10%/20%-level backtest
+found, which only won on full-period mean. Crypto-proxy shows the same
+pattern. MAIR's isolated weakness under the gate reproduces at every fee
+level (already known, already accepted - see the original doc). No
+parameter changed as a result - `MIN_SELL_PROFIT_PCT=0.0` and
+`GATE_MAX_HOLD_HOURS=24` were already live. 245/245 tests pass (7 new,
+covering `fee_pct`).
+
+## 2026-09-29 (later still) — Walk-forward backtest: strategy beats cash in every one of 4 real out-of-sample windows
+
+Last of the three ChatGPT-review follow-ups. Pulled a full year of real
+hourly data and found (before running any backtest) that a real fraction
+of every prior pull in this project's history included
+`interpolated: true` placeholder bars (flat price, zero volume) -
+previously never checked or filtered. After filtering to real bars only:
+9 `STOCK_WATCHLIST` symbols + `IBIT`/`ETHA` share a real 9-month window
+(2025-12-22 to 2026-09-28); MAIR's real data only starts at its April
+2026 IPO (5.3 months). Ran a genuine 4-fold (2-fold for MAIR) walk-forward
+- independent sequential windows, not the H1/H2 split used everywhere
+else in this project - at current production settings, against
+buy-and-hold and cash benchmarks. Full write-up:
+`backtest_2026-09-29_walkforward.md`. Added `profit_factor` to
+`backtest.py`'s `summarize()` along the way (gross gain/loss ratio, in
+pct terms).
+
+**Result: the strategy beat cash in all 4 independent portfolio-level
+windows tested**, with a clear, mechanistically sensible regime pattern -
+it massively outperformed buy-and-hold in the one real down-market
+window (+7.13% vs -12.80%) and gave back some upside in two strong
+bull-market windows (as expected from stop-loss/take-profit capping
+exposure), roughly matching buy-and-hold in the one choppier window.
+MAIR's known weakness reproduced again on real (not proxy) data - a
+third independent method now agreeing with the watchlist-review and
+gate-cost findings. No parameter change - this is validation evidence,
+not a proposal. 247/247 tests pass (2 new, covering `profit_factor`).
+
+## 2026-09-29 (later still) — Loss-budget position sizing evaluation: mixed evidence, not adopted
+
+Fourth and last ChatGPT-review follow-up. Full write-up:
+`backtest_2026-09-29_loss_budget_sizing.md`. Key finding before any
+backtest ran: since `stop_loss_pct` is a single fixed 4% for every asset
+on the live scanner path (`volatility_sizing.py`'s per-asset scaling only
+applies on the unused polling path - `PLAYBOOK.md`'s own documented
+scope note), "size by loss budget" is exact algebra identical to "use a
+smaller flat `max_position_pct`" in this system - `risk_pct = max_position_pct
+x stop_loss_pct`. Backtested 12.5%/10%/6.25% (0.5%/0.4%/0.25% implied
+risk-per-trade) against the current 20% (0.8%), same real walk-forward
+data and folds as the previous doc.
+
+**Result is genuinely mixed, not a clean win for smaller sizing**: 12.5%
+slightly beats 20% on full-period portfolio return and drawdown, but the
+one real down-market fold (F1) clearly favors the current 20% instead -
+smaller sizing gives up real downside protection in exactly the regime
+this strategy exists to handle. Found along the way: at 20% sizing, the
+60% aggregate cap only ever allows 3 of the nominally-allowed 5
+concurrent positions - a real, previously unnoticed interaction between
+`max_position_pct` and `max_aggregate_pct`, likely explaining most of
+12.5%'s edge. Also: `max_aggregate_pct` (60%) x `stop_loss_pct` (4%) =
+2.40% implied worst-case same-day correlated-stop loss, uncomfortably
+close to the 3.00% circuit breaker - a structural observation, not
+separately backtested here.
+
+**No `RISK_LIMITS` change** - evidence doesn't clear this project's bar
+for a live parameter change (worst-case-first, holds across neighbors).
+12.5% flagged as a genuine paper-test candidate per ChatGPT's own
+framing, not a proposal to adopt from this backtest alone.
+
+## 2026-09-29 (later still) — MAIR watchlist review: swap-to-VTRS recommended, not applied
+
+Full write-up: `watchlist_review_2026-09-29_stocks.md`. Third
+independent flag on MAIR (after the 2026-09-26/09-27 reviews and today's
+walk-forward doc's -21.92% real fold). Sourced 6 candidates via the
+production stock scan (SMMT, BURL, BJ, ROIV, HBM, VTRS), backtested
+each in isolation and MAIR on its own real window, then - per the
+2026-09-27 lesson that isolated wins can reverse - confirmed at the
+portfolio level against the full current watchlist over the 676-bar
+window where every member (including MAIR) has real data.
+
+**Every one of the 6 candidates beat the current MAIR-in portfolio on
+full-period return.** VTRS won on the binding portfolio metric (full
+return, worst-case fold, drawdown, and turnover all favor it), despite
+ranking only #5 of 6 in isolation - HBM ranked #1 in isolation but #2 at
+the portfolio level. A third instance of the isolated/portfolio ranking
+flip this project keeps finding.
+
+**Recommendation only: swap MAIR -> VTRS in `STOCK_WATCHLIST`.**
+`config.py` not edited - waiting on owner approval. MAIR carries zero
+open positions and zero trade history, so no liquidation step is needed
+if approved.
+
+## 2026-09-29 (later still) — MAIR -> VTRS swap approved and applied
+
+Owner approved the recommendation from the same-day review doc.
+`config.py` changed: `STOCK_WATCHLIST`: `MAIR` -> `VTRS`. No sell order
+needed - confirmed via `get_equity_positions` that the account holds
+zero open equity positions of any kind at the time of the swap. Real
+Robinhood "Trading Agent — Stock Watchlist" (`147f9bb2-...`) updated to
+match (`MAIR` removed, `VTRS` added), same step as every prior approved
+swap. Full reasoning: `watchlist_review_2026-09-29_stocks.md`. 247/247
+tests passing (no test logic changed, config-only edit).
+
+## 2026-09-29 (later still) — DOGE/SOL cost-basis correction applied
+
+Applied the correction identified in `pnl_reconciliation_2026-09-29.md`
+(the same-day audit that found the true all-time realized P&L, -$189.10
+per `get_realized_pnl`, diverged from local `trade_log` estimates due to
+two stale transfer-in cost bases). `state.json`'s `trade_log`: DOGE
+transfer-in buy entry price `0.098310635` -> `0.180421`; SOL transfer-in
+buy entry price `130.0` -> `166.549955`. Both back-calculated from
+Robinhood's own real `sell_price`/`realized_gain` on each position's
+closing sale, same method as the 2026-09-28 audit's five VWAP
+corrections. Both positions were already fully closed before this
+landed - historical P&L accuracy only, no effect on any live
+protective-exit calculation. 247/247 tests passing.
+
+## 2026-09-29 (later still) — Walk-forward backtest re-run with VTRS, fresh data
+
+Full write-up: `backtest_2026-09-29_walkforward_v2_vtrs.md`. Re-ran the
+same-day 4-fold walk-forward with the current live watchlist (`VTRS` in
+place of `MAIR`, following today's approved swap) and a fresh data pull
+- not because the DOGE/SOL or AVAX record fixes required it (backtests
+never read `trade_log`/`state.json`), but because the watchlist itself
+changed. Same result holds: strategy beats cash in all 4 folds,
+including an even wider down-market outperformance in F1 (+10.84% vs.
+buy-and-hold's -9.75%) than the original 11-symbol run. VTRS's one weak
+fold (F3, -10.71%) reproduces the same weakness already found in the
+watchlist review's shorter overlap window - not new. No parameter
+change; reconfirms the strategy on the updated watchlist.
+
+## 2026-09-29 (later still) — 70% partial stop-loss backtested, rejected
+
+Full write-up: `backtest_2026-09-29_partial_stop_loss_rejected.md`.
+Owner proposed matching stop-loss to take-profit's shape (70% partial,
+once per position). Backtested before implementing (COLLABORATION.md
+rule). Worst-case-first, it weakens down-market protection (portfolio
+F1 +10.84% -> +3.34%, the exact regime stop-loss exists to protect)
+without a consistent full-period upside elsewhere. **Rejected - no
+code change.**
+
+## 2026-09-29 (later still) — 24h gate floor removed
+
+Full write-up: `backtest_2026-09-29_gate_floor_removal.md`.
+`profit_gate.GATE_MAX_HOLD_HOURS`: `24` -> `None`. Backtested first: the
+floor rarely triggered in the same 9-month real dataset (portfolio
+F1-F3 byte-identical with vs. without it); removing it improved
+full-period return and combined drawdown (+39.05%/6.44% ->
++42.56%/5.41%). One real caveat found and flagged before applying:
+stocks alone saw worse full-period drawdown without it (6.41% ->
+7.60%) - owner reviewed and proceeded anyway, accepting low confidence
+either way given how rarely the floor actually fired in this window.
+247/247 tests passing (no test depended on the module-level default).
+
+## 2026-09-29 (later still) — MACD+RSI combo strategy backtested, rejected
+
+Full write-up: `backtest_2026-09-29_macd_rsi_strategy_rejected.md`.
+Owner requested testing a source-verified MACD+RSI strategy (MACD
+signal cross + RSI<60 + price>SMA200 entry, RSI>=75 exit) as a possible
+replacement for SMA(10,30) crossover. Backtested with our own risk
+management layered on (4%/8% SL/TP) - the real "should we switch"
+question. **SMA wins on 9 of 12 symbols**, often by a wide margin on
+the strongest trend names (CRDO 87.97% vs 23.01%, CRWD 66.65% vs
+-6.77%) - same root cause as the 2026-09-23 RSI rejection: this is a
+trend-following strategy, and a mean-reversion-flavored exit (RSI
+recovery to 75) gives back exactly the upside SMA crossover exists to
+capture. MACD+RSI won on 3 of 12 (both crypto proxies + PYPL) - a real
+but narrow signal, not enough to justify a switch. **Rejected - no
+code change.**
+
+## 2026-09-29 (later still) — Two live sizing/execution bugs found and fixed
+
+Found live during real hourly cycles today, not a backtest change - no
+strategy or risk parameter touched, both are correctness fixes.
+
+1. **`RiskManager.can_auto_execute` float-precision false negative**
+   (LIT, $91.25): every real call site sizes an order via
+   `position_size()` then recomputes its actual notional as
+   `quantity * price` (the number that actually gets placed) - float
+   division then multiplication doesn't always exactly invert, so that
+   notional can land a few ulps on the wrong side of
+   `portfolio_value * auto_execute_max_pct`. Live case: notional
+   `91.25317997295242` against a cap of `91.25317997295241` - the same
+   value, 1.4e-14 apart, wrongly forced a correctly-sized, in-budget
+   order into manual review instead of auto-executing. Fixed with
+   `math.isclose(..., rel_tol=1e-9)` alongside the existing `<=` -
+   absorbs float noise many orders of magnitude below any real
+   overage while still rejecting a genuine one (regression test
+   confirms a real $1-over-cap case still blocks).
+2. **Fractional equity sizing can't be placed as a marketable limit
+   order** (PANW, $92.03 sized to 0.2413 shares): `place_equity_order`
+   only accepts a fractional `quantity` on `type=market`, never
+   `type=limit` - and PLAYBOOK.md's equity policy requires `type=limit`
+   for price protection (see the 2026-09-27 order-type-policy-gap
+   incident above). Added `equity_signals.whole_share_quantity()` -
+   floors a risk-sized quantity to a whole share, which can only size
+   the order at or under budget, never over it; `0.0` means even one
+   share exceeds this cycle's budget, the signal to present as
+   `"recommended"` instead of auto-executing. PLAYBOOK.md's equity
+   execution steps now call this out explicitly - never round up over
+   the cap, never drop to `type=market` to force the exact fractional
+   quantity through.
+
+Both were found via the routine's own live cycles today, not invented
+- see `cycle_log.json`'s `2026-09-29T15:32:00` (LIT) and PANW's
+`recommended` entries. 5 new regression tests
+(`test_risk_manager.py`, `test_equity_signals.py`). 252/252 passing.
+
+## 2026-10-04 — BCH sell approved and executed; AVAX auto-executed; two things flagged, not yet resolved
+
+BCH fired a `fresh_sell_cross` at 23:09 UTC on a held position at
++3.02% (cleared the profitability gate). Order notional was $93.12
+against a $90.80 `auto_execute_max_pct` cap (20% of the $453.99
+portfolio) - about $2.3 over, not float noise - so it was logged
+`"recommended"` and held for approval per policy. Owner's response:
+"If we are in the green and a death cross signals. Sell" - read as
+approval for this specific trade, which was then placed and filled
+(0.29480179 BCH at $316.10, $0 fee) and recorded via `run_cycle.py`'s
+`--record-trade-*` flags.
+
+Immediately after, the same cycle's AVAX `fresh_buy_cross` ($91.49
+notional, under the unchanged buy-side cap) auto-executed normally per
+the existing, unrelated bounded auto-execution policy (8.1531 AVAX at
+$11.2214, $0 fee).
+
+**Open question, not yet decided**: whether the owner's comment should
+become a *standing* rule - "a `fresh_sell_cross` that has already
+cleared the profitability gate always auto-executes regardless of
+notional size" - rather than a one-off approval of the BCH trade.
+A first pass at writing that rule into `PLAYBOOK.md` was drafted and
+then reverted the same day, pending explicit confirmation: removing a
+sizing gate from a live real-money system is exactly the kind of
+change this project's collaboration rules require explicit owner
+sign-off for, and a short one-line message approving one specific trade
+is not clearly that. `RISK_LIMITS`/`auto_execute_max_pct` itself was
+never touched either way. Revisit once the owner confirms intent.
+
+**Separately, a real order-type deviation happened in this same cycle**:
+both the BCH sell and the AVAX buy were placed with `type=market`
+instead of the marketable-limit-order policy `PLAYBOOK.md` has required
+since 2026-09-24 (see the 2026-09-27 order-type-policy-gap incident
+above - this is the same mistake recurring, not a new one). Both fills
+landed close to the pre-trade quote (BCH sold at $316.10 against a
+~$315.86-$318.87 bid/mark range; AVAX bought at $11.2214 against an
+~$11.12-$11.33 mark/preview range) with $0 fee either way, so no real
+cost resulted this time, but that is luck, not the policy working, same
+conclusion as 2026-09-27. No code enforces the limit-order requirement
+today; it depends on the implementing step remembering it every time
+real orders are placed outside `run_cycle.py`'s own (order-placement-free)
+script. Flagged here rather than silently corrected going forward only -
+worth a real fix (e.g. a small wrapper that takes side/symbol/quantity
+and always resolves a marketable limit price from a fresh quote) so
+this class of mistake stops depending on memory each cycle.
+
+## 2026-10-04 (later, same day) — Both open items resolved: standing rule confirmed, order-type helper added
+
+**Standing rule confirmed.** Owner explicitly confirmed (asked directly
+whether the BCH approval above should be a one-off or a standing rule):
+"Standing rule, go ahead." `PLAYBOOK.md`'s crypto cycle step 3, the
+stock cycle's equivalent note, and the "Hard rules" summary now all
+state it plainly: a `fresh_sell_cross` that has already cleared the
+profitability gate (position at or above breakeven) auto-executes
+unconditionally, regardless of notional size - `RiskManager.can_auto_execute`
+is no longer consulted for this one case. Scope unchanged from the
+draft written (then reverted) earlier today: applies only to a
+gate-cleared `fresh_sell_cross`, never to a fresh buy, a gate-floor-forced
+exit, or stop-loss/take-profit (the latter two were already
+unconditional). `RISK_LIMITS`/`auto_execute_max_pct` itself is still
+untouched - this is a procedural exception in `PLAYBOOK.md`, not a
+config change.
+
+**Order-type bug fixed.** New module `trading_agent/order_pricing.py`
+(`marketable_limit_price(side, bid, ask, buffer_pct=0.001)`) - the "small
+wrapper" proposed in the entry above. Since no code in this repo places
+orders (every real order is an MCP tool call made directly from
+`PLAYBOOK.md`'s instructions each cycle - see the 2026-09-27 root-cause
+note above), this can't be a fix to order-placement code; it's a fix to
+*how the limit price gets picked*, turning a recalled policy ("remember
+to use type=limit, remember to pick a sensible price") into a single
+tested function call. `PLAYBOOK.md` updated at all four real
+order-placement sites (crypto scanner-cycle entries/exits, stock
+scanner-cycle entries/exits, crypto protective stop-loss/take-profit,
+and the stock-side note that already deferred to "as above") to call
+this function with the cycle's fresh quote instead of hand-picking a
+price. 4 new tests (`tests/test_order_pricing.py`): buy prices above the
+ask, sell prices below the bid, a custom buffer override, and an invalid
+`side` raising. Full suite: 258/258 passing
+(`trading_agent/tests/` + `research_agent/tests/`).
+
+This does not retroactively fix the two live incidents already logged
+(2026-09-27, 2026-10-04 earlier today) - both already recorded,
+no trades reversed. It only prevents a third recurrence.
+
+## 2026-10-05 — `run_cycle.py` record/classify dedup bug fixed (`--record-only`)
+
+**Trigger**: owner shared the live Trade Ledger with Codex in
+`#voltrap-agents-work` for a deeper quant review; Codex's reply (Priority
+2 of its 5-priority plan) identified that recording an executed trade
+was coupled to re-running classification, and asked for it to be made an
+isolated operation with regression tests. Owner then asked to act on
+that specifically.
+
+**The bug**: `scanner_signals.classify()` persists each asset's
+bullish/bearish + pending/confirmed state to `scanner_state.json` on
+*every* call, with no notion of "this is the same real-world cycle as
+the last call." A trade's real fill price/quantity is only known
+*after* the order is placed, which is after this cycle's classification
+has already been read from a first `run_cycle.py` invocation - so
+attaching `--record-trade-*` flags required a *second* invocation, and
+until today that second invocation still took `--scan-file`/
+`--historicals-file`/`--quotes-file`/`--positions-file` and so still ran
+the full classification loop a second time on identical input, silently
+advancing `scanner_state.json`'s persisted state an extra tick. Observed
+live more than once this session: 2026-10-05 ~17:12 UTC, XLM showed
+`fresh_sell_cross` only on the second call of that cycle, not the first,
+on an unchanged scan snapshot (logged in `cycle_log.json` with an
+explicit note at the time); the same pattern recurred at ~19:21 UTC
+(DOGE/CRV/ZORA). Both times the live effect was contained (none of the
+affected assets were held, so the spurious/suppressed signal only
+changed a `blocked_no_position` log line, not a real action) - but it
+was luck that no held position was involved, not a property of the code.
+
+**The fix**: `run_cycle.py` gets a new `--record-only` flag. When set,
+it skips the classification loop and the protective-exit-check loop
+entirely - recording a fill that was already decided and placed from an
+earlier invocation's classification needs neither - and does not
+require `--scan-file`/`--historicals-file`/`--quotes-file`/
+`--positions-file` at all, only `--portfolio-file` (kept for the
+circuit-breaker status line, which is read-only and safe to print
+repeatedly) and the existing `--record-trade-*` flags. `--positions-file`
+changed from argparse `required=True` to conditionally required
+(mirrors the existing scan-file-vs-historicals/quotes-file validation
+pattern already in this script). `PLAYBOOK.md`'s "Recording an executed
+trade" guidance updated to require `--record-only` on that second
+invocation - the previous wording ("on the *same* `run_cycle.py`
+invocation") was aspirational and not actually achievable for a fresh
+entry/exit, since the fill isn't known until after the first
+invocation's output is acted on.
+
+5 new regression tests (`tests/test_run_cycle.py`): `--record-only`
+rejects a call with no `--record-trade-asset`; doesn't require
+scan/historicals/quotes/positions files; still writes to
+`RiskManager.trade_log`/`state.json` and `CycleLogStore`/`cycle_log.json`
+correctly (including the `--record-trade-protective` daily-cap
+exemption); and the direct regression proof - pre-seed a pending
+bearish-to-bullish flip, confirm a `--record-only` call leaves
+`scanner_state.json` byte-for-byte unchanged, then confirm the *old*
+pattern (a second plain invocation with the same `--scan-file`) still
+mutates it further on the identical input, demonstrating this is a real,
+reproducible bug the new flag actually avoids, not a hypothetical one.
+Full suite: 262/262 passing (`trading_agent/tests/` + `research_agent/tests/`).
+
+Not yet done (out of scope for this fix, flagged for a later pass):
+Codex's Priority 2 also asked for "deduplicate broker fills and process
+each symbol/timeframe/closed-candle timestamp once" and restart/failed-
+write-recovery tests - this fix addresses the classify-on-record
+coupling specifically (the mechanism actually observed live twice this
+session), not a general fill-deduplication or crash-recovery layer.
+
+## 2026-10-05 (later, same day) — Reconciled ledger built (Priority 1, Codex review); true total is -$200.07, not -$199.4x
+
+**New module**: `trading_agent/reconcile_ledger.py`. Builds one
+canonical ledger from real broker records
+(`get_crypto_orders`/`get_equity_orders` for order-level truth,
+`get_pnl_trade_history` for Robinhood's own authoritative realized
+gain/loss per closing trade) instead of recomputing P&L locally from
+`trading_agent/state.json`'s `trade_log`. Full writeup, including the
+three specific discrepancies Codex's review flagged (BTC +$0.17/+1.13%
+vs +$0.18/+0.20%; CRV -4.13% vs -5.35%; the "pre-tightening" mislabeling
+on three real post-tightening trades) and the methodology, in
+`trading_agent/reconciliation_2026-10-05.md`.
+
+**Headline correction**: the true realized total, confirmed by TWO
+independent Robinhood endpoints agreeing exactly
+(`get_pnl_trade_history` span=all summed by hand, and
+`get_realized_pnl` span=all's own aggregate), is **-$200.07 across 15
+closed trades (5W/10L, 33.3% win rate)** - not the -$199.44/"16
+round-trips" this session reported earlier today, nor Codex's
+-$199.43 re-derivation of that same figure. Both prior numbers were
+built from the local `trade_log`/dashboard backfill, which turns out to
+be missing two real orders: a 2026-09-22 PEPE buy (so PEPE's real -$0.50
+loss was reported as a $0.00 "flat" trade) and a 2026-09-27 $96.51 DOGE
+buy that was never sold on this platform (transferred out - not a
+trading win or loss at all, and should never have been counted as
+either). Both are now added to the Trade Ledger dashboard's `trades`
+collection as new documents (nothing edited or removed), plus a visible
+reconciliation note in its `notes` collection.
+
+**New general-purpose check**: `detect_quantity_gaps()` compares each
+asset's broker-order-implied net quantity against its real current
+holding - any nonzero gap beyond a tight tolerance means the asset moved
+by a transfer, not an order. Run against the real account, every traded
+asset except SOL and DOGE shows zero gap (fully explained by real
+orders alone); SOL's +1.6604 gap matches the already-known 2026-09-26
+transfer-in almost exactly, confirming the check works correctly on
+real data, not just synthetic fixtures.
+
+**New general-purpose record**: `STRATEGY_VERSIONS` +
+`strategy_version_at()`, sourced from the real
+`git log --follow -- trading_agent/exit_criteria.py` commit timestamps
+(10%/15% from 2026-09-22, 10%/20% from 2026-09-25, 4%/8% from
+2026-09-28T17:39:15Z) rather than a hand-guessed "era" - directly fixing
+the three-trade mislabeling above and preventing a repeat.
+
+10 new tests (`tests/test_reconcile_ledger.py`): version-boundary
+lookups, order-filtering (non-`filled` states skipped), realized-gain
+matching and the unmatched-disposal case, flat-tolerance win/loss/flat
+classification, and both directions of `detect_quantity_gaps()`. The
+module was also run directly against this session's real, live-fetched
+`get_crypto_orders`/`get_pnl_trade_history` data (33 crypto legs,
+2026-09-22 through 2026-10-05) and reproduced the authoritative
+-$200.07/15/5W-10L exactly. Full suite: 272/272 passing
+(`trading_agent/tests/` + `research_agent/tests/`).
+
+Not yet done (out of scope for this pass, see
+`reconciliation_2026-10-05.md`'s own "Not yet done" section for detail):
+wiring the live dashboard's own P&L computation to call this module
+directly instead of reading its separately-maintained `trades`
+collection copy; equity-order support is implemented but untested
+against a real filled stock order (none exist on this account yet);
+per-trade holding-time/MFE-MAE/detection-to-fill-latency instrumentation
+(Codex's Priority 3) - the CRV and LINK/AVAX/DOT slippage findings in
+this pass are a manual first look at exactly that, not yet a general
+computation.

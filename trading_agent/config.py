@@ -41,8 +41,18 @@ WATCHLIST = [
 # the two worst 90-day backtested performers (-22.77%/-30.71%); CRDO/PYPL
 # backtested +17.59%/+16.82% and passed the same $10B+ market cap screen.
 # See watchlist_review_2026-09-26_stocks.md and CHANGELOG.md.
+# MAIR -> VTRS (2026-09-29 watchlist review): MAIR was independently
+# flagged as the weakest member 3 times (2026-09-26/09-27 reviews, then
+# the 2026-09-29 walk-forward backtest's -21.92% real fold). Sourced 6
+# candidates via the production scan; every one beat MAIR at the
+# portfolio level (not just isolated). VTRS won on the binding portfolio
+# metric (+31.66% vs. MAIR-in's +17.64% full-period, best worst-case
+# fold among top candidates, lower turnover) despite a mediocre isolated
+# result - another isolated/portfolio ranking flip. MAIR had zero open
+# positions and zero trade history, so no liquidation was needed. See
+# watchlist_review_2026-09-29_stocks.md and CHANGELOG.md.
 STOCK_WATCHLIST = [
-    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "MAIR", "AR", "PYPL",
+    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "VTRS", "AR", "PYPL",
 ]
 
 STRATEGY = {
@@ -58,23 +68,27 @@ RISK_LIMITS = {
                                      # max_aggregate_position_pct below, not this value alone.
                                      # History: CHANGELOG.md.
     "daily_loss_limit_pct": 0.03,   # halt all trading for the day past 3% drawdown
-    "max_trades_per_day": 3,        # combined across all watchlist assets (crypto + stocks
-                                     # share this one counter). Backtest-validated at 3 - see
-                                     # backtest_2026-09-24_trade_cap.md and CHANGELOG.md.
-    "auto_execute_max_usd": 100.0,   # fresh-crossover orders at/under this notional execute
+    "max_trades_per_day": 4,        # combined across all watchlist assets (crypto + stocks
+                                     # share this one counter). Raised from 3 (2026-09-27,
+                                     # owner request for more room) - the one value with a
+                                     # positive worst-case on both real test beds checked:
+                                     # STOCK_WATCHLIST's own 90-day data (worst +0.28%, vs 3's
+                                     # +2.70% - a modest give-up) and a real 3.7-year, more
+                                     # volatile 8-symbol universe (worst +5.82%, vs 3's +3.77% -
+                                     # better there). See backtest_2026-09-24_trade_cap.md and
+                                     # backtest_2026-09-27_trade_cap_recheck.md, and CHANGELOG.md.
+    "auto_execute_max_pct": 0.20,    # fresh-crossover orders at/under this fraction of current
+                                     # total portfolio value (RiskManager.can_auto_execute,
+                                     # computed fresh each cycle from get_portfolio) execute
                                      # automatically (all watchlist assets); larger orders
-                                     # still require explicit per-trade approval. History:
-                                     # CHANGELOG.md.
-                                     # NOTE (2026-09-24 audit): at the current ~$200 portfolio
-                                     # and 20% max_position_pct, the largest possible single
-                                     # trade is ~$40 - well under this $100 threshold, so the
-                                     # approval gate can't currently trigger; every properly-
-                                     # sized entry auto-executes. This is intentional headroom
-                                     # for when the account grows, not a bug - but it means the
-                                     # "requires approval above $100" description above isn't
-                                     # doing anything today. Revisit if/when the account grows
-                                     # enough for $100 to be reachable, or lower this value if
-                                     # the approval gate should have teeth sooner.
+                                     # still require explicit per-trade approval. Set equal to
+                                     # max_position_pct (2026-09-27, owner request) so a
+                                     # properly-sized confirmed entry always auto-executes and
+                                     # approval stays the exception (oversized/unconfirmed
+                                     # signals only) - the original 2026-09-22 design intent.
+                                     # Replaces the flat-dollar auto_execute_max_usd, which was
+                                     # a one-time snapshot of portfolio value (2026-09-23) that
+                                     # went stale as equity changed - see CHANGELOG.md.
     "max_concurrent_positions": 5,  # at most this many WATCHLIST assets may have an open
                                      # position at once (~1/3 of the 15-asset watchlist) -
                                      # see backtest_2026-09-23.md's concurrent-positions sweep
@@ -114,7 +128,7 @@ RISK_LIMITS = {
 
 # Master safety switch: no real orders are placed while True, auto-executed
 # or approved. The bounded auto-execution policy above (RISK_LIMITS
-# ["auto_execute_max_usd"]) is owner-authorized and ready, but flipping
+# ["auto_execute_max_pct"]) is owner-authorized and ready, but flipping
 # this to False is a separate, deliberate action the account owner takes
 # themselves - see CHANGELOG.md.
 DRY_RUN = False

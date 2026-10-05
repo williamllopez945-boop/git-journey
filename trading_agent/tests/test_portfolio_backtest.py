@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from trading_agent.portfolio_backtest import portfolio_backtest, summarize_portfolio
@@ -208,3 +210,119 @@ def test_awesome_trade_params_none_behaves_like_before_the_parameter_existed():
         awesome_trade_min_crossover_pct=None, awesome_trade_aggregate_pct=None,
     )
     assert eq_a == eq_b
+
+
+_DEATH_CROSS_AT_A_LOSS = (
+    [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.8, 8.7, 8.6, 8.6, 8.6]
+)  # buy confirms at 9 (index 37), death-cross confirms at 8.7 (index 40,
+   # -3.33% from entry) - underwater but well above a 10% stop-loss floor.
+   # These death-cross/gate tests override stop_loss_pct back to 10% (the
+   # module default tightened to 4% 2026-09-28) to stay isolated to
+   # testing the profit-gate logic, not the stop-loss.
+
+
+def test_death_cross_sells_at_a_loss_when_gate_explicitly_disabled():
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=None, stop_loss_pct=0.10,
+    )
+    death_crosses = [t for t in trades if t["reason"] == "death_cross"]
+    assert len(death_crosses) == 1
+    assert death_crosses[0]["price"] == 8.7
+
+
+def test_death_cross_held_by_default_now_that_gate_is_adopted():
+    # No min_sell_profit_pct passed - the adopted 2026-09-28 default
+    # (0.0, breakeven) now applies automatically.
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        stop_loss_pct=0.10,
+    )
+    assert not any(t["reason"] == "death_cross" for t in trades)
+    assert final_state["A"]["qty"] > 0  # position stayed open
+
+
+def test_gated_death_cross_does_not_consume_a_daily_trade_slot():
+    series = {"A": list(_DEATH_CROSS_AT_A_LOSS)}
+    timestamps = ["2026-01-01"] * len(_DEATH_CROSS_AT_A_LOSS)
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0, timestamps=timestamps, max_trades_per_day=1,
+        stop_loss_pct=0.10,
+    )
+    # the one daily slot went to the buy; the blocked death-cross took none
+    assert len([t for t in trades if t["action"] == "buy"]) == 1
+    assert not any(t["reason"] == "death_cross" for t in trades)
+
+
+_DEATH_CROSS_LONG_HOLD = (
+    [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.8, 8.7, 8.6] + [8.6] * 10
+)  # same block as _DEATH_CROSS_AT_A_LOSS, held flat afterward instead of
+   # ending right at the block.
+
+def test_gate_time_floor_forces_exit_after_max_hold_bars():
+    series = {"A": list(_DEATH_CROSS_LONG_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=0.0, gate_max_hold_bars=5, stop_loss_pct=0.10,
+    )
+    floor_exits = [t for t in trades if t["reason"] == "gate_floor"]
+    assert len(floor_exits) == 1
+    assert final_state["A"]["qty"] == 0.0
+
+
+def test_protective_exit_does_not_consume_a_daily_trade_slot():
+    # A buys (uses the day's 1st of 2 slots), then stop-losses out shortly
+    # after - with the 2026-09-28 owner-requested exemption, that exit
+    # doesn't consume the 2nd slot, so B's later fresh_buy_cross the same
+    # day still goes through. Before that exemption, A's buy+stop_loss
+    # alone would have hit the cap=2 ceiling and blocked B's buy.
+    A = [5.0] * 30 + [5, 5, 5, 5, 5, 9, 9, 9] + [8.0] * 10
+    B = [5.0] * 30 + [5, 5, 5, 5, 5, 5, 5, 5] + [5.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    series = {"A": A, "B": B}
+    timestamps = ["2026-01-01T00:00:00Z"] * len(A)
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=0.5, max_concurrent_positions=None,
+        timestamps=timestamps, max_trades_per_day=2,
+    )
+    assert any(t["asset"] == "A" and t["reason"] == "stop_loss" for t in trades)
+    assert any(t["asset"] == "B" and t["action"] == "buy" for t in trades)
+
+
+def test_fee_pct_zero_is_unchanged_from_default_behavior():
+    series = {"A": list(_RAMP_AND_HOLD)}
+    a = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                            max_position_pct=0.5)
+    b = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                            max_position_pct=0.5, fee_pct=0.0)
+    assert a == b
+
+
+def test_fee_pct_reduces_quantity_bought_and_sell_proceeds():
+    series = {"A": list(_RAMP_AND_HOLD)}
+    trades_free, _, _ = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                                            max_position_pct=0.5, fee_pct=0.0)
+    trades_fee, _, _ = portfolio_backtest(series, short_window=2, long_window=4, starting_cash=1000.0,
+                                           max_position_pct=0.5, fee_pct=0.01)
+    buy_free = next(t for t in trades_free if t["action"] == "buy")
+    buy_fee = next(t for t in trades_fee if t["action"] == "buy")
+    assert buy_fee["qty"] == pytest.approx(buy_free["qty"] / 1.01, rel=1e-9)
+
+
+def test_gate_floor_does_not_fire_on_a_position_never_blocked():
+    series = {"A": list(_DEATH_CROSS_LONG_HOLD)}
+    trades, equity_curve, final_state = portfolio_backtest(
+        series, short_window=2, long_window=4, starting_cash=1000.0,
+        max_position_pct=1.0, max_concurrent_positions=None,
+        min_sell_profit_pct=None, gate_max_hold_bars=1,
+        stop_loss_pct=0.10,
+    )
+    assert not any(t["reason"] == "gate_floor" for t in trades)
+    assert any(t["reason"] == "death_cross" for t in trades)

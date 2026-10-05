@@ -10,8 +10,10 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > **Live trading status (2026-09-22): LIVE.** `DRY_RUN = False`, flipped
 > directly by the account owner (Claude Code's own auto-mode safety
 > classifier blocked doing this via an agent commit twice; the owner did
-> it themselves via a direct push to `main`). `RISK_LIMITS["auto_execute_max_usd"]`
-> is $100 (raised from $5 on 2026-09-23), `max_position_pct` is 20% (5% →
+> it themselves via a direct push to `main`). `RISK_LIMITS["auto_execute_max_pct"]`
+> is 20% of current total portfolio value (a flat $100 cap 2026-09-23 →
+> a percentage 2026-09-27, so it scales with equity - see `CHANGELOG.md`),
+> `max_position_pct` is 20% (5% →
 > 50% → 15% → 20% the same day, across three re-backtested passes — see
 > "Risk limits" and "Concurrent-positions cap" below), and
 > `max_aggregate_position_pct` is a new **hard cap at 50% of portfolio
@@ -23,8 +25,9 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > reaches, **the $100 threshold no longer meaningfully gates anything** —
 > a properly-sized, strategy-confirmed entry now auto-executes with no
 > per-trade approval essentially always, not just "at or under" some
-> binding threshold. Per-position stop-loss (10%) and partial take-profit
-> (15%, sells 70%) also execute automatically once `DRY_RUN` is `False`
+> binding threshold. Per-position stop-loss (4%) and partial take-profit
+> (8%, sells 70%; tightened from 10%/20% 2026-09-28, see `CHANGELOG.md`)
+> also execute automatically once `DRY_RUN` is `False`
 > — see "Exit criteria" below. First real trade placed 2026-09-22: $5.02
 > PEPE buy, a discretionary override (not a strategy-confirmed signal). A
 > confirmed buy cross on the scanner path is also gated on real crypto
@@ -219,8 +222,9 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `equity_signals.py` | Computes `STOCK_WATCHLIST`'s sma10/sma30/pct_change/relative_volume directly from `get_equity_historicals` + `get_equity_quotes` per symbol, feeding `scanner_signals.classify` the same way the crypto scan does. Added 2026-09-25 to replace the retired stock scan as a signal source — see "Known gap: stock scan pagination" below |
 | `volume_filter.py` | Volume entry confirmation filter — blocks a fresh buy on unconvincing, low-volume breakouts — see `backtest_2026-09-23.md`'s "Volume entry confirmation filter" section |
 | `cost_basis_fallback.py` | Computes average cost basis from the local trade log, as a fallback for when `get_crypto_positions` reports a zero cost basis on a real held position (see "Known gap: cost basis" below) |
-| `exit_criteria.py` | Per-position stop-loss (10%) and partial take-profit (15%, sells 70%) checks, independent of the SMA signal |
-| `position_state.py` | Tracks take-profit state (fires once per position) and the post-exit whipsaw cooldown (4h, blocks re-entry) — persisted to `position_state.json` |
+| `exit_criteria.py` | Per-position stop-loss (4%) and partial take-profit (8%, sells 70%) checks, independent of the SMA signal. Tightened from 10%/20% 2026-09-28 (owner request) — see `backtest_2026-09-28_gate_floor_and_tighter_stops.md` |
+| `profit_gate.py` | Profitability gate for the death-cross/`fresh_sell_cross` exit (`blocks_sell_cross`) — holds the exit instead of executing it while the position is below `MIN_SELL_PROFIT_PCT` (0%, breakeven or better). Backtested 2026-09-28 (see `backtest_2026-09-28_sell_cross_profit_gate.md`) and **adopted the same day** (owner approval) — live in `PLAYBOOK.md`'s `fresh_sell_cross` procedure for both crypto and stocks, logged as `"blocked_unprofitable"` when it holds. Never overrides stop-loss/take-profit, which run independently every cycle. Also owns the **gate floor** (`gate_floor_should_force_exit`, added 2026-09-28) — a 24h time floor (`GATE_MAX_HOLD_HOURS`) that forces a still-gated position out regardless of P&L, so the gate can't hold forever. A companion price floor was backtested the same day, found redundant once the stop-loss is this tight, and removed entirely rather than kept disabled |
+| `position_state.py` | Tracks take-profit state (fires once per position), the post-exit whipsaw cooldown (4h, blocks re-entry), and (added 2026-09-28) how long a position has been held under the profitability gate, for the gate floor above — all persisted to `position_state.json` |
 | `backtest.py` | Runs the exact production strategy/exit code against a historical closing-price series — see `backtest_2026-09-23.md` for results |
 | `risk_manager.py` | Position sizing (flat or volatility-scaled, plus a hard aggregate cap across all open positions), daily loss circuit breaker, daily trade cap, concurrent-positions cap — persisted to `state.json` |
 | `volatility_sizing.py` | Scales the position-size cap down for higher-volatility assets relative to a benchmark (BTC) — see `volatility_sizing_2026-09-23.md` |
@@ -230,6 +234,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `daily_review.py` | Assembles the end-of-day after-action review from `cycle_log.py` + `RiskManager`'s trade log, including a chronological executive summary of every buy/sell/hold decision and why — see "Daily after-action review" below |
 | `voltrap_state.py` | VOLTRAP (options wheel strategy, added 2026-09-26, renamed same day) — per-symbol state machine (idle → csp_open → holding_shares → covered_call_open → ...), persisted to `voltrap_state.json`. See "VOLTRAP" below |
 | `voltrap_candidates.py` | VOLTRAP — candidate ranking (`rank_by_voltrap_fit`) and strike selection (`pick_strike_by_delta`/`pick_strike_by_otm_pct`), pure functions mirroring `watchlist_review.py`'s pattern |
+| `order_pricing.py` | Resolves the marketable-limit-order price (`marketable_limit_price`) PLAYBOOK.md's order-type policy requires for every real order. Added 2026-10-04 after the policy lapsed back to `type=market` live twice (2026-09-27, 2026-10-04) despite being written down both times — no code in this repo places orders, so making the correct limit price a single tested function call is the only durable fix available |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -304,19 +309,34 @@ which is inherent to the approach, not something tuning fixes.
 
 **Exit — three independent triggers, whichever fires first (or both):**
 1. **SMA death cross** — short SMA crosses below the long SMA. Exits the
-   full position (`strategy.py`).
-2. **Stop-loss (10%)** — current price is 10% or more below the position's
+   full position (`strategy.py`), **unless the profitability gate holds
+   it** (`profit_gate.py`, adopted 2026-09-28): a death cross while the
+   position is below breakeven is deferred, not executed, logged
+   `"blocked_unprofitable"` — see `backtest_2026-09-28_sell_cross_profit_gate.md`.
+   Deferred only, never skipped for good: triggers 2 and 3 below still
+   run every cycle regardless.
+2. **Stop-loss (4%)** — current price is 4% or more below the position's
    average cost basis. Exits the full position, regardless of the SMA
-   state (`exit_criteria.py`).
-3. **Take-profit (15%, partial)** — current price is 15% or more above
+   state (`exit_criteria.py`). Tightened from 10% 2026-09-28 (owner
+   request) — see `backtest_2026-09-28_gate_floor_and_tighter_stops.md`.
+3. **Take-profit (8%, partial)** — current price is 8% or more above
    average cost basis. Sells 70% of the position, once per position
    lifecycle; the remaining 30% keeps riding, subject to the same
    stop-loss and death-cross checks afterward (`exit_criteria.py` +
-   `position_state.py`).
+   `position_state.py`). Tightened from 20% the same day, same doc.
+4. **Gate floor (added 2026-09-28)** — while a `fresh_sell_cross` is being
+   held by trigger 1's profitability gate, forces the position out anyway
+   once it's been held that way for 24h (`GATE_MAX_HOLD_HOURS`,
+   `profit_gate.py`), regardless of P&L, so the gate can't hold forever.
+   Cleared early if the price recovers to breakeven first. Not protective
+   in the same sense as triggers 2/3 — see "Auto-execution policy" below.
 
 Stop-loss and take-profit are protective/profit-locking checks, not new
 risk-taking — see "Auto-execution policy" below for why they're exempt
-from the size cap and trade limits that apply to entries.
+from the size cap and trade limits that apply to entries. The gate floor
+is a same-substance stand-in for an ordinary death-cross exit, not a
+protective one — it's subject to the same gates a `fresh_sell_cross`
+exit is, and it still counts toward `max_trades_per_day`.
 
 ## Risk limits (as configured)
 
@@ -337,7 +357,7 @@ from the size cap and trade limits that apply to entries.
   their own.
 - Daily circuit breaker: all trading halts for the rest of the UTC day
   once portfolio drawdown from that day's starting equity hits 3%
-- Max 3 trades per day, combined across the whole watchlist
+- Max 4 trades per day, combined across the whole watchlist
 - Max 5 concurrent open positions across the whole watchlist (of 15
   assets) — see "Concurrent-positions cap" below
 
@@ -450,7 +470,8 @@ persisted one to detect an actual crossover *event*, not just a state.
 Each cycle's `classify()` call returns one of:
 - `fresh_buy_cross` / `fresh_sell_cross` — SMA10 crossed SMA30 since the
   last cycle. This is a genuine strategy signal. If the order notional is
-  at/under `auto_execute_max_usd` and `DRY_RUN` is `False`, it executes
+  at/under `auto_execute_max_pct` of current total portfolio value and
+  `DRY_RUN` is `False`, it executes
   automatically (see the live-trading banner above) and is reported after
   the fact; otherwise it's surfaced as a recommendation awaiting approval.
 - `excellent_watch` — no fresh cross, but `|crossover_pct|` or
@@ -469,28 +490,31 @@ Each cycle's `classify()` call returns one of:
   connector available in agent sessions on this account.
 - **New-entry auto-execution is gated by signal type, not blanket "no
   approval ever":** only fresh crossover signals (`fresh_buy_cross` /
-  `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_usd"]`
-  (currently $100 - raised from $5 on 2026-09-23) execute without
-  approval; `excellent_watch` alerts still always require it, regardless
-  of size. **The threshold no longer meaningfully gates anything:** it
-  was raised to $100 to match `max_position_pct`'s 50% cap that same day,
-  but `max_position_pct` was subsequently brought down to 20% across two
-  more passes (see "Risk limits" above) while `auto_execute_max_usd` was
-  left at $100 - since a 20%-sized position at this portfolio's value
-  never reaches anywhere close to $100, essentially every properly-sized
-  confirmed entry now auto-executes unconditionally, not "at or under" a
-  real binding threshold. Revisit `auto_execute_max_usd` if the approval
-  gate is meant to matter again - it was left alone deliberately, not
-  by oversight (see `CHANGELOG.md`). Reconfirmed still true in the
-  2026-09-24 audit - `config.py` now carries a NOTE on this setting
-  directly, not just here.
-- **Protective exits are not bounded the same way.** Stop-loss (10%) and
-  take-profit (15%, sells 70%) — see "Strategy" above — execute
+  `fresh_sell_cross`) at or under `RISK_LIMITS["auto_execute_max_pct"]`
+  of current total portfolio value execute without approval;
+  `excellent_watch` alerts still always require it, regardless of size.
+  **2026-09-27, owner request:** this was a flat dollar cap
+  (`auto_execute_max_usd`) that drifted stale every time portfolio value
+  changed - raised once (2026-09-23) to match `max_position_pct`'s 50%
+  cap at the time, then left behind when `max_position_pct` was brought
+  back down to 20%, so it stopped meaningfully gating anything (every
+  properly-sized entry auto-executed regardless of the stated
+  threshold). Replaced with a percentage of current total portfolio
+  value (`RiskManager.can_auto_execute(order_value_usd, portfolio_value)`,
+  recomputed fresh every cycle from that cycle's `get_portfolio` call),
+  set equal to `max_position_pct` (20%) so the same design intent -
+  properly-sized confirmed entries auto-execute, approval is the
+  exception - now holds automatically as equity moves, with no manual
+  resync required. See `CHANGELOG.md`.
+- **Protective exits are not bounded the same way.** Stop-loss (4%) and
+  take-profit (8%, sells 70%) — see "Strategy" above — execute
   automatically regardless of position size, and bypass `can_trade()`,
   the daily trade cap, and the circuit breaker. Only `DRY_RUN` gates
   them. This is deliberate: those gates limit new risk-taking, and
   applying them to an exit would mean being unable to cut a loss or lock
-  in a gain exactly when it matters.
+  in a gain exactly when it matters. The gate floor (trigger 4 above) is
+  NOT included in this exemption — it's an ordinary, non-protective exit
+  subject to `can_trade()`/the circuit breaker like any other.
 - **Every auto-executed trade is reported immediately after placement**
   (asset, side, quantity, price, order id, and for exits the reason and
   resulting P/L) — auto-execute removes the approval gate before the
@@ -513,7 +537,8 @@ hands-off:
 
 - **Hourly trading cycle** — runs `PLAYBOOK.md` in full, including
   bounded auto-execution (fresh, strategy-confirmed signals at/under
-  `auto_execute_max_usd` execute with no approval step; protective exits
+  `auto_execute_max_pct` of current total portfolio value execute with
+  no approval step; protective exits
   always execute; everything else alerts or waits for approval). Also
   calls `CycleLogStore().record(...)` (see `cycle_log.py`) for every
   non-hold event, so the daily review below has real data to work from.
@@ -588,7 +613,7 @@ commit (twice), so the owner pushed the change to `main` themselves and
 had it pulled into this branch. The same applies to any further change:
 
 - To adjust the auto-execute threshold or scope, edit
-  `RISK_LIMITS["auto_execute_max_usd"]` directly — `0` disables new-entry
+  `RISK_LIMITS["auto_execute_max_pct"]` directly — `0` disables new-entry
   auto-execution while leaving recommendations active (protective exits
   are unaffected by this value).
 - To adjust the stop-loss/take-profit levels or the take-profit sell
