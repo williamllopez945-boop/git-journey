@@ -1601,3 +1601,69 @@ each symbol/timeframe/closed-candle timestamp once" and restart/failed-
 write-recovery tests - this fix addresses the classify-on-record
 coupling specifically (the mechanism actually observed live twice this
 session), not a general fill-deduplication or crash-recovery layer.
+
+## 2026-10-05 (later, same day) — Reconciled ledger built (Priority 1, Codex review); true total is -$200.07, not -$199.4x
+
+**New module**: `trading_agent/reconcile_ledger.py`. Builds one
+canonical ledger from real broker records
+(`get_crypto_orders`/`get_equity_orders` for order-level truth,
+`get_pnl_trade_history` for Robinhood's own authoritative realized
+gain/loss per closing trade) instead of recomputing P&L locally from
+`trading_agent/state.json`'s `trade_log`. Full writeup, including the
+three specific discrepancies Codex's review flagged (BTC +$0.17/+1.13%
+vs +$0.18/+0.20%; CRV -4.13% vs -5.35%; the "pre-tightening" mislabeling
+on three real post-tightening trades) and the methodology, in
+`trading_agent/reconciliation_2026-10-05.md`.
+
+**Headline correction**: the true realized total, confirmed by TWO
+independent Robinhood endpoints agreeing exactly
+(`get_pnl_trade_history` span=all summed by hand, and
+`get_realized_pnl` span=all's own aggregate), is **-$200.07 across 15
+closed trades (5W/10L, 33.3% win rate)** - not the -$199.44/"16
+round-trips" this session reported earlier today, nor Codex's
+-$199.43 re-derivation of that same figure. Both prior numbers were
+built from the local `trade_log`/dashboard backfill, which turns out to
+be missing two real orders: a 2026-09-22 PEPE buy (so PEPE's real -$0.50
+loss was reported as a $0.00 "flat" trade) and a 2026-09-27 $96.51 DOGE
+buy that was never sold on this platform (transferred out - not a
+trading win or loss at all, and should never have been counted as
+either). Both are now added to the Trade Ledger dashboard's `trades`
+collection as new documents (nothing edited or removed), plus a visible
+reconciliation note in its `notes` collection.
+
+**New general-purpose check**: `detect_quantity_gaps()` compares each
+asset's broker-order-implied net quantity against its real current
+holding - any nonzero gap beyond a tight tolerance means the asset moved
+by a transfer, not an order. Run against the real account, every traded
+asset except SOL and DOGE shows zero gap (fully explained by real
+orders alone); SOL's +1.6604 gap matches the already-known 2026-09-26
+transfer-in almost exactly, confirming the check works correctly on
+real data, not just synthetic fixtures.
+
+**New general-purpose record**: `STRATEGY_VERSIONS` +
+`strategy_version_at()`, sourced from the real
+`git log --follow -- trading_agent/exit_criteria.py` commit timestamps
+(10%/15% from 2026-09-22, 10%/20% from 2026-09-25, 4%/8% from
+2026-09-28T17:39:15Z) rather than a hand-guessed "era" - directly fixing
+the three-trade mislabeling above and preventing a repeat.
+
+10 new tests (`tests/test_reconcile_ledger.py`): version-boundary
+lookups, order-filtering (non-`filled` states skipped), realized-gain
+matching and the unmatched-disposal case, flat-tolerance win/loss/flat
+classification, and both directions of `detect_quantity_gaps()`. The
+module was also run directly against this session's real, live-fetched
+`get_crypto_orders`/`get_pnl_trade_history` data (33 crypto legs,
+2026-09-22 through 2026-10-05) and reproduced the authoritative
+-$200.07/15/5W-10L exactly. Full suite: 272/272 passing
+(`trading_agent/tests/` + `research_agent/tests/`).
+
+Not yet done (out of scope for this pass, see
+`reconciliation_2026-10-05.md`'s own "Not yet done" section for detail):
+wiring the live dashboard's own P&L computation to call this module
+directly instead of reading its separately-maintained `trades`
+collection copy; equity-order support is implemented but untested
+against a real filled stock order (none exist on this account yet);
+per-trade holding-time/MFE-MAE/detection-to-fill-latency instrumentation
+(Codex's Priority 3) - the CRV and LINK/AVAX/DOT slippage findings in
+this pass are a manual first look at exactly that, not yet a general
+computation.
