@@ -1110,3 +1110,110 @@ any real order of any kind; the $5,000/2-concurrent-position assumptions
 live only in this Routine's own prompt and this PLAYBOOK section, never
 in `config.py`, so there's no risk of them leaking into the real,
 still-gated VOLTRAP path.
+
+## Income sleeve (YieldMax-style weekly-distribution basket ETFs)
+
+Added 2026-10-06 (owner request, via `AskUserQuestion`): a **third,
+independent** strategy on the same account, trading a handful of
+YieldMax-style synthetic covered-call "fund of option income" ETFs to
+build a weekly-income base. The explicit goal is buying as low as
+possible within a recent range, not trend-following — so this sleeve
+uses a new dip/support entry signal, not the SMA(10,30) crossover
+`scanner_signals.classify` the crypto/stock bot and VOLTRAP's own
+underlying-selection both use elsewhere.
+
+**Deliberately NOT part of `RISK_LIMITS`/`STOCK_WATCHLIST`.** Unlike
+VOLTRAP (whose CSP collateral has no crypto/stock accounting analogue),
+this sleeve trades ordinary mark-to-market ETF shares — the same shape
+`RiskManager`/`PositionStateStore` already model — so it reuses both
+classes directly via `income_state.py`'s two factories
+(`income_risk_manager(limits)`, `income_position_state_store()`), each
+pointed at its own state file (`income_risk_state.json`,
+`income_position_state.json` — deliberately distinct from the main bot's
+`state.json`/`position_state.json`; a path collision there would
+corrupt the live trading bot's real state). Own watchlist
+(`INCOME_WATCHLIST`), own budget (`INCOME_RISK_LIMITS`), own go-live
+switch (`INCOME_AUTO_EXECUTE`, currently `False` — **recommend-only**,
+same conservative bootstrap VOLTRAP and the crypto/stock bot itself both
+started at). `DRY_RUN` continues to gate only the crypto/stock bot.
+
+**Not live yet.** `config.py` has not been edited — `INCOME_WATCHLIST`/
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` below are a recommendation
+only (see `income_candidates_2026-10-06.md`), pending explicit owner
+approval. **Do not place any real order, and do not create any Routine,
+until that approval lands and a same-session, regular-market-hours
+liquidity re-check confirms the candidate list still holds** (spreads on
+these thinly-traded ETFs move; the screening doc's numbers are an
+after-hours snapshot).
+
+### Entry signal (`income_signals.py`)
+
+`rolling_range_position(closes, lookback_days=20)` — `(today_close -
+trailing_low) / (trailing_high - trailing_low)` over the trailing 20
+daily closes; `None` if under 20 bars of history or the window is flat.
+`classify_dip(closes, lookback_days=20, entry_threshold=0.10)` returns
+`"dip_buy"` when that position is `<= 0.10` (bottom 10% of the trailing
+range), else `"hold"` — including the warm-up/flat-window `None` case
+(never blocks, just doesn't signal). These two constants are proposed
+defaults, not swept/optimized the way `exit_criteria.py`'s are — see
+`income_backtest.py`'s stated limitation below.
+
+### Exit rule (`income_exit.py`)
+
+Its own constants, separate from `exit_criteria.py` (per this project's
+per-sleeve-constants convention, and because `exit_criteria.py`/
+`profit_gate.py` are tightly coupled to the crossover/death-cross
+concept): `INCOME_STOP_LOSS_PCT = 0.15` (looser than the main bot's 4% on
+purpose — these ETFs' price structurally drifts down with every
+distribution paid, independent of any adverse move; a tight stop would
+fire on routine decay, not signal), `INCOME_TRIM_TRIGGER_PCT = 0.10` /
+`INCOME_TRIM_SELL_FRACTION = 0.50` (lock in part of a price gain without
+fully exiting — same `(reason, fraction)` shape as
+`exit_criteria.check_exit` via `check_income_exit`).
+
+### Candidate screening (`income_candidates.py`)
+
+11 tradable candidates (confirmed via Robinhood `search`): `YMAX, YMAG,
+ULTY, GPTY, LFGY, QDTY, RDTY, SDTY, MINY, CHPY, SLTY` — YieldMax's
+"Group 1" weekly-distribution basket ETFs (not the larger single-stock
+Group 1/2 lineup on individual names, which the owner explicitly did not
+mean). Per screen: `get_equity_quotes(symbols=<candidates>)` →
+`income_candidates.filter_by_liquidity(quotes, max_spread_pct=0.02)`
+(fails closed on any missing/non-positive/crossed quote) →
+`get_equity_historicals(symbols=<survivors>, interval="day")` (real
+bars only — skip any `interpolated: true` padding at the front of a
+young ETF's series) → `income_signals.classify_dip` per survivor for
+today's live read. See `income_candidates_2026-10-06.md` for the first
+pass: `YMAX, YMAG, ULTY, CHPY` cleared the 2% spread bar cleanly; `GPTY`
+was borderline (3.19% after-hours) and needs a regular-hours re-check;
+`QDTY, RDTY, SDTY, MINY, SLTY, LFGY` were all materially too thin.
+
+### Backtest (`income_backtest.py`)
+
+A dedicated harness, not a retrofit of `backtest.py` (that module is
+tightly interwoven with the crossover pipeline throughout a heavily
+tested loop; this signal is simpler — one threshold entry, one stop, one
+trim — so a small dedicated loop carries less risk than injecting a
+signal function into load-bearing code). Reuses `backtest.summarize`
+unchanged for headline metrics. **Models price action only — no
+distribution/dividend cash flow is simulated** — understates real total
+return for a strategy whose entire appeal is the distribution; every
+report using this harness must state that plainly, never bury it. Every
+candidate has well under 2 years of real daily history (YMAX/YMAG
+oldest, ~2024 inception; GPTY/CHPY 2025-only) — treat any result as a
+mechanism sanity-check, not a tuned parameter.
+
+### Auto-execution
+
+`INCOME_AUTO_EXECUTE = False` (recommend-only): every cycle (once wired
+up) proposes a specific entry/trim/stop via `PushNotification` and waits
+for explicit approval before any order is placed. Revisit once it's run
+for a few real weeks — same graduation path VOLTRAP and the crypto/stock
+bot both followed.
+
+Hard rules: never modify `INCOME_RISK_LIMITS`, `INCOME_WATCHLIST`, or
+`INCOME_AUTO_EXECUTE` from within any Routine (same posture as
+`RISK_LIMITS`/`WATCHLIST`/`VOLTRAP_*` above); no Routine exists yet for
+this sleeve — one is created only after the owner approves the
+candidate list and confirms the `INCOME_RISK_LIMITS` numbers, mirroring
+VOLTRAP's own funding/confirmation gate.

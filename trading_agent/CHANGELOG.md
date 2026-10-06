@@ -1667,3 +1667,64 @@ per-trade holding-time/MFE-MAE/detection-to-fill-latency instrumentation
 (Codex's Priority 3) - the CRV and LINK/AVAX/DOT slippage findings in
 this pass are a manual first look at exactly that, not yet a general
 computation.
+
+## 2026-10-06 — Stock watchlist trim recommended; income sleeve built (mechanism only)
+
+Two owner requests (via `AskUserQuestion`): trim `STOCK_WATCHLIST` to
+its best 5, and build a separate "income sleeve" for YieldMax-style
+weekly-distribution basket ETFs, entered on a new dip/support signal
+rather than the SMA crossover.
+
+**Stock watchlist trim** (`watchlist_review_2026-10-06_stocks_top5.md`):
+applied the existing weekly-review methodology (`watchlist_review.py`,
+`backtest.py`, `portfolio_backtest.py`) across all 10 current names at
+once (extending the usual bottom-1-2 scope to a full trim), worst-case-
+first via H1/H2 split backtests over the real 90-day/384-bar window. No
+name is currently held, so none were exempt. Ranked worst to best:
+`VTRS (-5.04%), PYPL (-4.68%), AR (-1.08%), CRDO (0.96%), IR (2.05%)`
+(removal candidates) vs. `TWLO (3.05%), ILMN (3.30%), PTC (8.53%), CRWD
+(10.71%), PANW (10.84%)` (keep candidates). The binding portfolio-level
+gate (`portfolio_backtest.py`, full 10 vs. kept 5, same window/split)
+confirmed the trim clears cleanly at every level: worst-case 6.90% vs
+5.07%, full-period 22.17% vs 18.28%, max drawdown 4.84% vs 6.32% (lower
+is better). **Recommended, not applied** — `config.py` unedited pending
+explicit owner approval. Flagged for the owner: once the list holds
+exactly 5 names, `max_concurrent_positions=5` stops being a real
+constraint on this list specifically.
+
+**Income sleeve** (new files, all additive - no existing module
+edited): `income_signals.py` (`rolling_range_position`/`classify_dip` -
+a 20-day rolling-range-position dip signal, bottom-10% entry
+threshold), `income_exit.py` (`check_income_exit` - its own looser 15%
+stop-loss + 10%-trigger/50%-fraction trim, separate constants from
+`exit_criteria.py`), `income_candidates.py` (`spread_pct`/
+`filter_by_liquidity` - a liquidity screen that fails closed on any
+missing/crossed quote), `income_state.py` (wires `RiskManager`/
+`PositionStateStore` to their own `income_risk_state.json`/
+`income_position_state.json`, distinct from the main bot's state files),
+`income_backtest.py` (a dedicated backtest loop for the dip/stop/trim
+rule - not a retrofit of `backtest.py`, which is tightly coupled to the
+crossover pipeline; reuses `backtest.summarize` unchanged). 24 new tests
+across 5 new test files; full suite green, 293/293
+(`trading_agent/tests/`).
+
+First candidate screen (`income_candidates_2026-10-06.md`): 11 tradable
+YieldMax "Group 1" weekly-distribution basket ETFs identified via
+Robinhood `search` (`YMAX, YMAG, ULTY, GPTY, LFGY, QDTY, RDTY, SDTY,
+MINY, CHPY, SLTY`). Live (after-hours) `get_equity_quotes` run through
+`filter_by_liquidity` (2% spread bar): `YMAX, YMAG, ULTY, CHPY` cleared
+cleanly (0.08%-0.52% spreads); `GPTY` was borderline (3.19%, needs a
+regular-hours re-check); the other 6 were materially too thin (`RDTY`'s
+74.73% spread looks like a stale/crossed quote, not a real price).
+`income_backtest.py` run against each candidate's real daily history
+(378-682 bars, all well under 2 years) as a mechanism sanity-check only
+- explicitly **not** a verdict on the ETFs themselves, since it models
+price action only with no distribution cash flow, understating real
+total return for a strategy whose entire appeal is the distribution. No
+candidate shows a `dip_buy` signal today.
+
+**Not live.** No `config.py` edit (`INCOME_WATCHLIST`/
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` are proposed values in the
+screening doc, not written anywhere), no order placed, no Routine
+created - both outcomes pending explicit owner approval, same gating
+VOLTRAP used before it went live.

@@ -235,6 +235,11 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `voltrap_state.py` | VOLTRAP (options wheel strategy, added 2026-09-26, renamed same day) — per-symbol state machine (idle → csp_open → holding_shares → covered_call_open → ...), persisted to `voltrap_state.json`. See "VOLTRAP" below |
 | `voltrap_candidates.py` | VOLTRAP — candidate ranking (`rank_by_voltrap_fit`) and strike selection (`pick_strike_by_delta`/`pick_strike_by_otm_pct`), pure functions mirroring `watchlist_review.py`'s pattern |
 | `order_pricing.py` | Resolves the marketable-limit-order price (`marketable_limit_price`) PLAYBOOK.md's order-type policy requires for every real order. Added 2026-10-04 after the policy lapsed back to `type=market` live twice (2026-09-27, 2026-10-04) despite being written down both times — no code in this repo places orders, so making the correct limit price a single tested function call is the only durable fix available |
+| `income_signals.py` | Income sleeve (added 2026-10-06) — dip/support entry signal (`classify_dip`, a rolling-range-position read), deliberately not the SMA crossover. See "Income sleeve" below |
+| `income_exit.py` | Income sleeve — its own stop-loss/trim rule (`check_income_exit`), looser than `exit_criteria.py` on purpose (these ETFs' price structurally decays with every distribution paid) |
+| `income_candidates.py` | Income sleeve — liquidity screen (`filter_by_liquidity`), fails closed on any missing/crossed quote |
+| `income_state.py` | Income sleeve — wires `RiskManager`/`PositionStateStore` to their own state files (`income_risk_state.json`/`income_position_state.json`), distinct from the main bot's `state.json`/`position_state.json` |
+| `income_backtest.py` | Income sleeve — dedicated backtest loop for the dip/stop/trim rule (not a retrofit of `backtest.py`); models price only, no distribution cash flow — see "Income sleeve" below |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
@@ -261,6 +266,25 @@ placed and no Routine created until that funding lands and the exact
 percentage is confirmed. See `CHANGELOG.md` for the full build history,
 including why the candidate screen's filters were tuned twice against
 real data before they stopped surfacing mostly distressed microcaps.
+
+## Income sleeve (YieldMax-style weekly-distribution ETFs, added 2026-10-06)
+
+A third, independent strategy: a handful of YieldMax-style synthetic
+covered-call basket ETFs (`YMAX`/`YMAG`/`ULTY`/`CHPY` proposed, see
+`income_candidates_2026-10-06.md`), bought on a new dip/support signal
+(`income_signals.classify_dip`) rather than the SMA crossover, to build
+a weekly-income base. Full mechanism documented in `PLAYBOOK.md`'s
+"Income sleeve" section — deliberately kept separate from
+`RISK_LIMITS`/`STOCK_WATCHLIST` (own `INCOME_RISK_LIMITS`/
+`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE`, own state files via
+`income_state.py`), since these ETFs' price structurally erodes with
+every distribution paid — a different risk shape than either the
+crypto/stock bot's crossover-following or VOLTRAP's option collateral.
+
+**Not live yet.** Nothing has been added to `config.py` — the candidate
+list, risk limits, and entry/exit thresholds above are all a
+recommendation pending explicit owner approval, same gating as VOLTRAP.
+No order has been placed and no Routine created.
 
 ## Strategy
 
