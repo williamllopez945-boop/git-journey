@@ -6,8 +6,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from trading_agent import income_state
 from trading_agent.risk_manager import RiskManager
 from trading_agent.position_state import PositionStateStore
+from trading_agent.cycle_log import CycleLogStore
 from trading_agent import risk_manager as risk_manager_module
 from trading_agent import position_state as position_state_module
+from trading_agent import cycle_log as cycle_log_module
 
 
 def test_income_risk_manager_uses_its_own_state_path(tmp_path, monkeypatch):
@@ -32,10 +34,23 @@ def test_income_position_state_store_uses_its_own_path(tmp_path, monkeypatch):
     assert store.path != position_state_module.STATE_PATH
 
 
+def test_income_cycle_log_store_uses_its_own_path(tmp_path, monkeypatch):
+    own_path = tmp_path / "income_cycle_log.json"
+    monkeypatch.setattr(income_state, "CYCLE_LOG_PATH", own_path)
+
+    store = income_state.income_cycle_log_store()
+
+    assert isinstance(store, CycleLogStore)
+    assert store.path == own_path
+    assert store.path != cycle_log_module.LOG_PATH
+
+
 def test_default_paths_are_distinct_from_main_bot_state():
     # Guards against a path collision that would corrupt the live bot's
-    # real state.json / position_state.json.
+    # real state.json / position_state.json / cycle_log.json.
     assert income_state.RISK_STATE_PATH != risk_manager_module.STATE_PATH
     assert income_state.POSITION_STATE_PATH != position_state_module.STATE_PATH
+    assert income_state.CYCLE_LOG_PATH != cycle_log_module.LOG_PATH
     assert income_state.RISK_STATE_PATH.name == "income_risk_state.json"
     assert income_state.POSITION_STATE_PATH.name == "income_position_state.json"
+    assert income_state.CYCLE_LOG_PATH.name == "income_cycle_log.json"

@@ -183,3 +183,44 @@ VOLTRAP_RISK_LIMITS = {
 # explicit approval, same bootstrap posture the crypto/stock bot itself
 # started at before its own bounded auto-execution was authorized.
 VOLTRAP_AUTO_EXECUTE = False
+
+# Income sleeve (YieldMax-style weekly-distribution basket ETFs) - added
+# 2026-10-06, live the same day (owner request: auto-execute from the
+# start, no recommend-only trial period, unlike every other strategy
+# here). Deliberately NOT part of RISK_LIMITS/STOCK_WATCHLIST above - a
+# third, independent strategy, own budget, own state files
+# (income_state.py), own entry signal (income_signals.classify_dip, a
+# dip/support read, not the SMA crossover) and exit rule
+# (income_exit.check_income_exit). See PLAYBOOK.md's "Income sleeve"
+# section and income_candidates_2026-10-06.md for the full screen.
+INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY"]
+# GPTY excluded - 3.19% bid/ask spread vs the 2% liquidity filter as of
+# 2026-10-06 (after market close); re-check during regular hours before
+# adding it.
+
+INCOME_RISK_LIMITS = {
+    "max_position_pct": 0.05,          # smaller than the originally
+                                        # proposed 10% - initial live run
+                                        # (owner request), revisit after
+                                        # a couple of real weeks.
+    "max_aggregate_position_pct": 0.08, # smaller than the originally
+                                        # proposed 15%. Same key name as
+                                        # RISK_LIMITS' own
+                                        # max_aggregate_position_pct -
+                                        # RiskManager.position_size reads
+                                        # this key by default.
+    "max_concurrent_positions": 2,
+    "max_trades_per_day": 2,
+    "auto_execute_max_pct": 0.05,      # matches max_position_pct - every
+                                        # correctly-sized entry
+                                        # auto-executes, same convention
+                                        # RISK_LIMITS uses.
+    "daily_loss_limit_pct": 0.03,      # same value as RISK_LIMITS - shares
+                                        # RiskManager.check_circuit_breaker's
+                                        # mechanism, measured against total
+                                        # account equity like the main bot's
+                                        # own circuit breaker (not a
+                                        # sleeve-only sub-slice).
+}
+
+INCOME_AUTO_EXECUTE = True  # live from the start, owner request 2026-10-06.

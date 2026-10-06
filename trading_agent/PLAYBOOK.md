@@ -1126,25 +1126,105 @@ underlying-selection both use elsewhere.
 VOLTRAP (whose CSP collateral has no crypto/stock accounting analogue),
 this sleeve trades ordinary mark-to-market ETF shares — the same shape
 `RiskManager`/`PositionStateStore` already model — so it reuses both
-classes directly via `income_state.py`'s two factories
-(`income_risk_manager(limits)`, `income_position_state_store()`), each
-pointed at its own state file (`income_risk_state.json`,
-`income_position_state.json` — deliberately distinct from the main bot's
-`state.json`/`position_state.json`; a path collision there would
-corrupt the live trading bot's real state). Own watchlist
+classes directly via `income_cycle.py`, each pointed at its own state
+file (`income_risk_state.json`, `income_position_state.json`,
+`income_cycle_log.json` — deliberately distinct from the main bot's
+`state.json`/`position_state.json`/`cycle_log.json`; a path collision
+there would corrupt the live trading bot's real state). Own watchlist
 (`INCOME_WATCHLIST`), own budget (`INCOME_RISK_LIMITS`), own go-live
-switch (`INCOME_AUTO_EXECUTE`, currently `False` — **recommend-only**,
-same conservative bootstrap VOLTRAP and the crypto/stock bot itself both
-started at). `DRY_RUN` continues to gate only the crypto/stock bot.
+switch (`INCOME_AUTO_EXECUTE`). `DRY_RUN` continues to gate only the
+crypto/stock bot.
 
-**Not live yet.** `config.py` has not been edited — `INCOME_WATCHLIST`/
-`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` below are a recommendation
-only (see `income_candidates_2026-10-06.md`), pending explicit owner
-approval. **Do not place any real order, and do not create any Routine,
-until that approval lands and a same-session, regular-market-hours
-liquidity re-check confirms the candidate list still holds** (spreads on
-these thinly-traded ETFs move; the screening doc's numbers are an
-after-hours snapshot).
+**Live as of 2026-10-06 (owner request, via `AskUserQuestion`):
+`INCOME_AUTO_EXECUTE = True` from the start — no recommend-only trial
+period, unlike every other strategy in this project.** In exchange,
+`INCOME_RISK_LIMITS` starts deliberately smaller than this sleeve's
+original recommendation (`max_position_pct=5%`,
+`max_aggregate_position_pct=8%`, `max_concurrent_positions=2`,
+`max_trades_per_day=2`) — **revisit these upward only after a couple of
+real weeks of live trading**, the owner's own stated plan, written down
+here so it isn't lost. `INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY",
+"CHPY"]` — `GPTY` was excluded for a borderline 3.19% after-hours spread
+(see `income_candidates_2026-10-06.md`); re-check it live during regular
+hours before ever adding it.
+
+### Ex-dividend timing gate (`income_ex_dividend.py`)
+
+The owner's explicit second requirement: prefer buying just after the
+ex-dividend date, avoid buying just before it. The mechanics: on the
+ex-date, a fund's share price mechanically steps down by roughly the
+distribution amount (that value leaves the fund) — buying the day or two
+before just pre-pays for a distribution you immediately get back while
+eating the same markdown anyway, no real edge; buying on or shortly
+after the ex-date gets the genuinely lower post-markdown price, still
+positioned for every future week's payout.
+
+`days_until_ex_dividend(today, ex_dividend_date)` (positive = upcoming,
+0 = today is the ex-date, negative = already passed) feeds two gates:
+`in_avoid_window(days_until)` (`1 <= days_until <= 2` — blocks a buy even
+if `classify_dip` says `"dip_buy"`) and `in_favorable_window(days_until)`
+(`-2 <= days_until <= 0` — the only window a buy is allowed). `
+get_equity_fundamentals`'s `ex_dividend_date` field is the live source —
+confirmed real and reliable 2026-10-06 (all four candidates showed
+`distribution_frequency: "Weekly"`, next ex-date 2026-10-07).
+
+### Per-cycle script (`income_cycle.py`)
+
+Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
+`--record-trade-*`/overridable-state-path CLI pattern). Per firing:
+
+1. `get_portfolio` (account `581911765`) → `income_cycle.py`'s
+   `RiskManager(INCOME_RISK_LIMITS, ...).start_of_day`/
+   `check_circuit_breaker` (shares the same total-account-equity drawdown
+   check the main bot uses, not a sleeve-only sub-slice — a severe
+   daily loss from *any* source halts new income-sleeve entries too).
+2. `get_equity_quotes(symbols=INCOME_WATCHLIST)` →
+   `get_equity_fundamentals(symbols=INCOME_WATCHLIST)` →
+   `get_equity_historicals(symbols=INCOME_WATCHLIST, interval="day")` →
+   `get_equity_positions(account_number=581911765)` → save each to a
+   file, run:
+   ```
+   python3 trading_agent/income_cycle.py \
+     --quotes-file quotes.json --fundamentals-file fundamentals.json \
+     --historicals-file historicals.json --portfolio-file portfolio.json \
+     --positions-file positions.json
+   ```
+3. For every line reporting an exit (`stop_loss` or `trim`): sell via
+   `place_equity_order` (marketable limit, `market_hours=regular_hours`,
+   account `581911765`), **always executes regardless of `can_trade()`**
+   (protective, same posture as `exit_criteria.check_exit` — reducing
+   risk is never gated the way taking on new risk is).
+4. For every line reporting `ENTER dip_buy`: `review_equity_order` to
+   confirm real notional/fees, then `place_equity_order` (buy, marketable
+   limit at/through the current ask, `market_hours=regular_hours`,
+   account `581911765`) — `INCOME_AUTO_EXECUTE` is `True`, so this
+   executes automatically, no approval step. Notify the owner after the
+   fact, do not ask first.
+5. After any real fill (buy, stop-loss sell, or trim sell), look up the
+   real fill `average_price` via `get_equity_orders`, then record it in
+   a **separate** invocation:
+   ```
+   python3 trading_agent/income_cycle.py --record-only \
+     --record-trade-asset YMAX --record-trade-side buy \
+     --record-trade-quantity <qty> --record-trade-price <avg_price> \
+     --record-trade-reason dip_buy --record-trade-notional <notional> \
+     --record-trade-order-id <order_id>
+   ```
+   Use `--record-trade-protective` and `--record-trade-reason stop_loss`
+   or `trim` for an exit — protective exits never consume a daily trade
+   slot, same as the main bot's stop-loss/take-profit.
+6. One `PushNotification` (<200 chars) per firing summarizing anything
+   notable (an entry, an exit, a blocked signal worth noting) — stay
+   quiet on a plain hold, same convention as the hourly crypto/stock
+   cycle.
+
+### Liquidity re-check
+
+Spreads on these thinly-traded ETFs move — `income_candidates.py`'s
+`filter_by_liquidity` runs live every cycle inside `income_cycle.py`
+against that cycle's real quotes, never against a stored snapshot.
+`GPTY`'s exclusion from `INCOME_WATCHLIST` was a specific after-hours
+read; if it's ever added, confirm its spread during regular hours first.
 
 ### Entry signal (`income_signals.py`)
 
@@ -1171,22 +1251,16 @@ fire on routine decay, not signal), `INCOME_TRIM_TRIGGER_PCT = 0.10` /
 fully exiting — same `(reason, fraction)` shape as
 `exit_criteria.check_exit` via `check_income_exit`).
 
-### Candidate screening (`income_candidates.py`)
+### Candidate universe (`income_candidates.py`)
 
-11 tradable candidates (confirmed via Robinhood `search`): `YMAX, YMAG,
-ULTY, GPTY, LFGY, QDTY, RDTY, SDTY, MINY, CHPY, SLTY` — YieldMax's
-"Group 1" weekly-distribution basket ETFs (not the larger single-stock
-Group 1/2 lineup on individual names, which the owner explicitly did not
-mean). Per screen: `get_equity_quotes(symbols=<candidates>)` →
-`income_candidates.filter_by_liquidity(quotes, max_spread_pct=0.02)`
-(fails closed on any missing/non-positive/crossed quote) →
-`get_equity_historicals(symbols=<survivors>, interval="day")` (real
-bars only — skip any `interpolated: true` padding at the front of a
-young ETF's series) → `income_signals.classify_dip` per survivor for
-today's live read. See `income_candidates_2026-10-06.md` for the first
-pass: `YMAX, YMAG, ULTY, CHPY` cleared the 2% spread bar cleanly; `GPTY`
-was borderline (3.19% after-hours) and needs a regular-hours re-check;
-`QDTY, RDTY, SDTY, MINY, SLTY, LFGY` were all materially too thin.
+11 tradable candidates were screened (confirmed via Robinhood `search`):
+`YMAX, YMAG, ULTY, GPTY, LFGY, QDTY, RDTY, SDTY, MINY, CHPY, SLTY` —
+YieldMax's "Group 1" weekly-distribution basket ETFs (not the larger
+single-stock Group 1/2 lineup on individual names, which the owner
+explicitly did not mean). See `income_candidates_2026-10-06.md` for the
+full first-pass screen; `income_cycle.py` re-runs the liquidity half of
+that screen live every cycle (see "Liquidity re-check" above) rather
+than trusting that dated snapshot going forward.
 
 ### Backtest (`income_backtest.py`)
 
@@ -1205,15 +1279,17 @@ mechanism sanity-check, not a tuned parameter.
 
 ### Auto-execution
 
-`INCOME_AUTO_EXECUTE = False` (recommend-only): every cycle (once wired
-up) proposes a specific entry/trim/stop via `PushNotification` and waits
-for explicit approval before any order is placed. Revisit once it's run
-for a few real weeks — same graduation path VOLTRAP and the crypto/stock
-bot both followed.
+`INCOME_AUTO_EXECUTE = True` (live, owner request 2026-10-06, no
+recommend-only trial): every entry/exit `income_cycle.py` reports as
+actionable executes automatically within the smaller initial
+`INCOME_RISK_LIMITS` above — no approval step, notify after the fact.
+**Revisit `INCOME_RISK_LIMITS` upward only after a couple of real weeks**
+(owner's own stated plan) — never as a side effect of this Routine
+itself.
 
 Hard rules: never modify `INCOME_RISK_LIMITS`, `INCOME_WATCHLIST`, or
-`INCOME_AUTO_EXECUTE` from within any Routine (same posture as
-`RISK_LIMITS`/`WATCHLIST`/`VOLTRAP_*` above); no Routine exists yet for
-this sleeve — one is created only after the owner approves the
-candidate list and confirms the `INCOME_RISK_LIMITS` numbers, mirroring
-VOLTRAP's own funding/confirmation gate.
+`INCOME_AUTO_EXECUTE` from within the Routine (same posture as
+`RISK_LIMITS`/`WATCHLIST`/`VOLTRAP_*` above — these are deliberate,
+reviewed decisions, never a side effect of an automated cycle); never
+place a market order (every real order is a marketable limit, same
+order-type policy as the main bot — see `order_pricing.py`).

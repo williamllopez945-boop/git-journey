@@ -17,9 +17,11 @@ from pathlib import Path
 
 from .risk_manager import RiskManager
 from .position_state import PositionStateStore
+from .cycle_log import CycleLogStore
 
 RISK_STATE_PATH = Path(__file__).parent / "income_risk_state.json"
 POSITION_STATE_PATH = Path(__file__).parent / "income_position_state.json"
+CYCLE_LOG_PATH = Path(__file__).parent / "income_cycle_log.json"
 
 
 def income_risk_manager(limits):
@@ -29,3 +31,7 @@ def income_risk_manager(limits):
 
 def income_position_state_store():
     return PositionStateStore(path=POSITION_STATE_PATH)
+
+
+def income_cycle_log_store():
+    return CycleLogStore(path=CYCLE_LOG_PATH)

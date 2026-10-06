@@ -1728,3 +1728,68 @@ candidate shows a `dip_buy` signal today.
 screening doc, not written anywhere), no order placed, no Routine
 created - both outcomes pending explicit owner approval, same gating
 VOLTRAP used before it went live.
+
+## 2026-10-06 (later, same day) — Income sleeve goes live: ex-dividend timing gate, auto-execution, Routine
+
+Owner approved the candidate list and gave two further explicit
+decisions (via `AskUserQuestion`): go live immediately with no
+recommend-only trial (unlike every other strategy here), but with
+smaller initial sizing to be revisited after a couple of real weeks;
+and gate entries on ex-dividend timing - prefer buying on/just after
+the ex-date (the post-markdown price), avoid buying the 1-2 days before
+it (pre-paying for a distribution you immediately get back while eating
+the same markdown anyway).
+
+**New module `income_ex_dividend.py`**: `days_until_ex_dividend(today,
+ex_dividend_date)` plus `in_avoid_window`/`in_favorable_window`. Real
+`ex_dividend_date` data confirmed live via `get_equity_fundamentals`:
+all four candidates (`YMAX, YMAG, ULTY, CHPY`) show
+`distribution_frequency: "Weekly"`, next ex-date 2026-10-07.
+
+**New per-cycle script `income_cycle.py`**: mirrors `run_cycle.py`'s
+exact shape (`--record-only`/`--record-trade-*`/overridable state
+paths). Ties together `income_candidates.filter_by_liquidity` (live
+every cycle, never a stored snapshot), `income_signals.classify_dip`,
+the new ex-dividend gate, `income_exit.check_income_exit`, and
+`RiskManager`/`PositionStateStore`/`CycleLogStore` pointed at this
+sleeve's own state files (`income_risk_state.json`,
+`income_position_state.json`, `income_cycle_log.json` - added
+`income_cycle_log_store()` to `income_state.py`, its only change).
+Reports what should happen; the calling Routine still places the real
+order and re-invokes with `--record-only` to log the fill, same
+division of labor as `run_cycle.py`.
+
+**`config.py`** (first edit to anything income-sleeve-related):
+`INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY"]` (`GPTY` stays
+excluded, still-borderline 3.19% after-hours spread), `INCOME_RISK_LIMITS`
+smaller than the original recommendation per the owner's "smaller size
+for the first couple weeks" choice (`max_position_pct=5%`,
+`max_aggregate_position_pct=8%`, `max_concurrent_positions=2`,
+`max_trades_per_day=2`, `auto_execute_max_pct=5%`, plus a
+`daily_loss_limit_pct=3%` the original recommendation's draft was
+missing - caught when `RiskManager.check_circuit_breaker` raised a
+`KeyError` against real test runs), `INCOME_AUTO_EXECUTE = True`.
+
+`PLAYBOOK.md`'s "Income sleeve" section rewritten from "not live yet" to
+the real live procedure (ex-dividend gate rationale, the per-cycle
+tool-call sequence, auto-execution posture, hard rules).
+
+18 new tests (`test_income_ex_dividend.py`, `test_income_cycle.py`,
+plus `test_income_state.py`'s new factory coverage); full suite green,
+323/323 (`trading_agent/tests/` + `research_agent/tests/`). Dry-ran
+`income_cycle.py` against real `get_equity_quotes`/
+`get_equity_fundamentals`/`get_equity_historicals`/`get_equity_positions`
+data for all four candidates before creating any Routine: ran
+end-to-end with no crash; all four correctly read `hold` (no dip signal
+today, consistent with the earlier screening doc's finding at a
+different snapshot time) - nothing to act on yet, so the avoid-window
+gate wasn't exercised by real data this run (it's covered directly by
+`test_income_ex_dividend.py` and a synthetic case in
+`test_income_cycle.py` instead).
+
+New Routine **"Income sleeve cycle"** (daily, 15:00 UTC, Mon-Fri -
+matches this signal's daily-close/weekly-ex-date resolution, not the
+main bot's hourly cadence), prompt pointing at `PLAYBOOK.md`'s rewritten
+section, same hard-rule wording as every other Routine (never modify
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE` from
+within it).
