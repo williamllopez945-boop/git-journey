@@ -40,3 +40,8 @@ __pycache__/
 
 # VOLTRAP runtime state, like the other production state above
 trading_agent/voltrap_state.json
+
+# Income sleeve runtime state, like the other production state above
+trading_agent/income_risk_state.json
+trading_agent/income_position_state.json
+trading_agent/income_cycle_log.json
