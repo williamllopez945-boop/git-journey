@@ -1168,9 +1168,17 @@ original recommendation (`max_position_pct=5%`,
 `max_trades_per_day=2`) — **revisit these upward only after a couple of
 real weeks of live trading**, the owner's own stated plan, written down
 here so it isn't lost. `INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY",
-"CHPY"]` — `GPTY` was excluded for a borderline 3.19% after-hours spread
-(see `income_candidates_2026-10-06.md`); re-check it live during regular
-hours before ever adding it.
+"CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]` as of 2026-10-07 (see
+`income_candidates_2026-10-07_expansion.md`): `GPTY` (originally excluded
+for a borderline 3.19% after-hours spread, now liquid at 1.78% during
+regular hours — same diversified, unleveraged basket shape as the
+original four) plus three Roundhill `WeeklyPay` single-stock,
+1.2x-leveraged funds the owner approved despite that materially
+different risk profile (`AMDW`, `GOOW`, `NVDW` — the mildest of seven
+candidates on a real 1.75-year price-only backtest; four others in the
+same family, `TSLW`/`COIW`/`HOOW`/`PLTW`, lost 32-66% over the identical
+window and were left out). `max_concurrent_positions=2` is still a real
+cap against 8 names.
 
 ### Ex-dividend timing gate (`income_ex_dividend.py`)
 
@@ -1247,8 +1255,11 @@ Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
 Spreads on these thinly-traded ETFs move — `income_candidates.py`'s
 `filter_by_liquidity` runs live every cycle inside `income_cycle.py`
 against that cycle's real quotes, never against a stored snapshot.
-`GPTY`'s exclusion from `INCOME_WATCHLIST` was a specific after-hours
-read; if it's ever added, confirm its spread during regular hours first.
+`GPTY` was excluded on an after-hours spread read, then added 2026-10-07
+once a regular-hours re-check cleared it — the same re-check applies to
+any future candidate (e.g. `QDTY`/`ARMW`/`GLDW`, each within ~0.2% of
+the 2% filter as of 2026-10-07, see
+`income_candidates_2026-10-07_expansion.md`).
 
 ### Entry signal (`income_signals.py`)
 

@@ -292,24 +292,29 @@ percentage is confirmed. See `CHANGELOG.md` for the full build history,
 including why the candidate screen's filters were tuned twice against
 real data before they stopped surfacing mostly distressed microcaps.
 
-## Income sleeve (YieldMax-style weekly-distribution ETFs, added 2026-10-06)
+## Income sleeve (YieldMax-style weekly-distribution ETFs, live since 2026-10-06)
 
-A third, independent strategy: a handful of YieldMax-style synthetic
-covered-call basket ETFs (`YMAX`/`YMAG`/`ULTY`/`CHPY` proposed, see
-`income_candidates_2026-10-06.md`), bought on a new dip/support signal
-(`income_signals.classify_dip`) rather than the SMA crossover, to build
-a weekly-income base. Full mechanism documented in `PLAYBOOK.md`'s
-"Income sleeve" section — deliberately kept separate from
-`RISK_LIMITS`/`STOCK_WATCHLIST` (own `INCOME_RISK_LIMITS`/
-`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE`, own state files via
-`income_state.py`), since these ETFs' price structurally erodes with
-every distribution paid — a different risk shape than either the
-crypto/stock bot's crossover-following or VOLTRAP's option collateral.
+A third, independent strategy: a handful of weekly-distribution basket
+ETFs, bought on a new dip/support signal (`income_signals.classify_dip`)
+rather than the SMA crossover, to build a weekly-income base. Full
+mechanism documented in `PLAYBOOK.md`'s "Income sleeve" section —
+deliberately kept separate from `RISK_LIMITS`/`STOCK_WATCHLIST` (own
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE`, own state
+files via `income_state.py`), since these ETFs' price structurally
+erodes with every distribution paid — a different risk shape than either
+the crypto/stock bot's crossover-following or VOLTRAP's option
+collateral.
 
-**Not live yet.** Nothing has been added to `config.py` — the candidate
-list, risk limits, and entry/exit thresholds above are all a
-recommendation pending explicit owner approval, same gating as VOLTRAP.
-No order has been placed and no Routine created.
+**Live, `INCOME_AUTO_EXECUTE = True`.** `INCOME_WATCHLIST` currently
+holds 8 names: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
+`CHPY`), `GPTY` (another YieldMax basket, added 2026-10-07 once a
+regular-hours liquidity re-check cleared it — see
+`income_candidates_2026-10-07_expansion.md`), and three Roundhill
+`WeeklyPay` single-stock, 1.2x-leveraged funds the owner approved
+2026-10-07 despite their materially different (higher) concentration
+risk — `AMDW`, `GOOW`, `NVDW`. `INCOME_RISK_LIMITS` starts deliberately
+small (see `PLAYBOOK.md`); revisit upward only after a couple of real
+weeks, per the owner's own stated plan.
 
 ## Strategy
 

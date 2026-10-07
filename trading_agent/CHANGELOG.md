@@ -1818,3 +1818,39 @@ constraint on the stock side specifically (5 names, 5 slots) - its
 purpose was capping concentration out of a *larger* universe. Not a
 reason to avoid the trim; no `RISK_LIMITS` change proposed or made as
 part of this edit.
+
+## 2026-10-07 (later, same day) — Income sleeve expanded, 4 -> 8 names
+
+Owner request: "Add more yieldmax or another stocks with weekly dividend
+payout." Full screen in `income_candidates_2026-10-07_expansion.md`.
+
+Re-checked `GPTY` (excluded 2026-10-06 on a 3.19% after-hours spread) at
+regular-hours quotes: 1.78% spread, clears the 2% liquidity filter,
+confirmed weekly distribution. Same diversified, unleveraged basket
+shape as the existing four - added.
+
+New discovery: Robinhood search surfaced a Roundhill `WeeklyPay` family
+not previously screened - one basket fund (`TOPW`) and ten single-stock,
+1.2x-leveraged weekly payers. `TOPW` and six previously-excluded
+YieldMax basket funds (`LFGY`, `QDTY`, `RDTY`, `SDTY`, `MINY`, `SLTY`)
+remain too illiquid to trade (8-24% spreads; `QDTY` closest at 2.48%).
+Seven of the Roundhill single-stock funds cleared the liquidity filter
+easily (sub-1% spreads in most cases) but are a materially different
+risk shape: single-name concentration plus 1.2x leverage on the
+underlying's weekly price return, not a basket. A real 1.75-year
+price-only backtest showed 5 of 7 lost 21-66% of price value (max
+drawdowns 38-75%); flagged as not fitting this sleeve's basket-only,
+conservative mandate as scoped.
+
+Presented both findings to the owner via `AskUserQuestion`. Owner
+approved `GPTY` as recommended, and chose to add three of the seven
+Roundhill funds despite the flagged risk - `AMDW` (+89.17% backtest
+return, the standout, but explained entirely by AMD's own rally over
+the window, not a repeatable edge), `GOOW` (+16.36%), `NVDW` (-21.06%,
+mildest loser) - leaving out the other four (`TSLW`, `COIW`, `HOOW`,
+`PLTW`, each down 32-66% over the same window).
+
+`INCOME_WATCHLIST`: `["YMAX", "YMAG", "ULTY", "CHPY"]` ->
+`["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]`.
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` unchanged - not part of this
+request; `max_concurrent_positions=2` stays a real cap against 8 names.

@@ -204,10 +204,23 @@ VOLTRAP_AUTO_EXECUTE = False
 # dip/support read, not the SMA crossover) and exit rule
 # (income_exit.check_income_exit). See PLAYBOOK.md's "Income sleeve"
 # section and income_candidates_2026-10-06.md for the full screen.
-INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY"]
-# GPTY excluded - 3.19% bid/ask spread vs the 2% liquidity filter as of
-# 2026-10-06 (after market close); re-check during regular hours before
-# adding it.
+INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]
+# 2026-10-07 owner-approved expansion (see
+# income_candidates_2026-10-07_expansion.md for the full screen):
+# - GPTY (YieldMax AI & Tech basket, unleveraged) - previously excluded on an
+#   after-hours 3.19% spread (2026-10-06); re-checked during regular hours at
+#   1.78%, clears the 2% liquidity filter. Same risk shape as the original 4.
+# - AMDW/GOOW/NVDW (Roundhill "WeeklyPay" series) - owner-approved despite a
+#   MATERIALLY DIFFERENT risk profile from the rest of this list: each is a
+#   single-stock, 1.2x-LEVERAGED weekly payer (AMD/GOOGL/NVDA respectively),
+#   not a diversified basket. Real 1.75yr price-only backtest: AMDW +89.17%,
+#   GOOW +16.36%, NVDW -21.06% (max drawdowns 17.98-38.43%) - the two winners
+#   are explained entirely by that one stock's own run, not a repeatable
+#   edge; four other same-family single-stock funds screened the same day
+#   (TSLW, COIW, HOOW, PLTW) lost 32-66% over the identical window and were
+#   explicitly NOT added. Other previously-screened basket funds (LFGY, QDTY,
+#   RDTY, SDTY, MINY, SLTY, TOPW) remain excluded on liquidity, re-confirmed
+#   2026-10-07.
 
 INCOME_RISK_LIMITS = {
     "max_position_pct": 0.05,          # smaller than the originally
