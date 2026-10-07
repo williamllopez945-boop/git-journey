@@ -28,6 +28,29 @@ just mean rebuilding it later. Skip steps 1-6 entirely while `WATCHLIST`
 has no such asset; re-activate them (scoped to whichever asset needs it,
 not the whole watchlist) if one is ever added.
 
+**Crypto new-entry pause, 2026-10-12T00:00:00Z onward (owner request,
+2026-10-07) — reversed/updated only on explicit owner instruction:**
+starting that timestamp, skip only the BUY side of step 3 below for
+every crypto asset — no `preview_crypto_order`/`place_crypto_order` for
+a fresh entry, whether from a `fresh_buy_cross` or a cleared
+`fresh_sell_cross` that would otherwise flip to a buy. Log
+`blocked_cooldown`/`blocked_concurrent_cap`/`blocked_aggregate_cap` as
+usual when those would have applied; when none would have, log
+`"blocked_entries_paused"` instead so the cycle log shows a real signal
+was seen and intentionally not acted on, not silence. Everything else
+in this file is unaffected: steps 1, 2, 4 (scanning/classifying,
+protective stop-loss/take-profit, the profitability gate and its
+gate-floor force-exit, `excellent_watch` logging) keep running exactly
+as before for the existing BTC/SOL/AVAX positions — they are still
+fully scanned and protected, just never added to, and nothing is
+force-liquidated. The stock side (steps 5-8) and VOLTRAP are unaffected
+by this note. This is a deliberate wind-down while the owner shifts
+focus/capital toward the income sleeve (`## Income sleeve` below,
+YieldMax-style weekly ETFs) for weekly, dividend-style income — it is
+not a backtested parameter change, so no `backtest.py` evidence
+is attached; it is a pure risk/operational switch, same category as
+`DRY_RUN`.
+
 ## Steps, per cycle
 
 1. **Load config.** Read `WATCHLIST`, `STRATEGY`, `RISK_LIMITS`, and

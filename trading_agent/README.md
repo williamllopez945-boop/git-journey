@@ -34,6 +34,15 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
+> **Crypto new-entry pause, 2026-10-12T00:00:00Z onward (owner request,
+> 2026-10-07):** no new crypto positions open from that timestamp until
+> the owner explicitly re-enables entries — see `PLAYBOOK.md`'s note
+> above "Steps, per cycle" for the exact mechanism. Existing BTC/SOL/AVAX
+> positions keep running under normal stop-loss/take-profit/gate-floor
+> rules, not force-liquidated. The owner is shifting focus/capital to the
+> income sleeve (YieldMax-style weekly ETFs, see "Income sleeve" below)
+> for weekly dividend-style income.
+
 **Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
 DOGE (core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER
 (top 10 by SMA(10,30) crossover strength among blue-chip/established
