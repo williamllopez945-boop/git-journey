@@ -454,8 +454,9 @@ scope: extended-hours trading is not implemented.
    to source signals — retired for this purpose 2026-09-25 (see "Known gap"
    below: it silently dropped 9 of 10 `STOCK_WATCHLIST` names almost every
    cycle observed on 2026-09-24/25 due to its 200-row pagination cap).**
-   Instead, call `get_equity_historicals(symbols=STOCK_WATCHLIST` (all 10
-   in one call — the tool accepts up to 10 symbols), `interval="hour",
+   Instead, call `get_equity_historicals(symbols=STOCK_WATCHLIST` (all of
+   `STOCK_WATCHLIST` in one call — the tool accepts up to 10 symbols),
+   `interval="hour",
    bounds="regular", start_time=<~7 days back, comfortably covers 30
    regular-hours 1h bars even across a weekend>)` and
    `get_equity_quotes(symbols=STOCK_WATCHLIST)` once each, up front.

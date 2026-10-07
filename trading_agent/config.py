@@ -51,8 +51,19 @@ WATCHLIST = [
 # result - another isolated/portfolio ranking flip. MAIR had zero open
 # positions and zero trade history, so no liquidation was needed. See
 # watchlist_review_2026-09-29_stocks.md and CHANGELOG.md.
+# 10 -> 5 trim (2026-10-07 owner approval): VTRS/PYPL/AR/CRDO/IR removed -
+# bottom 5 of all 10 ranked worst-case-first on a real 90-day/384-bar
+# backtest (see watchlist_review_2026-10-06_stocks_top5.md). The kept-5
+# portfolio cleanly beat the full-10 baseline on full-period return,
+# worst-case half, AND max drawdown (6.90%/4.84% vs 5.07%/6.32%) - not
+# just a mean-level improvement. No stock here has ever actually traded
+# live (trade_log confirms), so this is backtest-only, same as every
+# prior stock-side review. Caveat: with exactly 5 names now,
+# RISK_LIMITS["max_concurrent_positions"]=5 stops being a real
+# constraint on this list specifically - not a reason to avoid the
+# trim, just noted; no RISK_LIMITS change proposed or made here.
 STOCK_WATCHLIST = [
-    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "VTRS", "AR", "PYPL",
+    "TWLO", "ILMN", "PTC", "CRWD", "PANW",
 ]
 
 STRATEGY = {

@@ -1793,3 +1793,28 @@ main bot's hourly cadence), prompt pointing at `PLAYBOOK.md`'s rewritten
 section, same hard-rule wording as every other Routine (never modify
 `INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE` from
 within it).
+
+## 2026-10-07 — Stock watchlist trim approved and applied
+
+Owner approved `watchlist_review_2026-10-06_stocks_top5.md`'s
+recommendation as-is: `STOCK_WATCHLIST` goes from 10 names to the top 5
+ranked worst-case-first on a real 90-day/384-bar backtest at production
+settings. `CRWD, PANW, TWLO, ILMN, IR, PTC, CRDO, VTRS, AR, PYPL` ->
+`TWLO, ILMN, PTC, CRWD, PANW`, dropping `VTRS, PYPL, AR, CRDO, IR` (the
+bottom 5 by worst-of-H1/H2 isolated return). The binding portfolio-level
+gate cleared cleanly: the kept-5 beat the full-10 baseline on
+full-period return (22.17% vs 18.28%), worst-case half (6.90% vs 5.07%),
+and max drawdown (4.84% vs 6.32%) - not just a mean-level improvement.
+
+No stock in the list has ever actually traded live (`trade_log`
+confirms zero entries for any of the 10), so this is backtest-only, same
+as every prior stock-side review - not evidence about these companies'
+fundamentals, just this SMA(10,30) crossover strategy's performance on
+their price action over this one window.
+
+**Caveat carried into `config.py`'s own comment**: with exactly 5 names
+now, `RISK_LIMITS["max_concurrent_positions"]=5` stops being a real
+constraint on the stock side specifically (5 names, 5 slots) - its
+purpose was capping concentration out of a *larger* universe. Not a
+reason to avoid the trim; no `RISK_LIMITS` change proposed or made as
+part of this edit.

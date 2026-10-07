@@ -89,18 +89,34 @@ watchlist change this session, not hand-picked. No sell orders were
 needed — the account held zero open crypto positions at the time. Full
 exclusion list and ranking in `watchlist_2026-09-23_meme_removal.md`.
 
-## Stock watchlist (2026-09-23)
+## Stock watchlist (last updated 2026-10-07)
 
-`config.py`'s `STOCK_WATCHLIST`: **CRWD, PANW, TWLO, ILMN, IR, PTC, CHKP,
-MAIR, AR, HUBS** — top 10 by SMA(10,30) 1h crossover strength among
-**large-cap** stocks (market cap > $10B, price > $10, 30d avg volume >
-1M shares), same screener methodology used for every watchlist this
-session. Scanned via the same saved scan, `Stock SMA(10,30) 1h Crossover
-— Strategy Screener`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`
-(market-cap filter updated in place, so future re-screens inherit the
-$10B floor automatically).
+`config.py`'s `STOCK_WATCHLIST`: **TWLO, ILMN, PTC, CRWD, PANW** — see
+"History of this list" below for how it got here. Originally screened
+via the saved scan `Stock SMA(10,30) 1h Crossover — Strategy Screener`,
+scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be` (large-cap methodology:
+market cap > $10B, price > $10, 30d avg volume > 1M shares) — that scan
+was retired 2026-09-25 for a pagination gap (see "Known gap: stock scan
+pagination" below) and is no longer how later swaps/trims were sourced.
 
 **History of this list, most recent first:**
+- **2026-10-07 (trim to top 5):** owner approved narrowing the list from
+  10 to the best 5, ranked worst-case-first on a real 90-day/384-bar
+  backtest at production settings. `CRWD, PANW, TWLO, ILMN, IR, PTC,
+  CRDO, VTRS, AR, PYPL` → `TWLO, ILMN, PTC, CRWD, PANW`, dropping `VTRS,
+  PYPL, AR, CRDO, IR` (the bottom 5). The kept-5 portfolio beat the
+  full-10 baseline on full-period return, worst-case half, and max
+  drawdown — not just a mean-level improvement. No stock here has ever
+  actually traded live. See `watchlist_review_2026-10-06_stocks_top5.md`
+  and `CHANGELOG.md`.
+- **2026-09-26 and 2026-09-29 swaps (not previously recorded in this
+  file — backfilled 2026-10-07):** `CHKP` → `CRDO` and `HUBS` → `PYPL`
+  (2026-09-26 review, `watchlist_review_2026-09-26_stocks.md`), then
+  `MAIR` → `VTRS` (2026-09-29 review, `watchlist_review_2026-09-29_stocks.md`)
+  — both evidence-based swaps of the worst isolated/portfolio performer
+  for a backtested-stronger candidate, same methodology as every other
+  swap here. Full detail in `CHANGELOG.md`'s 2026-09-26 and 2026-09-29
+  entries.
 - **2026-09-23 (large-cap upgrade):** owner asked to replace the mid-cap
   names with larger ones ("Let's look at replacing the small cap stocks
   with larger ones. With more confidence, I will add more capital").
