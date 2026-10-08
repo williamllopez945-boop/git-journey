@@ -6,6 +6,30 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-08
+
+Owner request: **"Cut all crypto trades. Only stocks now."** Supersedes
+the 2026-10-12 new-entry-only pause (set 2026-10-07), which never took
+effect. The crypto scanner-based cycle (scan, classify, every
+`fresh_buy_cross`/`fresh_sell_cross` handling, `excellent_watch`
+logging) is now skipped entirely every cycle for every `WATCHLIST`
+asset — not just new entries. Clarified with the owner via
+`AskUserQuestion` on two points: (1) the one open crypto position at
+the time (AERO, gate-blocked below breakeven) is left to resolve on
+its own under normal stop-loss/take-profit/gate-floor rules, not
+force-closed; (2) the crypto scan/classification itself is skipped
+entirely rather than kept running read-only, with a narrow exception
+(a direct quote-based protective-exit/gate-floor check scoped to AERO
+only, bypassing the full scan/classify path) carved out so that
+exception doesn't lapse into "no protection at all" for the one real
+position still open. The Routine's own stored prompt
+(`trig_01U7cif9R7pWiUf61ntWruHY`) was updated in place to match. No
+`WATCHLIST`/`RISK_LIMITS`/`DRY_RUN` values were edited — this is a
+scope/operational change to what the hourly cycle does, same category
+as the superseded pause note, not a parameter change. Stocks
+(`STOCK_WATCHLIST`) are now the sole source of new trading activity
+until the owner re-authorizes crypto.
+
 ## 2026-09-22
 
 Owner explicitly authorized a bounded auto-execution policy after a

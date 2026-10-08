@@ -28,28 +28,44 @@ just mean rebuilding it later. Skip steps 1-6 entirely while `WATCHLIST`
 has no such asset; re-activate them (scoped to whichever asset needs it,
 not the whole watchlist) if one is ever added.
 
-**Crypto new-entry pause, 2026-10-12T00:00:00Z onward (owner request,
-2026-10-07) — reversed/updated only on explicit owner instruction:**
-starting that timestamp, skip only the BUY side of step 3 below for
-every crypto asset — no `preview_crypto_order`/`place_crypto_order` for
-a fresh entry, whether from a `fresh_buy_cross` or a cleared
-`fresh_sell_cross` that would otherwise flip to a buy. Log
-`blocked_cooldown`/`blocked_concurrent_cap`/`blocked_aggregate_cap` as
-usual when those would have applied; when none would have, log
-`"blocked_entries_paused"` instead so the cycle log shows a real signal
-was seen and intentionally not acted on, not silence. Everything else
-in this file is unaffected: steps 1, 2, 4 (scanning/classifying,
-protective stop-loss/take-profit, the profitability gate and its
-gate-floor force-exit, `excellent_watch` logging) keep running exactly
-as before for the existing BTC/SOL/AVAX positions — they are still
-fully scanned and protected, just never added to, and nothing is
-force-liquidated. The stock side (steps 5-8) and VOLTRAP are unaffected
-by this note. This is a deliberate wind-down while the owner shifts
+**ALL crypto trading cut, effective 2026-10-08 (owner request:
+"Cut all crypto trades. Only stocks now") — supersedes the
+2026-10-12 new-entry-only pause note below, which never took effect
+and is now moot. Reversed/updated only on explicit owner instruction.**
+The crypto scanner-based cycle below (scan, classify, every
+`fresh_buy_cross`/`fresh_sell_cross` handling including new entries,
+`excellent_watch` logging) is **skipped entirely, every cycle, for
+every `WATCHLIST` asset** — no `run_scan`, no
+`scanner_signals.classify()`, no `preview_crypto_order`/
+`place_crypto_order` for any reason. The **only** crypto activity that
+still runs is a scoped protective-exit/gate-floor check for **AERO
+specifically** — the sole open crypto position at the time of this cut
+(CRV closed via stop-loss the same day) — following "Per-position exit
+rules" below exactly, but via a direct `get_crypto_quotes(["AERO-USD"])`
+call rather than the full scan/classify path (which would needlessly
+re-run `classify()` against the whole `WATCHLIST` and advance
+`scanner_state.json` for assets with nothing to act on). The moment
+AERO's `quantity_transferable` reaches 0, apply the usual
+`PositionStateStore().reset`/`.record_exit`/`.clear_gate_blocked` calls
+and from the next cycle onward crypto is skipped **completely** — not
+even an AERO check — until the owner explicitly re-authorizes crypto
+trading. Step 2's shared `open_position_count`/`total_open_position_value`
+counters still include AERO while it's open (real exposure against the
+shared budget), from a plain `get_crypto_positions` call — no scan
+needed for that. The stock side (steps 5-8 below) and VOLTRAP are
+unaffected and are now the **sole** source of new trading activity.
+Like the superseded pause note below, this is a pure risk/operational
+switch (not a backtested parameter change) — no `backtest.py` evidence
+attached, same category as `DRY_RUN`.
+
+**(Superseded by the note above, kept for history) Crypto new-entry
+pause, 2026-10-12T00:00:00Z onward (owner request, 2026-10-07):** was
+going to skip only the BUY side of step 3 below starting that
+timestamp, leaving scanning/protective-exits/excellent_watch running
+for existing positions. Overtaken by the full cut above before it ever
+took effect — this is a deliberate wind-down while the owner shifts
 focus/capital toward the income sleeve (`## Income sleeve` below,
-YieldMax-style weekly ETFs) for weekly, dividend-style income — it is
-not a backtested parameter change, so no `backtest.py` evidence
-is attached; it is a pure risk/operational switch, same category as
-`DRY_RUN`.
+YieldMax-style weekly ETFs) for weekly, dividend-style income.
 
 ## Steps, per cycle
 

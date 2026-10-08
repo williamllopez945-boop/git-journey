@@ -34,14 +34,23 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
-> **Crypto new-entry pause, 2026-10-12T00:00:00Z onward (owner request,
-> 2026-10-07):** no new crypto positions open from that timestamp until
-> the owner explicitly re-enables entries — see `PLAYBOOK.md`'s note
-> above "Steps, per cycle" for the exact mechanism. Existing BTC/SOL/AVAX
-> positions keep running under normal stop-loss/take-profit/gate-floor
-> rules, not force-liquidated. The owner is shifting focus/capital to the
-> income sleeve (YieldMax-style weekly ETFs, see "Income sleeve" below)
-> for weekly dividend-style income.
+> **ALL crypto trading cut, effective 2026-10-08 (owner request: "Cut
+> all crypto trades. Only stocks now") — supersedes the 2026-10-12
+> new-entry-only pause below, which never took effect.** No crypto
+> scan, classification, or new entries/exits on a fresh cross run at
+> all anymore; the only crypto activity left is a scoped protective-exit/
+> gate-floor check on AERO (the sole open crypto position at the time of
+> the cut) until it closes, after which crypto is skipped entirely — see
+> `PLAYBOOK.md`'s note above "Steps, per cycle" for the exact mechanism.
+> Stocks are now the sole source of new trading activity. The owner is
+> shifting focus/capital to the income sleeve (YieldMax-style weekly
+> ETFs, see "Income sleeve" below) for weekly dividend-style income.
+>
+> (Superseded, kept for history) **Crypto new-entry pause,
+> 2026-10-12T00:00:00Z onward (owner request, 2026-10-07):** was going
+> to skip only new entries from that timestamp, leaving existing
+> positions scanned/protected. Overtaken by the full cut above before it
+> ever took effect.
 
 **Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
 DOGE (core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER
