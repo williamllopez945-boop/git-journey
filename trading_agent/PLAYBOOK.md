@@ -1001,15 +1001,14 @@ currently `False` — **recommend-only**, same conservative bootstrap the
 crypto/stock bot itself started at before its own bounded auto-execution
 was authorized). `DRY_RUN` continues to gate only the crypto/stock bot.
 
-**Not live yet.** Free cash is currently ~$82 — nowhere near the ~$1,000+
-a single real contract needs (confirmed live via `review_option_order`,
-see CHANGELOG.md). The owner is depositing new funds specifically for
-this strategy, sized as a % of total portfolio value
-(`VOLTRAP_RISK_LIMITS["max_voltrap_pct"]`, proposed default 25%, owner
-to confirm the exact number). **Do not place any real option order, and
-do not create either Routine below, until (a) the owner confirms
-`max_voltrap_pct` and (b) `get_portfolio` shows real free cash for it.**
-Until then this section documents the mechanism only.
+**Live as of 2026-10-09.** The owner deposited new funds (account now
+$1,028.21) and confirmed `VOLTRAP_RISK_LIMITS["max_voltrap_pct"] = 1.00`
+(100% of total portfolio value, raised from the proposed 0.25 default —
+confirmed via `AskUserQuestion` right after the deposit landed). Both
+real go-live conditions are now met, and the two Routines below have
+been created. `VOLTRAP_AUTO_EXECUTE` remains `False` (recommend-only) —
+that bootstrap posture was never revisited by this request, only the
+budget was. See CHANGELOG.md for the full exchange.
 
 ### State machine (`voltrap_state.py`, per symbol)
 
@@ -1061,7 +1060,7 @@ missing delta) → `review_option_order` (pass `chain_symbol`/
 `underlying_type` for real collateral + fee numbers) before ever
 proposing a contract.
 
-### Weekly + daily cycles (two new Routines, created only once funded)
+### Weekly + daily cycles (two Routines, created 2026-10-09 once funded)
 
 1. **Weekly entry** (Monday, shortly after open): for `VOLTRAP_WATCHLIST`
    symbols in `idle`, run the screen above and open new CSPs within

@@ -6,6 +6,31 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-09
+
+**VOLTRAP (options wheel strategy) goes live.** Owner deposited new
+funds into the account (`get_portfolio` confirmed $1,028.21 total value,
+all cash, no open positions). Owner then said "Budget increase to open
+options trades" - clarified via `AskUserQuestion` that this meant the
+real account deposit (not a code/config change) and that it was for
+VOLTRAP specifically, not the crypto/stock bot's `RISK_LIMITS`. Asked a
+second `AskUserQuestion` for the one open number VOLTRAP's plan always
+needed: `VOLTRAP_RISK_LIMITS["max_voltrap_pct"]`. Owner chose **100%**
+of the account (offered against the originally-proposed conservative
+25% default, 50%, and "a different %") - `max_voltrap_pct` raised from
+0.25 to 1.00.
+
+Both of VOLTRAP's real go-live conditions (max_voltrap_pct confirmed;
+`get_portfolio` shows real free cash) are now met for the first time.
+Created the two real Routines PLAYBOOK.md's "VOLTRAP" section already
+specified (weekly entry, Monday shortly after open; daily monitor, near
+close) - previously undeployed because neither condition held.
+`VOLTRAP_AUTO_EXECUTE` stays `False` (recommend-only) - the owner's
+request was about budget, not about revisiting that separate, earlier-
+approved bootstrap decision; every contract still needs explicit
+approval before `place_option_order`. No `RISK_LIMITS`/`WATCHLIST`/
+`STOCK_WATCHLIST`/`DRY_RUN` value touched.
+
 ## 2026-10-08
 
 Owner request: **"Cut all crypto trades. Only stocks now."** Supersedes

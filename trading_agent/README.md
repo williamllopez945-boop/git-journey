@@ -277,7 +277,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
-## VOLTRAP (options wheel strategy, added 2026-09-26)
+## VOLTRAP (options wheel strategy, added 2026-09-26, live since 2026-10-09)
 
 A second, independent strategy on the same account: sell weekly
 cash-secured puts for premium; if assigned, sell weekly covered calls
@@ -290,16 +290,15 @@ deliberately kept separate from `RISK_LIMITS`/`WATCHLIST` above (own
 reserved collateral, not a mark-to-market position, and doesn't compose
 with the crypto/stock bot's aggregate cap.
 
-**Not live yet.** The account already has `option_level_3` (no upgrade
-needed), but the account's free cash (~$82) is nowhere near what even
-one real contract needs — confirmed live via `review_option_order`
-(a real MARA cash-secured put needed $1,150 collateral against $81.71
-available). The owner is depositing new funds specifically for this
-strategy, sized as a % of total portfolio value; no real order will be
-placed and no Routine created until that funding lands and the exact
-percentage is confirmed. See `CHANGELOG.md` for the full build history,
-including why the candidate screen's filters were tuned twice against
-real data before they stopped surfacing mostly distressed microcaps.
+**Live as of 2026-10-09.** The owner deposited new funds (account now
+$1,028.21) and confirmed `max_voltrap_pct = 1.00` (100% of the account).
+Both real go-live conditions are now met, and the weekly-entry and
+daily-monitor Routines have been created. `VOLTRAP_AUTO_EXECUTE` is
+still `False` (recommend-only) — every contract needs explicit approval
+before `place_option_order`. See `CHANGELOG.md` for the full build
+history, including why the candidate screen's filters were tuned twice
+against real data before they stopped surfacing mostly distressed
+microcaps.
 
 ## Income sleeve (YieldMax-style weekly-distribution ETFs, live since 2026-10-06)
 

@@ -165,14 +165,18 @@ VOLTRAP_WATCHLIST = [
    # max_voltrap_pct is confirmed and the account is funded.
 
 VOLTRAP_RISK_LIMITS = {
-    "max_voltrap_pct": 0.25,         # ceiling on total reserved options collateral
+    "max_voltrap_pct": 1.00,         # ceiling on total reserved options collateral
                                       # (CSP strikes + any assigned shares' cost
                                       # basis) as a fraction of total portfolio
-                                      # value - proposed default, owner to confirm
-                                      # before first real order. Conservative vs.
-                                      # RISK_LIMITS' 60% aggregate cap since this
-                                      # is a brand-new, unbacktested mechanism on
-                                      # real assignment risk. History: CHANGELOG.md.
+                                      # value. Raised from the proposed 0.25 default
+                                      # to 1.00 (owner request, 2026-10-09, confirmed
+                                      # via AskUserQuestion right after a real deposit
+                                      # brought the account to $1,028.21) - the owner
+                                      # explicitly chose to allocate the full account
+                                      # to VOLTRAP rather than the conservative
+                                      # default. Both real go-live conditions (owner
+                                      # confirms this number; get_portfolio shows real
+                                      # free cash) are now met - see CHANGELOG.md.
     "target_delta_min": 0.15,        # target strike band for both CSPs and
     "target_delta_max": 0.30,        # covered calls: roughly 70-85% chance of
                                       # expiring OTM (the point of the strategy -
