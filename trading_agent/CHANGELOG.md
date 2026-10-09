@@ -38,6 +38,30 @@ step, notified after the fact. No recommend-only trial period was held
 owner choice, not an oversight. No `RISK_LIMITS`/`WATCHLIST`/
 `STOCK_WATCHLIST`/`DRY_RUN` value touched by either change.
 
+**Same day, budget coordination ("Ensure dividend stocks buys are
+available too. Voltrap will trade with what's left"):** VOLTRAP's new
+`max_voltrap_pct=1.00` is nominal only now - `voltrap_candidates.py`
+gained `voltrap_budget_after_income_reserve(portfolio_value,
+buying_power, max_voltrap_pct, income_max_aggregate_pct,
+current_voltrap_collateral_used)`, a pure function that leaves the
+income sleeve's full `INCOME_RISK_LIMITS["max_aggregate_position_pct"]`
+reserved against real `buying_power` (whether or not the sleeve
+currently holds anything) before computing what VOLTRAP's weekly entry
+may actually spend on new collateral this cycle. Previously each
+strategy's pct-of-portfolio budget was computed independently with no
+awareness that all three (VOLTRAP, income sleeve, crypto/stock bot)
+draw on the same real cash - harmless while VOLTRAP had no real budget,
+a real risk once it did. Four new unit tests
+(`tests/test_voltrap_candidates.py`); PLAYBOOK.md's "VOLTRAP" section
+and the real "VOLTRAP weekly entry" Routine's prompt both updated to
+call this function before sizing `max_collateral_per_contract`. The
+crypto/stock bot's own budget is NOT included in this reservation -
+out of scope for this request, flagged in PLAYBOOK.md as worth
+revisiting if it also starts competing for cash in practice. No
+`RISK_LIMITS`/`WATCHLIST`/`STOCK_WATCHLIST`/`DRY_RUN`/
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE` value
+touched.
+
 ## 2026-10-08
 
 Owner request: **"Cut all crypto trades. Only stocks now."** Supersedes

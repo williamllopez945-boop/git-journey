@@ -1048,7 +1048,31 @@ for why the first two attempts were rejected):
 - `Last` `>` `5` — keeps out sub-$5 names, which skew penny-stock/low
   quality even when the liquidity/IV filters are otherwise satisfied.
 
-Per cycle: `run_scan` this scan → `voltrap_candidates.rank_by_voltrap_fit(rows, max_collateral_per_contract=<current budget / desired concurrent positions>, min_avg_options_volume=VOLTRAP_RISK_LIMITS["min_avg_options_volume"], min_open_interest=VOLTRAP_RISK_LIMITS["min_open_interest"])`
+**Budget coordination with the income sleeve (added 2026-10-09, owner
+request: "Ensure dividend stocks buys are available too. Voltrap will
+trade with what's left").** VOLTRAP, the income sleeve, and the
+crypto/stock bot each size their own budget as a fraction of total
+portfolio value, but all three draw on the same real cash
+(`get_portfolio`'s `buying_power`). With `max_voltrap_pct` now 1.00, a
+pct-of-portfolio ceiling alone would let VOLTRAP reserve cash the
+income sleeve needs for its own buys. Before computing
+`max_collateral_per_contract` each cycle, call
+`voltrap_candidates.voltrap_budget_after_income_reserve(portfolio_value,
+buying_power, VOLTRAP_RISK_LIMITS["max_voltrap_pct"],
+INCOME_RISK_LIMITS["max_aggregate_position_pct"],
+current_voltrap_collateral_used)` — `current_voltrap_collateral_used`
+is the sum of reserved collateral across every `VOLTRAP_WATCHLIST`
+symbol currently `csp_open`/`covered_call_open` (from
+`VoltrapStateStore`/`get_option_positions`). This leaves the income
+sleeve's full ceiling untouched (whether or not it currently holds
+anything) and gives VOLTRAP only what's left of its own nominal budget
+and of real cash — the returned value, divided across the desired
+concurrent-positions count, is this cycle's `max_collateral_per_contract`
+used below. The crypto/stock bot's own budget isn't included in this
+reservation (out of scope for this request) — revisit if it also
+starts competing for cash in practice.
+
+Per cycle: `run_scan` this scan → `voltrap_candidates.rank_by_voltrap_fit(rows, max_collateral_per_contract=<budget from voltrap_budget_after_income_reserve, divided by desired concurrent positions>, min_avg_options_volume=VOLTRAP_RISK_LIMITS["min_avg_options_volume"], min_open_interest=VOLTRAP_RISK_LIMITS["min_open_interest"])`
 → for the top few survivors: `get_option_chains(underlying_symbol=...)`
 → `get_option_instruments(chain_id=..., expiration_dates=<nearest Friday>, type="put")`
 → `get_option_quotes(instrument_ids=[...])` for each strike (confirmed

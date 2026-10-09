@@ -176,7 +176,15 @@ VOLTRAP_RISK_LIMITS = {
                                       # to VOLTRAP rather than the conservative
                                       # default. Both real go-live conditions (owner
                                       # confirms this number; get_portfolio shows real
-                                      # free cash) are now met - see CHANGELOG.md.
+                                      # free cash) are now met - see CHANGELOG.md. At
+                                      # 1.00 this is nominal only: the real weekly-entry
+                                      # Routine caps actual spend via
+                                      # voltrap_candidates.voltrap_budget_after_income_reserve,
+                                      # which leaves INCOME_RISK_LIMITS'
+                                      # max_aggregate_position_pct worth of real cash
+                                      # untouched for the income sleeve's own buys
+                                      # (owner request, 2026-10-09 - see PLAYBOOK.md's
+                                      # "Budget coordination" note and CHANGELOG.md).
     "target_delta_min": 0.15,        # target strike band for both CSPs and
     "target_delta_max": 0.30,        # covered calls: roughly 70-85% chance of
                                       # expiring OTM (the point of the strategy -

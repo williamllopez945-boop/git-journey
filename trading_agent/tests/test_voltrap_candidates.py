@@ -5,7 +5,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from trading_agent.voltrap_candidates import rank_by_voltrap_fit, pick_strike_by_delta, pick_strike_by_otm_pct
+from trading_agent.voltrap_candidates import (
+    rank_by_voltrap_fit,
+    pick_strike_by_delta,
+    pick_strike_by_otm_pct,
+    voltrap_budget_after_income_reserve,
+)
 
 
 def _row(ticker, last, iv, avg_options_volume=1000, open_interest=1000):
@@ -96,3 +101,41 @@ def test_pick_strike_by_otm_pct_ignores_itm_strikes():
     picked = pick_strike_by_otm_pct(instruments, current_price=100,
                                      target_otm_pct_min=0.10, target_otm_pct_max=0.20, option_type="put")
     assert picked["strike"] == 85
+
+
+def test_voltrap_budget_capped_by_cash_after_income_reserve():
+    # portfolio=1000, buying_power=900, max_voltrap_pct=1.00 -> nominal=1000
+    # income reserve = 1000*0.08=80 -> cash_after_income=820
+    # min(1000, 820) = 820
+    budget = voltrap_budget_after_income_reserve(
+        portfolio_value=1000, buying_power=900, max_voltrap_pct=1.00,
+        income_max_aggregate_pct=0.08, current_voltrap_collateral_used=0,
+    )
+    assert budget == 820
+
+
+def test_voltrap_budget_capped_by_remaining_nominal_ceiling():
+    # nominal ceiling = 1000*0.25=250, already used 200 -> remaining=50
+    # cash after income reserve = 900 - 80 = 820
+    # min(50, 820) = 50
+    budget = voltrap_budget_after_income_reserve(
+        portfolio_value=1000, buying_power=900, max_voltrap_pct=0.25,
+        income_max_aggregate_pct=0.08, current_voltrap_collateral_used=200,
+    )
+    assert budget == 50
+
+
+def test_voltrap_budget_never_negative_when_income_reserve_exceeds_cash():
+    budget = voltrap_budget_after_income_reserve(
+        portfolio_value=1000, buying_power=50, max_voltrap_pct=1.00,
+        income_max_aggregate_pct=0.08, current_voltrap_collateral_used=0,
+    )
+    assert budget == 0.0
+
+
+def test_voltrap_budget_never_negative_when_existing_collateral_exceeds_ceiling():
+    budget = voltrap_budget_after_income_reserve(
+        portfolio_value=1000, buying_power=900, max_voltrap_pct=0.25,
+        income_max_aggregate_pct=0.08, current_voltrap_collateral_used=300,
+    )
+    assert budget == 0.0
