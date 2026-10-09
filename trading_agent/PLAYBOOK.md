@@ -1006,9 +1006,10 @@ $1,028.21) and confirmed `VOLTRAP_RISK_LIMITS["max_voltrap_pct"] = 1.00`
 (100% of total portfolio value, raised from the proposed 0.25 default —
 confirmed via `AskUserQuestion` right after the deposit landed). Both
 real go-live conditions are now met, and the two Routines below have
-been created. `VOLTRAP_AUTO_EXECUTE` remains `False` (recommend-only) —
-that bootstrap posture was never revisited by this request, only the
-budget was. See CHANGELOG.md for the full exchange.
+been created. `VOLTRAP_AUTO_EXECUTE` was flipped to `True` the same day
+(separate, explicit owner request) — contracts within
+`VOLTRAP_RISK_LIMITS` now execute automatically, no per-trade approval
+step. See CHANGELOG.md for the full exchange.
 
 ### State machine (`voltrap_state.py`, per symbol)
 
@@ -1078,12 +1079,16 @@ proposing a contract.
 
 ### Auto-execution
 
-`VOLTRAP_AUTO_EXECUTE = False` (recommend-only): every cycle proposes a
-specific contract (strike, expiration, premium, collateral, via
-`review_option_order`'s real numbers) through `PushNotification` and
-waits for explicit approval before `place_option_order`. Revisit once
-it's run for a few real weeks — same graduation path the crypto/stock
-bot followed before its own bounded auto-execution was authorized.
+`VOLTRAP_AUTO_EXECUTE = True` (live, owner request 2026-10-09 —
+immediately after funding + `max_voltrap_pct=1.00` were confirmed, no
+recommend-only trial period held): every candidate/strike the weekly
+entry Routine identifies within `VOLTRAP_RISK_LIMITS` executes
+automatically via `place_option_order` (`review_option_order` first for
+real numbers, as always) — no per-trade approval step, notify after the
+fact via `PushNotification`. Started `False` (recommend-only) from
+2026-09-26 through 2026-10-09 — see CHANGELOG.md for the full history
+of both decisions. Still cash-secured puts / covered calls only, same
+as ever.
 
 Hard rules: never modify `VOLTRAP_RISK_LIMITS`, `VOLTRAP_WATCHLIST`, or
 `VOLTRAP_AUTO_EXECUTE` from within either Routine itself (same posture as

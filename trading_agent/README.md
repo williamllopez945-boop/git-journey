@@ -293,9 +293,10 @@ with the crypto/stock bot's aggregate cap.
 **Live as of 2026-10-09.** The owner deposited new funds (account now
 $1,028.21) and confirmed `max_voltrap_pct = 1.00` (100% of the account).
 Both real go-live conditions are now met, and the weekly-entry and
-daily-monitor Routines have been created. `VOLTRAP_AUTO_EXECUTE` is
-still `False` (recommend-only) — every contract needs explicit approval
-before `place_option_order`. See `CHANGELOG.md` for the full build
+daily-monitor Routines have been created. `VOLTRAP_AUTO_EXECUTE` was
+flipped to `True` the same day (separate explicit owner request) —
+contracts within `VOLTRAP_RISK_LIMITS` now execute automatically, no
+per-trade approval step. See `CHANGELOG.md` for the full build
 history, including why the candidate screen's filters were tuned twice
 against real data before they stopped surfacing mostly distressed
 microcaps.

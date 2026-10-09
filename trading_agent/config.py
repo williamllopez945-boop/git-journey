@@ -193,11 +193,16 @@ VOLTRAP_RISK_LIMITS = {
                                       # premium" this strategy is chasing.
 }
 
-# Auto-execution: recommend-only to start (my recommendation, approved
-# 2026-09-26) - every cycle proposes a specific contract and waits for
+# Auto-execution: started recommend-only (my recommendation, approved
+# 2026-09-26) - every cycle proposed a specific contract and waited for
 # explicit approval, same bootstrap posture the crypto/stock bot itself
-# started at before its own bounded auto-execution was authorized.
-VOLTRAP_AUTO_EXECUTE = False
+# started at. Flipped to True 2026-10-09 (owner request, immediately
+# after funding + max_voltrap_pct=1.00 were confirmed) - contracts
+# within VOLTRAP_RISK_LIMITS now execute automatically via
+# place_option_order, no per-trade approval step. Still cash-secured
+# puts / covered calls only - no naked options, no margin leverage
+# beyond what's already reserved as collateral.
+VOLTRAP_AUTO_EXECUTE = True
 
 # Income sleeve (YieldMax-style weekly-distribution basket ETFs) - added
 # 2026-10-06, live the same day (owner request: auto-execute from the

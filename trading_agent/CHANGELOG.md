@@ -25,11 +25,18 @@ Both of VOLTRAP's real go-live conditions (max_voltrap_pct confirmed;
 Created the two real Routines PLAYBOOK.md's "VOLTRAP" section already
 specified (weekly entry, Monday shortly after open; daily monitor, near
 close) - previously undeployed because neither condition held.
-`VOLTRAP_AUTO_EXECUTE` stays `False` (recommend-only) - the owner's
-request was about budget, not about revisiting that separate, earlier-
-approved bootstrap decision; every contract still needs explicit
-approval before `place_option_order`. No `RISK_LIMITS`/`WATCHLIST`/
-`STOCK_WATCHLIST`/`DRY_RUN` value touched.
+`VOLTRAP_AUTO_EXECUTE` stayed `False` (recommend-only) at first - the
+owner's request was about budget, not about revisiting that separate,
+earlier-approved bootstrap decision.
+
+**Same day, separate explicit request ("Flip to auto execute"):**
+`VOLTRAP_AUTO_EXECUTE` raised from `False` to `True`. Contracts the
+weekly entry Routine identifies within `VOLTRAP_RISK_LIMITS` now
+execute automatically via `place_option_order` - no per-trade approval
+step, notified after the fact. No recommend-only trial period was held
+(unlike the crypto/stock bot's own graduation path) - a deliberate
+owner choice, not an oversight. No `RISK_LIMITS`/`WATCHLIST`/
+`STOCK_WATCHLIST`/`DRY_RUN` value touched by either change.
 
 ## 2026-10-08
 
