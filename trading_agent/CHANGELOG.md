@@ -6,6 +6,24 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-13 (institutional-flow gate)
+
+**New config constant: `INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS =
+["ULTY", "YMAG"]`.** Owner asked the income sleeve's dip-buy signal to
+also confirm "where institutional money will enter" (no RSI gate - a
+separate 2026-10-09 study already found RSI-alone close to a wash).
+Built `income_institutional_flow.volume_surge_confirmed` (today's volume
+>= 1.5x trailing 20-day average) as the proxy - no real order-flow data
+exists via this API. A real backtest
+(`backtest_2026-10-13_institutional_flow_income_sleeve.md`) found a
+mixed, worst-case-first result across all 8 original symbols: a clear
+win on every axis for ULTY and YMAG, wash-to-negative for the other six.
+Owner said "Adopt it" after seeing that split result, so the gate is
+wired into `income_cycle.py` scoped to just those two names - every
+other `INCOME_WATCHLIST` symbol is unaffected, still gated by
+`classify_dip` alone. `INCOME_WATCHLIST`/`INCOME_RISK_LIMITS`/
+`INCOME_AUTO_EXECUTE` untouched.
+
 ## 2026-10-13
 
 **Income sleeve `INCOME_WATCHLIST` expanded from 8 to 15 names.** Owner

@@ -12,6 +12,7 @@ from trading_agent.income_cycle import (
     _quotes_by_symbol,
     _fundamentals_by_symbol,
     _closes_by_symbol,
+    _volumes_by_symbol,
     _positions_by_symbol,
 )
 
@@ -68,6 +69,17 @@ def test_closes_by_symbol_drops_interpolated_bars():
         ]},
     ]}}
     assert _closes_by_symbol(historicals)["YMAX"] == [7.60, 7.65]
+
+
+def test_volumes_by_symbol_drops_interpolated_bars():
+    historicals = {"data": {"results": [
+        {"symbol": "YMAX", "bars": [
+            {"close_price": "19.80", "volume": "999999", "interpolated": True},
+            {"close_price": "7.60", "volume": "1000", "interpolated": False},
+            {"close_price": "7.65", "volume": "1500"},  # no interpolated key -> real bar
+        ]},
+    ]}}
+    assert _volumes_by_symbol(historicals)["YMAX"] == [1000.0, 1500.0]
 
 
 def test_positions_by_symbol_drops_zero_quantity():
@@ -133,6 +145,72 @@ def test_entry_allowed_in_favorable_window():
         ])
         assert result.returncode == 0, result.stderr
         assert "YMAX: ENTER dip_buy" in result.stdout
+
+
+def _gated_symbol_bars(today_volume, trailing_volume=1000.0):
+    # 21 real bars so the trailing 20-bar window used by both
+    # classify_dip and volume_surge_confirmed is fully warmed up; the
+    # extra leading bar is outside both windows.
+    closes = [10.0] + _dip_closes(days=20)
+    volumes = [trailing_volume] * 20 + [today_volume]
+    return [{"close_price": str(c), "volume": str(v)} for c, v in zip(closes, volumes)]
+
+
+def test_gated_symbol_blocked_without_volume_surge():
+    # ULTY is in INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS - a plain dip_buy
+    # with ordinary volume must NOT enter (see
+    # backtest_2026-10-13_institutional_flow_income_sleeve.md).
+    with tempfile.TemporaryDirectory() as tmp:
+        today = date.today().isoformat()
+        quotes = {"data": {"results": [
+            {"quote": {"symbol": "ULTY", "bid_price": "7.68", "ask_price": "7.70",
+                        "last_trade_price": "7.69"}},
+        ]}}
+        fundamentals = {"data": {"results": [{"symbol": "ULTY", "ex_dividend_date": today}]}}
+        historicals = {"data": {"results": [
+            {"symbol": "ULTY", "bars": _gated_symbol_bars(today_volume=1000.0)},
+        ]}}
+        portfolio = {"data": {"total_value": "500.0"}}
+        positions = {"data": {"positions": []}}
+
+        result = _run(tmp, [
+            "--quotes-file", _write(tmp, "quotes.json", quotes),
+            "--fundamentals-file", _write(tmp, "fundamentals.json", fundamentals),
+            "--historicals-file", _write(tmp, "historicals.json", historicals),
+            "--portfolio-file", _write(tmp, "portfolio.json", portfolio),
+            "--positions-file", _write(tmp, "positions.json", positions),
+        ])
+        assert result.returncode == 0, result.stderr
+        assert "blocked_no_volume_surge" in result.stdout
+        assert "ENTER" not in result.stdout
+
+
+def test_gated_symbol_allowed_with_volume_surge():
+    # Same fixture, but today's volume is a clear surge (10x trailing
+    # average) - should clear the gate and proceed to ENTER (favorable
+    # ex-dividend window, same as test_entry_allowed_in_favorable_window).
+    with tempfile.TemporaryDirectory() as tmp:
+        today = date.today().isoformat()
+        quotes = {"data": {"results": [
+            {"quote": {"symbol": "ULTY", "bid_price": "7.68", "ask_price": "7.70",
+                        "last_trade_price": "7.69"}},
+        ]}}
+        fundamentals = {"data": {"results": [{"symbol": "ULTY", "ex_dividend_date": today}]}}
+        historicals = {"data": {"results": [
+            {"symbol": "ULTY", "bars": _gated_symbol_bars(today_volume=10000.0)},
+        ]}}
+        portfolio = {"data": {"total_value": "500.0"}}
+        positions = {"data": {"positions": []}}
+
+        result = _run(tmp, [
+            "--quotes-file", _write(tmp, "quotes.json", quotes),
+            "--fundamentals-file", _write(tmp, "fundamentals.json", fundamentals),
+            "--historicals-file", _write(tmp, "historicals.json", historicals),
+            "--portfolio-file", _write(tmp, "portfolio.json", portfolio),
+            "--positions-file", _write(tmp, "positions.json", positions),
+        ])
+        assert result.returncode == 0, result.stderr
+        assert "ULTY: ENTER dip_buy" in result.stdout
 
 
 def test_illiquid_candidate_skipped():

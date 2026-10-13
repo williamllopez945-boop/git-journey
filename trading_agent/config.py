@@ -273,3 +273,17 @@ INCOME_RISK_LIMITS = {
 }
 
 INCOME_AUTO_EXECUTE = True  # live from the start, owner request 2026-10-06.
+
+INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS = ["ULTY", "YMAG"]
+# 2026-10-13 owner-approved adoption (see
+# backtest_2026-10-13_institutional_flow_income_sleeve.md): a dip_buy
+# signal on one of these symbols must ALSO clear
+# income_institutional_flow.volume_surge_confirmed (today's volume >=
+# 1.5x the trailing 20-day average) before it counts as an entry
+# candidate - a proxy for "institutional money entering" since no real
+# order-flow data exists. Scoped to just these two names because the
+# backtest's result was mixed worst-case-first across the full roster:
+# a clear win on every axis for ULTY and YMAG (the two most actively
+# traded names), wash-to-negative for the other six. Every other
+# INCOME_WATCHLIST symbol stays on the plain classify_dip signal.
+

@@ -46,6 +46,7 @@ from trading_agent.income_candidates import filter_by_liquidity
 from trading_agent.income_exit import check_income_exit
 from trading_agent.income_ex_dividend import days_until_ex_dividend, in_avoid_window, in_favorable_window
 from trading_agent.income_signals import classify_dip
+from trading_agent.income_institutional_flow import volume_surge_confirmed
 from trading_agent.cycle_log import CycleLogStore
 from trading_agent.position_state import PositionStateStore
 from trading_agent.risk_manager import RiskManager
@@ -85,6 +86,15 @@ def _closes_by_symbol(historicals_json):
     for row in data["results"]:
         bars = [b for b in row["bars"] if not b.get("interpolated", False)]
         by_symbol[row["symbol"]] = [float(b["close_price"]) for b in bars]
+    return by_symbol
+
+
+def _volumes_by_symbol(historicals_json):
+    data = historicals_json.get("data", historicals_json)
+    by_symbol = {}
+    for row in data["results"]:
+        bars = [b for b in row["bars"] if not b.get("interpolated", False)]
+        by_symbol[row["symbol"]] = [float(b.get("volume", 0.0)) for b in bars]
     return by_symbol
 
 
@@ -149,7 +159,11 @@ def main():
         if missing:
             parser.error(f"--{missing[0].replace('_', '-')} is required unless --record-only")
 
-    from trading_agent.config import INCOME_WATCHLIST, INCOME_RISK_LIMITS
+    from trading_agent.config import (
+        INCOME_WATCHLIST,
+        INCOME_RISK_LIMITS,
+        INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS,
+    )
 
     rm = RiskManager(INCOME_RISK_LIMITS, state_path=Path(args.risk_state_path))
     log = CycleLogStore(path=Path(args.cycle_log_path))
@@ -166,6 +180,7 @@ def main():
         quotes = _quotes_by_symbol(_load_json(args.quotes_file))
         fundamentals = _fundamentals_by_symbol(_load_json(args.fundamentals_file))
         closes_by_symbol = _closes_by_symbol(_load_json(args.historicals_file))
+        volumes_by_symbol = _volumes_by_symbol(_load_json(args.historicals_file))
         positions = _positions_by_symbol(_load_json(args.positions_file))
         today = date.today()
 
@@ -217,6 +232,16 @@ def main():
             if signal != "dip_buy":
                 print(f"{symbol}: hold (no dip signal)")
                 continue
+
+            if symbol in INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS:
+                volumes = volumes_by_symbol.get(symbol)
+                if not volumes or not volume_surge_confirmed(volumes):
+                    print(f"{symbol}: dip_buy signal but blocked_no_volume_surge "
+                          f"(institutional-flow gate, see "
+                          f"backtest_2026-10-13_institutional_flow_income_sleeve.md)")
+                    if not args.no_log:
+                        log.record(symbol, "dip_buy", None, "blocked_no_volume_surge")
+                    continue
 
             fundamentals_row = fundamentals.get(symbol)
             ex_div = fundamentals_row.get("ex_dividend_date") if fundamentals_row else None

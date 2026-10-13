@@ -1317,6 +1317,41 @@ range), else `"hold"` — including the warm-up/flat-window `None` case
 defaults, not swept/optimized the way `exit_criteria.py`'s are — see
 `income_backtest.py`'s stated limitation below.
 
+### Institutional-flow gate (`income_institutional_flow.py`) — `ULTY`/`YMAG` only
+
+Owner-approved addition, 2026-10-13: for symbols in
+`INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS` (`config.py`, currently
+`["ULTY", "YMAG"]`), a `dip_buy` signal must ALSO clear
+`volume_surge_confirmed(volumes)` — today's volume at least 1.5x the
+trailing 20-day average (today excluded) — before it counts as an entry
+candidate. `income_cycle.py` checks this right after `classify_dip`
+returns `dip_buy`; if it fails, the symbol is logged
+`blocked_no_volume_surge` and the cycle moves on, same as any other
+blocked reason.
+
+**Why only these two symbols, and why this exact gate**: no real
+order-flow/dark-pool data exists via this API, so "institutional money
+entering" is approximated by unusually heavy volume on the dip day — a
+proxy, not a claim about real institutional activity. A first design
+(distance from a trailing volume-weighted average price) turned out to
+be a mathematical no-op — being in the bottom 10% of a 20-day range is
+near-certain to already be below that window's volume-weighted average,
+so it never blocked a single real `dip_buy` bar across 8 symbols'
+history. The volume-surge version does discriminate, and its real
+backtest (`backtest_2026-10-13_institutional_flow_income_sleeve.md`)
+showed a **mixed, worst-case-first result across the full roster** — a
+clear win on every axis (return, max drawdown, worst-half return) for
+`ULTY` and `YMAG` specifically, wash-to-negative for the other six. The
+owner approved adopting it **scoped to just the two names it clearly
+helps**, not sleeve-wide — every other `INCOME_WATCHLIST` symbol stays
+on the plain `classify_dip` signal with no volume gate.
+
+**Still built entirely from daily bars** (daily close + daily volume) —
+checking more often than once a day would not surface new information
+under this design. A genuinely intraday/hourly version of this idea
+would need a different signal built on intraday bars, not yet
+attempted.
+
 ### Exit rule (`income_exit.py`)
 
 Its own constants, separate from `exit_criteria.py` (per this project's
