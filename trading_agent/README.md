@@ -274,6 +274,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `income_candidates.py` | Income sleeve — liquidity screen (`filter_by_liquidity`), fails closed on any missing/crossed quote |
 | `income_state.py` | Income sleeve — wires `RiskManager`/`PositionStateStore` to their own state files (`income_risk_state.json`/`income_position_state.json`), distinct from the main bot's `state.json`/`position_state.json` |
 | `income_backtest.py` | Income sleeve — dedicated backtest loop for the dip/stop/trim rule (not a retrofit of `backtest.py`); models price only, no distribution cash flow — see "Income sleeve" below |
+| `income_institutional_flow.py` | Income sleeve — volume-surge confirmation gate (`volume_surge_confirmed`), built and backtested (2026-10-13) as an "institutional money entry" proxy but **not** wired into live entries — mixed, worst-case-first result across the roster (clear win for ULTY/YMAG, wash-to-negative elsewhere); see `backtest_2026-10-13_institutional_flow_income_sleeve.md` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 

@@ -36,13 +36,24 @@ from .income_exit import (
     INCOME_TRIM_TRIGGER_PCT,
     INCOME_TRIM_SELL_FRACTION,
 )
+from .income_institutional_flow import volume_surge_confirmed, VOLUME_LOOKBACK_DAYS, VOLUME_SURGE_MULTIPLE
 
 
 def income_backtest(closes, starting_cash=100.0, lookback_days=DIP_LOOKBACK_DAYS,
                      entry_threshold=DIP_ENTRY_THRESHOLD, stop_loss_pct=INCOME_STOP_LOSS_PCT,
                      trim_trigger_pct=INCOME_TRIM_TRIGGER_PCT, trim_sell_fraction=INCOME_TRIM_SELL_FRACTION,
-                     fee_pct=0.0):
+                     fee_pct=0.0, volumes=None, volume_lookback_days=VOLUME_LOOKBACK_DAYS,
+                     volume_surge_multiple=VOLUME_SURGE_MULTIPLE):
     """closes: oldest-to-newest daily close prices for one symbol.
+
+    volumes: optional oldest-to-newest daily volumes, same length as
+    closes. When supplied, a dip_buy signal must ALSO clear
+    income_institutional_flow.volume_surge_confirmed (the owner-requested
+    "institutional money entry" gate, 2026-10-13) before an entry is
+    taken - a plain dip_buy with no volume confirmation is held back as
+    a "hold" for that bar, the same soft-gate pattern the rejected RSI
+    study used for comparability. None (default) skips the gate
+    entirely - the original dip-only behavior.
 
     fee_pct: round-trip friction applied at every fill, same model as
     backtest.py's fee_pct (symmetric haircut on both sides of a trade).
@@ -87,6 +98,14 @@ def income_backtest(closes, starting_cash=100.0, lookback_days=DIP_LOOKBACK_DAYS
         if position_qty == 0 and cash > 0:
             window = closes[: i + 1]
             signal = classify_dip(window, lookback_days=lookback_days, entry_threshold=entry_threshold)
+            if signal == "dip_buy" and volumes is not None:
+                volume_window = volumes[: i + 1]
+                if not volume_surge_confirmed(
+                    volume_window,
+                    lookback_days=volume_lookback_days,
+                    surge_multiple=volume_surge_multiple,
+                ):
+                    signal = "hold"
             if signal == "dip_buy":
                 qty = cash / (price * (1 + fee_pct))
                 position_qty = qty
