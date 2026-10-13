@@ -6,6 +6,34 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-13 (income sleeve: raised position/trade caps, widened ex-dividend window)
+
+**`INCOME_RISK_LIMITS`: `max_concurrent_positions` 2 -> 5, `max_trades_per_day`
+2 -> 4** (now matches the main bot's `RISK_LIMITS` values). Owner request,
+prompted by a cycle where 4 real dip-buy candidates (LFGY, RDTY, MINY,
+SLTY) existed simultaneously and the old caps (sized for "at most one
+new entry alongside ULTY") would have blocked most of them on
+`blocked_concurrent_cap`/daily-cap grounds alone. `max_aggregate_position_pct`
+(8%) was deliberately left unchanged - it remains the real brake on
+total new exposure regardless of how many positions/trades are allowed.
+
+**`income_ex_dividend.FAVORABLE_DAYS_AFTER_EX_DIVIDEND`: 2 -> 6 days**,
+also owner request, same cycle. Root cause found while investigating
+that cycle's blocks: `get_equity_fundamentals`'s `ex_dividend_date`
+field was still showing the prior week's ex-date days after the next
+weekly cycle's ex-date should already apply (confirmed via the known
+weekly-Wednesday cadence - 2026-10-13, a Tuesday, was 1 day before the
+real next ex-date of 2026-10-14, squarely inside the pre-markdown
+`AVOID_DAYS_BEFORE_EX_DIVIDEND` window, even though the stale field made
+it read as "6 days past, outside favorable window"). Flagged this
+explicitly to the owner before acting - widening the constant does NOT
+fix the staleness, it was an accepted risk, not a resolved one: a buy
+allowed under the wider window can still land in the real pre-markdown
+window whenever this staleness recurs. Owner confirmed proceeding anyway.
+Not backtested (no existing harness models ex-dividend timing's effect
+on returns) - a live, real-money gate change on explicit owner approval,
+not a tuned parameter.
+
 ## 2026-10-13 (institutional-flow gate)
 
 **New config constant: `INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS =

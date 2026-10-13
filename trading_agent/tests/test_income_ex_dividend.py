@@ -8,6 +8,7 @@ from trading_agent.income_ex_dividend import (
     days_until_ex_dividend,
     in_avoid_window,
     in_favorable_window,
+    FAVORABLE_DAYS_AFTER_EX_DIVIDEND,
 )
 
 
@@ -38,11 +39,10 @@ def test_avoid_window_boundaries():
 def test_favorable_window_boundaries():
     assert in_favorable_window(1) is False   # still before ex-date
     assert in_favorable_window(0) is True    # ex-date itself
-    assert in_favorable_window(-1) is True
-    assert in_favorable_window(-2) is True
-    assert in_favorable_window(-3) is False
+    assert in_favorable_window(-FAVORABLE_DAYS_AFTER_EX_DIVIDEND) is True
+    assert in_favorable_window(-FAVORABLE_DAYS_AFTER_EX_DIVIDEND - 1) is False
 
 
 def test_avoid_and_favorable_windows_do_not_overlap():
-    for days_until in range(-5, 6):
+    for days_until in range(-10, 6):
         assert not (in_avoid_window(days_until) and in_favorable_window(days_until))

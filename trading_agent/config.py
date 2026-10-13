@@ -258,8 +258,16 @@ INCOME_RISK_LIMITS = {
                                         # max_aggregate_position_pct -
                                         # RiskManager.position_size reads
                                         # this key by default.
-    "max_concurrent_positions": 2,
-    "max_trades_per_day": 2,
+    "max_concurrent_positions": 5,     # raised from 2, 2026-10-13 owner
+                                        # request - matches the main bot's
+                                        # RISK_LIMITS value. Needed to let
+                                        # ULTY (already held) plus multiple
+                                        # same-day dip-buy candidates open
+                                        # at once; max_aggregate_position_pct
+                                        # below is unchanged and is still
+                                        # the real brake on total exposure.
+    "max_trades_per_day": 4,           # raised from 2, same request/date,
+                                        # same reasoning and matching value.
     "auto_execute_max_pct": 0.05,      # matches max_position_pct - every
                                         # correctly-sized entry
                                         # auto-executes, same convention

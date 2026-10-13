@@ -18,7 +18,18 @@ by this module.
 from datetime import date
 
 AVOID_DAYS_BEFORE_EX_DIVIDEND = 2    # don't buy 1-2 days before ex-date
-FAVORABLE_DAYS_AFTER_EX_DIVIDEND = 2  # do buy on, or up to 2 days after
+FAVORABLE_DAYS_AFTER_EX_DIVIDEND = 6  # widened from 2, 2026-10-13 owner
+# request - get_equity_fundamentals' ex_dividend_date field was observed
+# lagging the real weekly cadence by up to a week (still showing the
+# PRIOR cycle's ex-date days after the next one should already apply),
+# so days_until_ex_dividend computed against it understated how close
+# the real NEXT ex-date was. Widening this constant does not fix that
+# root cause - it was explicitly accepted, not resolved: a buy allowed
+# under this wider window can still land 1-2 days before the real next
+# ex-date (the exact pre-markdown scenario AVOID_DAYS_BEFORE_EX_DIVIDEND
+# exists to block) whenever the API's date is stale in this way. Not
+# backtested - this is a live, real-money gate change made on explicit
+# owner approval despite that known risk, not a tuned parameter.
 
 
 def _as_date(value):
