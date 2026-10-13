@@ -6,6 +6,20 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-13
+
+**Income sleeve `INCOME_WATCHLIST` expanded from 8 to 15 names.** Owner
+asked to add more weekly-distribution ETFs; a liquidity screen of 7
+previously-excluded basket funds (LFGY, QDTY, RDTY, SDTY, MINY, SLTY,
+TOPW - all had been held back on liquidity grounds as of the 2026-10-07
+expansion note) was presented with two flagged caveats: RDTY/SDTY/MINY
+clear the 2% spread filter but trade thin, so real fills may slip more
+than the filter implies; SLTY runs a short/inverse strategy, structurally
+different from this sleeve's long-only weekly-income names. Owner said
+"Add all seven" - all 7 added as-is, caveats and all. No
+`RISK_LIMITS`/`WATCHLIST`/`STOCK_WATCHLIST`/`DRY_RUN`/
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` value touched.
+
 ## 2026-10-09
 
 **VOLTRAP (options wheel strategy) goes live.** Owner deposited new

@@ -221,7 +221,8 @@ VOLTRAP_AUTO_EXECUTE = True
 # dip/support read, not the SMA crossover) and exit rule
 # (income_exit.check_income_exit). See PLAYBOOK.md's "Income sleeve"
 # section and income_candidates_2026-10-06.md for the full screen.
-INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]
+INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW",
+                     "LFGY", "QDTY", "RDTY", "SDTY", "MINY", "SLTY", "TOPW"]
 # 2026-10-07 owner-approved expansion (see
 # income_candidates_2026-10-07_expansion.md for the full screen):
 # - GPTY (YieldMax AI & Tech basket, unleveraged) - previously excluded on an
@@ -235,9 +236,16 @@ INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVD
 #   are explained entirely by that one stock's own run, not a repeatable
 #   edge; four other same-family single-stock funds screened the same day
 #   (TSLW, COIW, HOOW, PLTW) lost 32-66% over the identical window and were
-#   explicitly NOT added. Other previously-screened basket funds (LFGY, QDTY,
-#   RDTY, SDTY, MINY, SLTY, TOPW) remain excluded on liquidity, re-confirmed
-#   2026-10-07.
+#   explicitly NOT added.
+# 2026-10-13 owner-approved expansion: LFGY, QDTY, RDTY, SDTY, MINY, SLTY,
+# TOPW - all 7 previously-screened basket funds that had been held back on
+# liquidity grounds. Caveats raised at screening time, still live risks:
+# RDTY/SDTY/MINY clear the 2% spread filter but trade thin, so real fills
+# may slip more than the filter implies; SLTY runs a short/inverse
+# strategy, structurally different from this sleeve's long-only
+# weekly-income names, not just a different ticker. Owner chose to add
+# all seven anyway - re-check liquidity live before trusting this list on
+# a later date, spreads move.
 
 INCOME_RISK_LIMITS = {
     "max_position_pct": 0.05,          # smaller than the originally
