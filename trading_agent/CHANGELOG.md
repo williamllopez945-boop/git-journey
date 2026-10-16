@@ -6,6 +6,50 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-16 (income sleeve: entry gates removed, support-zone signal added, caps resized)
+
+Owner request, real-money change, no recommend-only trial: "no gates for
+entry on dividend stocks... any entry is good based on analysis and
+data," exit stays stop-loss-only at -15% (trim rule also kept, per
+follow-up), smaller per-entry size with a higher aggregate ceiling, and
+a new "good low with good support zones" signal rather than just the
+existing rolling-range percentile.
+
+**`income_cycle.py` no longer calls:** `income_ex_dividend.in_avoid_window`/
+`in_favorable_window` (the ex-dividend timing gate), `income_candidates.filter_by_liquidity`
+(the spread filter), or `PositionStateStore.in_cooldown` (post-exit
+re-entry block). All three modules/functions still exist and are still
+unit-tested - only their call sites inside the live cycle script were
+removed, so re-enabling any of them is a wiring change, not a rebuild.
+`income_cycle.py` no longer requires `--fundamentals-file` as a result
+(nothing reads `ex_dividend_date` anymore).
+
+**`income_signals.py` adds `near_support(closes, lookback_days=60,
+tolerance_pct=0.03)`** (today's close within 3% of the trailing 60-day
+low) and **`classify_entry(closes)`** (dip_buy only when `classify_dip`
+AND `near_support` both agree) - `classify_entry` replaces `classify_dip`
+as `income_cycle.py`'s live entry signal. `income_backtest.py` gained a
+matching `require_support` flag (default `False`, unchanged original
+behavior) to backtest the new combined signal with the same production
+code paths. See
+`backtest_2026-10-16_income_sleeve_support_zone_and_gate_removal.md`:
+mild net positive worst-case-first across all 15 `INCOME_WATCHLIST`
+names on a price-only basis (worst-case return -81.71% -> -80.75%, mean
+-20.09% -> -17.43%) - same stated price-only-backtest and thin-history
+limitations as every prior income-sleeve backtest; the gate removals
+themselves have no backtest surface (see that doc's "Not backtested
+here" section).
+
+**`INCOME_RISK_LIMITS`: `max_position_pct` 5% -> 2%, `auto_execute_max_pct`
+5% -> 2%, `max_aggregate_position_pct` 8% -> 25%, `max_concurrent_positions`
+5 -> 6.** `max_trades_per_day` (4) unchanged. Smaller, more frequent
+entries against a much higher but still real ceiling - not an
+unlimited-exposure change, a resized one. Real risk accepted by this
+whole change: an entry can now fill at a worse price on a thin/crossed
+market, land 1-2 days before an ex-dividend markdown, or re-enter a
+symbol immediately after being stopped out - all three were the exact
+scenarios the removed gates existed to prevent.
+
 ## 2026-10-13 (income sleeve: raised position/trade caps, widened ex-dividend window)
 
 **`INCOME_RISK_LIMITS`: `max_concurrent_positions` 2 -> 5, `max_trades_per_day`

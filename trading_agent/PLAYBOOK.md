@@ -1205,13 +1205,17 @@ crypto/stock bot.
 
 **Live as of 2026-10-06 (owner request, via `AskUserQuestion`):
 `INCOME_AUTO_EXECUTE = True` from the start — no recommend-only trial
-period, unlike every other strategy in this project.** In exchange,
-`INCOME_RISK_LIMITS` starts deliberately smaller than this sleeve's
-original recommendation (`max_position_pct=5%`,
-`max_aggregate_position_pct=8%`, `max_concurrent_positions=2`,
-`max_trades_per_day=2`) — **revisit these upward only after a couple of
-real weeks of live trading**, the owner's own stated plan, written down
-here so it isn't lost. `INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY",
+period, unlike every other strategy in this project.** `INCOME_RISK_LIMITS`
+started deliberately smaller than this sleeve's original recommendation
+(`max_position_pct=5%`, `max_aggregate_position_pct=8%`,
+`max_concurrent_positions=2`, `max_trades_per_day=2`), then raised
+2026-10-13 (`max_concurrent_positions=5`, `max_trades_per_day=4`), then
+reshaped again 2026-10-16 (owner request: smaller per-entry, higher
+aggregate ceiling — see "Entry gates removed" and "Entry signal" below)
+to `max_position_pct=2%`, `auto_execute_max_pct=2%`,
+`max_aggregate_position_pct=25%`, `max_concurrent_positions=6`,
+`max_trades_per_day=4` (current values — always read `config.py` directly,
+this prose will drift). `INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY",
 "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]` as of 2026-10-07 (see
 `income_candidates_2026-10-07_expansion.md`): `GPTY` (originally excluded
 for a borderline 3.19% after-hours spread, now liquid at 1.78% during
@@ -1224,25 +1228,33 @@ same family, `TSLW`/`COIW`/`HOOW`/`PLTW`, lost 32-66% over the identical
 window and were left out). `max_concurrent_positions=2` is still a real
 cap against 8 names.
 
-### Ex-dividend timing gate (`income_ex_dividend.py`)
+### Ex-dividend timing gate (`income_ex_dividend.py`) — DISABLED 2026-10-16
 
-The owner's explicit second requirement: prefer buying just after the
-ex-dividend date, avoid buying just before it. The mechanics: on the
-ex-date, a fund's share price mechanically steps down by roughly the
-distribution amount (that value leaves the fund) — buying the day or two
-before just pre-pays for a distribution you immediately get back while
-eating the same markdown anyway, no real edge; buying on or shortly
-after the ex-date gets the genuinely lower post-markdown price, still
-positioned for every future week's payout.
+The owner's original second requirement (2026-10-06): prefer buying just
+after the ex-dividend date, avoid buying just before it. The mechanics:
+on the ex-date, a fund's share price mechanically steps down by roughly
+the distribution amount (that value leaves the fund) — buying the day or
+two before just pre-pays for a distribution you immediately get back
+while eating the same markdown anyway, no real edge; buying on or
+shortly after the ex-date gets the genuinely lower post-markdown price,
+still positioned for every future week's payout.
 
 `days_until_ex_dividend(today, ex_dividend_date)` (positive = upcoming,
-0 = today is the ex-date, negative = already passed) feeds two gates:
-`in_avoid_window(days_until)` (`1 <= days_until <= 2` — blocks a buy even
-if `classify_dip` says `"dip_buy"`) and `in_favorable_window(days_until)`
-(`-2 <= days_until <= 0` — the only window a buy is allowed). `
-get_equity_fundamentals`'s `ex_dividend_date` field is the live source —
-confirmed real and reliable 2026-10-06 (all four candidates showed
-`distribution_frequency: "Weekly"`, next ex-date 2026-10-07).
+0 = today is the ex-date, negative = already passed) fed two gates:
+`in_avoid_window(days_until)` (`1 <= days_until <= 2`) and
+`in_favorable_window(days_until)` (`-6 <= days_until <= 0`, widened
+2026-10-13 after `get_equity_fundamentals`'s `ex_dividend_date` field was
+observed lagging the real weekly cadence).
+
+**2026-10-16 owner request: this gate no longer blocks entries.**
+`income_cycle.py` no longer calls either function or requires
+`--fundamentals-file` - a `classify_entry` signal (see "Entry signal"
+below) is trusted on its own. The module and its tests still exist,
+unused, in case this gate is ever re-enabled - it is not deleted, just
+no longer wired into the live cycle. Real risk accepted: an entry can
+now land in the 1-2 days right before an ex-date, pre-paying for a
+distribution with no real edge, exactly the scenario this gate existed
+to avoid.
 
 ### Per-cycle script (`income_cycle.py`)
 
@@ -1255,15 +1267,14 @@ Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
    check the main bot uses, not a sleeve-only sub-slice — a severe
    daily loss from *any* source halts new income-sleeve entries too).
 2. `get_equity_quotes(symbols=INCOME_WATCHLIST)` →
-   `get_equity_fundamentals(symbols=INCOME_WATCHLIST)` →
    `get_equity_historicals(symbols=INCOME_WATCHLIST, interval="day")` →
    `get_equity_positions(account_number=581911765)` → save each to a
-   file, run:
+   file, run (no `--fundamentals-file` since 2026-10-16 - the
+   ex-dividend gate is disabled, see above):
    ```
    python3 trading_agent/income_cycle.py \
-     --quotes-file quotes.json --fundamentals-file fundamentals.json \
-     --historicals-file historicals.json --portfolio-file portfolio.json \
-     --positions-file positions.json
+     --quotes-file quotes.json --historicals-file historicals.json \
+     --portfolio-file portfolio.json --positions-file positions.json
    ```
 3. For every line reporting an exit (`stop_loss` or `trim`): sell via
    `place_equity_order` (marketable limit, `market_hours=regular_hours`,
@@ -1294,16 +1305,16 @@ Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
    quiet on a plain hold, same convention as the hourly crypto/stock
    cycle.
 
-### Liquidity re-check
+### Liquidity re-check — DISABLED 2026-10-16
 
-Spreads on these thinly-traded ETFs move — `income_candidates.py`'s
-`filter_by_liquidity` runs live every cycle inside `income_cycle.py`
-against that cycle's real quotes, never against a stored snapshot.
-`GPTY` was excluded on an after-hours spread read, then added 2026-10-07
-once a regular-hours re-check cleared it — the same re-check applies to
-any future candidate (e.g. `QDTY`/`ARMW`/`GLDW`, each within ~0.2% of
-the 2% filter as of 2026-10-07, see
-`income_candidates_2026-10-07_expansion.md`).
+Spreads on these thinly-traded ETFs move; `income_candidates.py`'s
+`filter_by_liquidity` used to run live every cycle inside
+`income_cycle.py` against that cycle's real quotes, never against a
+stored snapshot. **2026-10-16 owner request: this filter no longer
+blocks entries** - `income_cycle.py` no longer calls it. The module and
+its tests still exist, unused. Real risk accepted: an entry can now fill
+at a worse price on a thin or crossed market day - no live spread check
+protects against that anymore.
 
 ### Entry signal (`income_signals.py`)
 
@@ -1313,9 +1324,27 @@ daily closes; `None` if under 20 bars of history or the window is flat.
 `classify_dip(closes, lookback_days=20, entry_threshold=0.10)` returns
 `"dip_buy"` when that position is `<= 0.10` (bottom 10% of the trailing
 range), else `"hold"` — including the warm-up/flat-window `None` case
-(never blocks, just doesn't signal). These two constants are proposed
-defaults, not swept/optimized the way `exit_criteria.py`'s are — see
-`income_backtest.py`'s stated limitation below.
+(never blocks, just doesn't signal).
+
+**2026-10-16 owner request — "good low with good support zones," not
+just a rolling-range percentile.** Added `near_support(closes,
+lookback_days=60, tolerance_pct=0.03)`: true when today's close is
+within 3% of the lowest close over the trailing 60 days - a longer
+horizon than `classify_dip`'s 20-day window, meant to confirm the dip is
+a real support level, not just a short-term wiggle. `classify_entry(closes)`
+combines both - `"dip_buy"` only when `classify_dip` AND `near_support`
+agree - and **replaces `classify_dip` as `income_cycle.py`'s live entry
+signal** (the ex-dividend/liquidity/cooldown gates removed above are not
+replaced by anything else; this combined signal is the only thing left
+gating a new entry, besides the institutional-flow gate and
+`INCOME_RISK_LIMITS` below). See
+`backtest_2026-10-16_income_sleeve_support_zone_and_gate_removal.md` for
+the real-history backtest: mild net positive worst-case-first on a
+price-only basis (same stated limitation as every income-sleeve
+backtest - these are weekly-distribution funds, price-only return
+substantially understates the real total return the strategy is built
+around). None of these constants are swept/optimized the way
+`exit_criteria.py`'s are.
 
 ### Institutional-flow gate (`income_institutional_flow.py`) — `ULTY`/`YMAG` only
 
@@ -1324,7 +1353,7 @@ Owner-approved addition, 2026-10-13: for symbols in
 `["ULTY", "YMAG"]`), a `dip_buy` signal must ALSO clear
 `volume_surge_confirmed(volumes)` — today's volume at least 1.5x the
 trailing 20-day average (today excluded) — before it counts as an entry
-candidate. `income_cycle.py` checks this right after `classify_dip`
+candidate. `income_cycle.py` checks this right after `classify_entry`
 returns `dip_buy`; if it fails, the symbol is logged
 `blocked_no_volume_surge` and the cycle moves on, same as any other
 blocked reason.
@@ -1391,15 +1420,38 @@ candidate has well under 2 years of real daily history (YMAX/YMAG
 oldest, ~2024 inception; GPTY/CHPY 2025-only) — treat any result as a
 mechanism sanity-check, not a tuned parameter.
 
+`income_backtest(..., require_support=False)` (2026-10-16): when `True`,
+applies the live `near_support` check on top of `classify_dip`, same
+combined signal `classify_entry` uses. Default `False` reproduces the
+original dip-only behavior unchanged.
+
+### Entry gates removed 2026-10-16 (owner request) — summary
+
+Three gates that used to block an otherwise-qualifying entry no longer
+run inside `income_cycle.py`: the ex-dividend timing gate, the
+liquidity/spread filter, and `PositionStateStore.in_cooldown` (re-entry
+right after a stop-out/trim is no longer blocked). None of their
+pure functions were deleted - only their call sites in the live cycle
+script were removed, so re-enabling any of them later is a wiring
+change, not a rebuild. In exchange, `INCOME_RISK_LIMITS` was resized the
+same day: smaller per-entry (`max_position_pct`/`auto_execute_max_pct`
+5%→2%) against a much higher but still real aggregate ceiling
+(`max_aggregate_position_pct` 8%→25%) and one more concurrent slot
+(`max_concurrent_positions` 5→6) — see `config.py` for the authoritative
+current values. The entry signal itself was simultaneously strengthened
+(see "Entry signal" above: `classify_entry` requires both a dip
+percentile and a real 60-day support-zone check, where the old signal
+only required the former) - the owner's framing was "any entry is good
+based on analysis and data," so the two timing/liquidity gates were
+removed but the underlying signal was made stricter, not left as-is.
+
 ### Auto-execution
 
 `INCOME_AUTO_EXECUTE = True` (live, owner request 2026-10-06, no
 recommend-only trial): every entry/exit `income_cycle.py` reports as
-actionable executes automatically within the smaller initial
-`INCOME_RISK_LIMITS` above — no approval step, notify after the fact.
-**Revisit `INCOME_RISK_LIMITS` upward only after a couple of real weeks**
-(owner's own stated plan) — never as a side effect of this Routine
-itself.
+actionable executes automatically within the current `INCOME_RISK_LIMITS`
+(`config.py` is authoritative — this prose drifts) — no approval step,
+notify after the fact.
 
 Hard rules: never modify `INCOME_RISK_LIMITS`, `INCOME_WATCHLIST`, or
 `INCOME_AUTO_EXECUTE` from within the Routine (same posture as

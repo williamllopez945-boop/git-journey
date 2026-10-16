@@ -59,3 +59,33 @@ def test_fee_pct_reduces_final_equity_versus_frictionless():
     _, frictionless_curve = income_backtest(closes, starting_cash=100.0, fee_pct=0.0)
     _, with_fees_curve = income_backtest(closes, starting_cash=100.0, fee_pct=0.01)
     assert with_fees_curve[-1] < frictionless_curve[-1]
+
+
+def test_require_support_blocks_entry_without_60_bar_warmup():
+    # The dip-then-recover-then-crash fixture only has ~24 bars - a
+    # dip_buy fires without require_support (default), but near_support
+    # can't be computed yet with fewer than 60 bars, so require_support
+    # must hold the entry back entirely.
+    closes = _synthetic_dip_then_recover_then_crash()
+    trades, _ = income_backtest(closes, starting_cash=100.0, require_support=True)
+    assert trades == []
+
+
+def test_require_support_allows_entry_when_support_confirmed():
+    # 60 bars flat at 20.0, then a dip to 10.0 that is simultaneously the
+    # bottom of the trailing 20-day window AND the 60-day support level.
+    closes = [20.0] * 59 + [10.0, 10.5, 11.0, 7.0]
+    trades, _ = income_backtest(closes, starting_cash=100.0, require_support=True)
+    reasons = [t["reason"] for t in trades]
+    assert "dip_buy" in reasons
+
+
+def test_require_support_rejects_dip_far_from_60_day_low():
+    # A deep low early in the 60-day window makes the later dip NOT a
+    # real support level - require_support must reject it even though
+    # classify_dip alone (the old, unmodified behavior) would fire.
+    closes = [100.0] * 10 + [5.0] + [50.0] * 48 + [40.0, 42.0, 45.0]
+    trades_old, _ = income_backtest(closes, starting_cash=100.0, require_support=False)
+    trades_new, _ = income_backtest(closes, starting_cash=100.0, require_support=True)
+    assert any(t["reason"] == "dip_buy" for t in trades_old)
+    assert trades_new == []

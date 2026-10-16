@@ -2,12 +2,22 @@
 distribution basket ETFs - see PLAYBOOK.md's "Income sleeve" section).
 Mirrors run_cycle.py's shape and CLI conventions exactly (same
 --record-only/--record-trade-*/overridable-state-path pattern), wired to
-this sleeve's own signal (income_signals.classify_dip +
-income_ex_dividend's ex-dividend timing gate), own exit rule
+this sleeve's own signal (income_signals.classify_entry - dip percentile
+AND a real support-zone check, see income_signals.py), own exit rule
 (income_exit.check_income_exit), and own isolated state
 (income_state.py - income_risk_state.json/income_position_state.json/
 income_cycle_log.json, never the main bot's state.json/
 position_state.json/cycle_log.json).
+
+2026-10-16 owner request: the ex-dividend timing gate (income_ex_dividend.py),
+the liquidity/spread filter (income_candidates.filter_by_liquidity), and
+the post-exit cooldown (PositionStateStore.in_cooldown) no longer block
+entries here - a classify_entry signal is trusted on its own, sized
+smaller per entry (INCOME_RISK_LIMITS) instead. Those modules/functions
+still exist and are still tested; they're just not called from this
+script anymore. See CHANGELOG.md for the real-money risk this accepts
+(an entry can now fill on a thin/crossed market, right before an
+ex-dividend markdown, or immediately after a stop-out).
 
 Read-only and side-effect-light, same posture as run_cycle.py: never
 calls the RobinHood MCP tools or places orders - the calling session's
@@ -16,14 +26,13 @@ and then re-invokes this script with --record-only to log the fill.
 
 Usage (a normal cycle):
     python3 trading_agent/income_cycle.py \\
-        --quotes-file quotes.json --fundamentals-file fundamentals.json \\
-        --historicals-file historicals.json --portfolio-file portfolio.json \\
-        --positions-file positions.json
+        --quotes-file quotes.json --historicals-file historicals.json \\
+        --portfolio-file portfolio.json --positions-file positions.json
 
 Usage (recording an already-placed fill, in a SEPARATE invocation after
 the real order call - see run_cycle.py's own module docstring for why
-this is split out: recording must never re-run classify_dip/the
-ex-dividend gate a second time in the same cycle):
+this is split out: recording must never re-run classify_entry a second
+time in the same cycle):
     python3 trading_agent/income_cycle.py --record-only \\
         --record-trade-asset YMAX --record-trade-side buy \\
         --record-trade-quantity 12.5 --record-trade-price 7.68 \\
@@ -35,17 +44,14 @@ unwrapped payload, same convention as run_cycle.py.
 
 import argparse
 import sys
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import json
 
-from trading_agent.income_candidates import filter_by_liquidity
 from trading_agent.income_exit import check_income_exit
-from trading_agent.income_ex_dividend import days_until_ex_dividend, in_avoid_window, in_favorable_window
-from trading_agent.income_signals import classify_dip
+from trading_agent.income_signals import classify_entry
 from trading_agent.income_institutional_flow import volume_surge_confirmed
 from trading_agent.cycle_log import CycleLogStore
 from trading_agent.position_state import PositionStateStore
@@ -73,11 +79,6 @@ def _quotes_by_symbol(quotes_json):
         quote = row["quote"]
         by_symbol[quote["symbol"]] = quote
     return by_symbol
-
-
-def _fundamentals_by_symbol(fundamentals_json):
-    data = fundamentals_json.get("data", fundamentals_json)
-    return {row["symbol"]: row for row in data["results"]}
 
 
 def _closes_by_symbol(historicals_json):
@@ -112,10 +113,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quotes-file",
                          help="required unless --record-only (get_equity_quotes' raw response "
-                              "for INCOME_WATCHLIST - supplies bid/ask for the liquidity check)")
-    parser.add_argument("--fundamentals-file",
-                         help="required unless --record-only (get_equity_fundamentals' raw response "
-                              "for INCOME_WATCHLIST - supplies each symbol's ex_dividend_date)")
+                              "for INCOME_WATCHLIST - supplies each symbol's live price for sizing "
+                              "and marking held positions)")
     parser.add_argument("--historicals-file",
                          help="required unless --record-only (get_equity_historicals' raw response, "
                               "interval=day, for INCOME_WATCHLIST - real bars only, interpolated "
@@ -129,7 +128,7 @@ def main():
     parser.add_argument("--record-only", action="store_true",
                          help="only record an already-executed trade (--record-trade-* flags) - "
                               "skips the signal/exit checks entirely, so recording a fill never "
-                              "re-runs classify_dip/the ex-dividend gate a second time this cycle.")
+                              "re-runs classify_entry a second time this cycle.")
     parser.add_argument("--risk-state-path", default=str(DEFAULT_RISK_STATE_PATH),
                          help="override for tests - defaults to the real income_risk_state.json")
     parser.add_argument("--position-state-path", default=str(DEFAULT_POSITION_STATE_PATH),
@@ -153,7 +152,7 @@ def main():
     if args.record_only and not args.record_trade_asset:
         parser.error("--record-only has nothing to do without --record-trade-asset (and friends)")
     if not args.record_only:
-        missing = [name for name in ("quotes_file", "fundamentals_file", "historicals_file",
+        missing = [name for name in ("quotes_file", "historicals_file",
                                       "portfolio_file", "positions_file")
                    if getattr(args, name) is None]
         if missing:
@@ -178,20 +177,9 @@ def main():
               f"(trades_today={rm.state['trades_today']}/{INCOME_RISK_LIMITS['max_trades_per_day']})")
 
         quotes = _quotes_by_symbol(_load_json(args.quotes_file))
-        fundamentals = _fundamentals_by_symbol(_load_json(args.fundamentals_file))
         closes_by_symbol = _closes_by_symbol(_load_json(args.historicals_file))
         volumes_by_symbol = _volumes_by_symbol(_load_json(args.historicals_file))
         positions = _positions_by_symbol(_load_json(args.positions_file))
-        today = date.today()
-
-        liquidity_rows = []
-        for symbol in INCOME_WATCHLIST:
-            quote = quotes.get(symbol)
-            if quote is None:
-                continue
-            liquidity_rows.append({"symbol": symbol, "bid_price": float(quote["bid_price"]),
-                                    "ask_price": float(quote["ask_price"])})
-        liquid_symbols = {row["symbol"] for row in filter_by_liquidity(liquidity_rows)}
 
         open_position_count = len(positions)
         total_open_position_value = 0.0
@@ -218,19 +206,14 @@ def main():
         for symbol in INCOME_WATCHLIST:
             if symbol in positions:
                 continue
-            if symbol not in liquid_symbols:
-                print(f"{symbol}: blocked_illiquid")
-                if not args.no_log:
-                    log.record(symbol, "dip_buy", None, "blocked_illiquid")
-                continue
 
             closes = closes_by_symbol.get(symbol)
             if not closes:
                 print(f"{symbol}: no historicals this cycle, skipped")
                 continue
-            signal = classify_dip(closes)
+            signal = classify_entry(closes)
             if signal != "dip_buy":
-                print(f"{symbol}: hold (no dip signal)")
+                print(f"{symbol}: hold (no dip+support signal)")
                 continue
 
             if symbol in INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS:
@@ -243,28 +226,6 @@ def main():
                         log.record(symbol, "dip_buy", None, "blocked_no_volume_surge")
                     continue
 
-            fundamentals_row = fundamentals.get(symbol)
-            ex_div = fundamentals_row.get("ex_dividend_date") if fundamentals_row else None
-            if not ex_div:
-                print(f"{symbol}: dip_buy signal but no ex_dividend_date this cycle, skipped")
-                continue
-            days_until = days_until_ex_dividend(today, ex_div)
-            if in_avoid_window(days_until):
-                print(f"{symbol}: dip_buy signal but blocked_avoid_window "
-                      f"(ex-dividend in {days_until} day(s))")
-                if not args.no_log:
-                    log.record(symbol, "dip_buy", None, "blocked_avoid_window")
-                continue
-            if not in_favorable_window(days_until):
-                print(f"{symbol}: dip_buy signal but outside the favorable ex-dividend window "
-                      f"(ex-dividend in {days_until} day(s))")
-                continue
-
-            if pss.in_cooldown(symbol):
-                print(f"{symbol}: dip_buy signal but blocked_cooldown")
-                if not args.no_log:
-                    log.record(symbol, "dip_buy", None, "blocked_cooldown")
-                continue
             if not rm.can_trade():
                 print(f"{symbol}: dip_buy signal but blocked_cannot_trade (halted or daily cap reached)")
                 continue
@@ -287,8 +248,7 @@ def main():
                       f"auto_execute_max_pct - present as a recommendation instead")
                 continue
 
-            print(f"{symbol}: ENTER dip_buy, qty={qty:.4f} notional=${notional:.2f} @ ${price:.2f} "
-                  f"(ex-dividend in {days_until} day(s))")
+            print(f"{symbol}: ENTER dip_buy, qty={qty:.4f} notional=${notional:.2f} @ ${price:.2f}")
 
     if args.record_trade_asset:
         rm.record_trade(args.record_trade_asset, args.record_trade_side,

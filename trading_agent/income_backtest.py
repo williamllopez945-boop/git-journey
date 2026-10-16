@@ -29,7 +29,14 @@ live sleeve's INCOME_RISK_LIMITS caps), to isolate and evaluate the
 entry/exit signal quality itself - same convention backtest.py uses.
 """
 
-from .income_signals import classify_dip, DIP_LOOKBACK_DAYS, DIP_ENTRY_THRESHOLD
+from .income_signals import (
+    classify_dip,
+    near_support,
+    DIP_LOOKBACK_DAYS,
+    DIP_ENTRY_THRESHOLD,
+    SUPPORT_LOOKBACK_DAYS,
+    SUPPORT_TOLERANCE_PCT,
+)
 from .income_exit import (
     check_income_exit,
     INCOME_STOP_LOSS_PCT,
@@ -43,8 +50,16 @@ def income_backtest(closes, starting_cash=100.0, lookback_days=DIP_LOOKBACK_DAYS
                      entry_threshold=DIP_ENTRY_THRESHOLD, stop_loss_pct=INCOME_STOP_LOSS_PCT,
                      trim_trigger_pct=INCOME_TRIM_TRIGGER_PCT, trim_sell_fraction=INCOME_TRIM_SELL_FRACTION,
                      fee_pct=0.0, volumes=None, volume_lookback_days=VOLUME_LOOKBACK_DAYS,
-                     volume_surge_multiple=VOLUME_SURGE_MULTIPLE):
+                     volume_surge_multiple=VOLUME_SURGE_MULTIPLE, require_support=False,
+                     support_lookback_days=SUPPORT_LOOKBACK_DAYS, support_tolerance_pct=SUPPORT_TOLERANCE_PCT):
     """closes: oldest-to-newest daily close prices for one symbol.
+
+    require_support: when True (2026-10-16 owner request - the live
+    sleeve's new classify_entry signal), a dip_buy signal must ALSO clear
+    near_support (today's close within support_tolerance_pct of the
+    trailing support_lookback_days low) before an entry is taken. False
+    (default) reproduces the original dip-only behavior, so existing
+    callers/tests are unaffected.
 
     volumes: optional oldest-to-newest daily volumes, same length as
     closes. When supplied, a dip_buy signal must ALSO clear
@@ -98,6 +113,10 @@ def income_backtest(closes, starting_cash=100.0, lookback_days=DIP_LOOKBACK_DAYS
         if position_qty == 0 and cash > 0:
             window = closes[: i + 1]
             signal = classify_dip(window, lookback_days=lookback_days, entry_threshold=entry_threshold)
+            if signal == "dip_buy" and require_support:
+                if not near_support(window, lookback_days=support_lookback_days,
+                                     tolerance_pct=support_tolerance_pct):
+                    signal = "hold"
             if signal == "dip_buy" and volumes is not None:
                 volume_window = volumes[: i + 1]
                 if not volume_surge_confirmed(

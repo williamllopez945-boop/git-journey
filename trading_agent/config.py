@@ -217,8 +217,9 @@ VOLTRAP_AUTO_EXECUTE = True
 # start, no recommend-only trial period, unlike every other strategy
 # here). Deliberately NOT part of RISK_LIMITS/STOCK_WATCHLIST above - a
 # third, independent strategy, own budget, own state files
-# (income_state.py), own entry signal (income_signals.classify_dip, a
-# dip/support read, not the SMA crossover) and exit rule
+# (income_state.py), own entry signal (income_signals.classify_entry, a
+# dip percentile AND a real support-zone read, not the SMA crossover -
+# replaced classify_dip alone 2026-10-16) and exit rule
 # (income_exit.check_income_exit). See PLAYBOOK.md's "Income sleeve"
 # section and income_candidates_2026-10-06.md for the full screen.
 INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW",
@@ -248,27 +249,27 @@ INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVD
 # a later date, spreads move.
 
 INCOME_RISK_LIMITS = {
-    "max_position_pct": 0.05,          # smaller than the originally
-                                        # proposed 10% - initial live run
-                                        # (owner request), revisit after
-                                        # a couple of real weeks.
-    "max_aggregate_position_pct": 0.08, # smaller than the originally
-                                        # proposed 15%. Same key name as
-                                        # RISK_LIMITS' own
+    "max_position_pct": 0.02,          # cut from 5%, 2026-10-16 owner
+                                        # request - "any entry is good,"
+                                        # paired with smaller, more
+                                        # frequent entries instead of a
+                                        # few large ones.
+    "max_aggregate_position_pct": 0.25, # raised from 8%, same request -
+                                        # this was the binding brake on
+                                        # exposure; raised to a much
+                                        # higher but still real ceiling,
+                                        # not removed outright. Same key
+                                        # name as RISK_LIMITS' own
                                         # max_aggregate_position_pct -
                                         # RiskManager.position_size reads
                                         # this key by default.
-    "max_concurrent_positions": 5,     # raised from 2, 2026-10-13 owner
-                                        # request - matches the main bot's
-                                        # RISK_LIMITS value. Needed to let
-                                        # ULTY (already held) plus multiple
-                                        # same-day dip-buy candidates open
-                                        # at once; max_aggregate_position_pct
-                                        # below is unchanged and is still
-                                        # the real brake on total exposure.
-    "max_trades_per_day": 4,           # raised from 2, same request/date,
-                                        # same reasoning and matching value.
-    "auto_execute_max_pct": 0.05,      # matches max_position_pct - every
+    "max_concurrent_positions": 6,     # raised from 5, same request -
+                                        # room for one more small
+                                        # position open at once across a
+                                        # 15-name watchlist.
+    "max_trades_per_day": 4,           # unchanged (already raised
+                                        # 2026-10-13).
+    "auto_execute_max_pct": 0.02,      # matches max_position_pct - every
                                         # correctly-sized entry
                                         # auto-executes, same convention
                                         # RISK_LIMITS uses.
@@ -279,6 +280,20 @@ INCOME_RISK_LIMITS = {
                                         # own circuit breaker (not a
                                         # sleeve-only sub-slice).
 }
+# 2026-10-16 owner request - real-money change, no recommend-only trial
+# (consistent with every prior income-sleeve change): the ex-dividend
+# timing gate (income_ex_dividend.py), the liquidity/spread filter
+# (income_candidates.filter_by_liquidity), and the post-exit cooldown
+# (PositionStateStore.in_cooldown) no longer block entries in
+# income_cycle.py - a classify_entry signal (income_signals.py: the
+# existing dip percentile AND a new real support-zone check) is trusted
+# on its own. Those modules/functions still exist and are still tested,
+# just no longer called from the live cycle script. Sized smaller per
+# entry (above) to compensate for the wider aggregate ceiling. See
+# backtest_2026-10-16_income_sleeve_support_zone_and_gate_removal.md for
+# the support-zone signal's backtest evidence (mild net positive,
+# worst-case-first, on a price-only basis) and PLAYBOOK.md's "Income
+# sleeve" section for the real risk this accepts.
 
 INCOME_AUTO_EXECUTE = True  # live from the start, owner request 2026-10-06.
 
@@ -293,5 +308,5 @@ INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS = ["ULTY", "YMAG"]
 # backtest's result was mixed worst-case-first across the full roster:
 # a clear win on every axis for ULTY and YMAG (the two most actively
 # traded names), wash-to-negative for the other six. Every other
-# INCOME_WATCHLIST symbol stays on the plain classify_dip signal.
+# INCOME_WATCHLIST symbol stays on the plain classify_entry signal.
 
