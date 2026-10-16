@@ -249,27 +249,45 @@ INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVD
 # a later date, spreads move.
 
 INCOME_RISK_LIMITS = {
-    "max_position_pct": 0.02,          # cut from 5%, 2026-10-16 owner
-                                        # request - "any entry is good,"
-                                        # paired with smaller, more
-                                        # frequent entries instead of a
-                                        # few large ones.
-    "max_aggregate_position_pct": 0.25, # raised from 8%, same request -
-                                        # this was the binding brake on
-                                        # exposure; raised to a much
-                                        # higher but still real ceiling,
-                                        # not removed outright. Same key
-                                        # name as RISK_LIMITS' own
+    "max_position_pct": 0.06,          # raised from 2%, 2026-10-16 (same
+                                        # day, second owner request): at 2%
+                                        # on a ~$1024 account (~$20.49/trade)
+                                        # the live cycle floored CHPY
+                                        # (~$61/share) and QDTY (~$37/share)
+                                        # to 0 whole shares - this sleeve
+                                        # never places fractional-share
+                                        # orders (only a market order can be
+                                        # fractional, and the hard rule here
+                                        # is marketable-limit-only). 6%
+                                        # (~$61/trade) covers every current
+                                        # INCOME_WATCHLIST name except AMDW
+                                        # (~$85/share), which still floors
+                                        # to 0 - owner explicitly chose 6%
+                                        # over the 8.5% needed to cover AMDW
+                                        # too.
+    "max_aggregate_position_pct": 0.25, # unchanged this round - still the
+                                        # real brake on total exposure: 10
+                                        # concurrent positions (below) at 6%
+                                        # each would exceed this if all were
+                                        # sized at the max simultaneously,
+                                        # so this cap, not the concurrent
+                                        # count or per-trade %, is what
+                                        # actually limits aggregate income-
+                                        # sleeve exposure. Same key name as
+                                        # RISK_LIMITS' own
                                         # max_aggregate_position_pct -
                                         # RiskManager.position_size reads
                                         # this key by default.
-    "max_concurrent_positions": 6,     # raised from 5, same request -
-                                        # room for one more small
-                                        # position open at once across a
-                                        # 15-name watchlist.
+    "max_concurrent_positions": 10,    # raised from 6, same 2026-10-16
+                                        # second request - more of the
+                                        # 15-name watchlist can be held at
+                                        # once; max_aggregate_position_pct
+                                        # above remains the binding ceiling
+                                        # on total exposure regardless.
     "max_trades_per_day": 4,           # unchanged (already raised
                                         # 2026-10-13).
-    "auto_execute_max_pct": 0.02,      # matches max_position_pct - every
+    "auto_execute_max_pct": 0.06,      # raised to match max_position_pct,
+                                        # same convention as before - every
                                         # correctly-sized entry
                                         # auto-executes, same convention
                                         # RISK_LIMITS uses.
@@ -294,6 +312,17 @@ INCOME_RISK_LIMITS = {
 # the support-zone signal's backtest evidence (mild net positive,
 # worst-case-first, on a price-only basis) and PLAYBOOK.md's "Income
 # sleeve" section for the real risk this accepts.
+#
+# Same-day follow-up, 2026-10-16 (second owner request): the first live
+# cycle under the gate-removal/smaller-sizing change above found a real
+# consequence of the 2% per-trade size - CHPY and QDTY both signaled
+# dip_buy but floored to 0 whole shares (this sleeve never places a
+# fractional-share order; only a market order can be fractional, and the
+# hard rule here is marketable-limit-only). Owner raised max_position_pct
+# 2% -> 6% (and auto_execute_max_pct to match) and max_concurrent_positions
+# 6 -> 10 in response. max_aggregate_position_pct stays at 25% - it is
+# still the real ceiling on total exposure, independent of the per-trade %
+# or concurrent-position count.
 
 INCOME_AUTO_EXECUTE = True  # live from the start, owner request 2026-10-06.
 

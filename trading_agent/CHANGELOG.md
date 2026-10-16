@@ -6,6 +6,40 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-16 (income sleeve: max_position_pct and max_concurrent_positions raised, same-day follow-up)
+
+Owner request, real-money change, no recommend-only trial, made in a
+normal conversation (not from inside the Income sleeve cycle Routine,
+which is explicitly barred from touching these). Prompted by the first
+live cycle run under the gate-removal/smaller-sizing change directly
+below: `classify_entry` correctly signaled `dip_buy` on CHPY (~$61/share)
+and QDTY (~$37/share), but both sized to 0 whole shares at the then-2%
+per-trade budget (~$20.49 on the ~$1024 account) - this sleeve never
+places a fractional-share order (only a `type=market` order supports
+fractions, and the sleeve's hard rule is marketable-limit-only, never
+market), so a signal on a higher-priced name silently produced no trade.
+
+**`INCOME_RISK_LIMITS` changes (see `config.py` for authoritative current
+values):**
+- `max_position_pct`: 2% → 6% (~$20.49 → ~$61 per trade on the ~$1024
+  account). 6% covers every current `INCOME_WATCHLIST` name except AMDW
+  (~$85/share, would need ~8.5%) - owner explicitly chose 6% over 8.5%.
+- `auto_execute_max_pct`: 2% → 6%, kept matched to `max_position_pct` per
+  the existing convention (every correctly-sized entry auto-executes).
+- `max_concurrent_positions`: 6 → 10.
+- `max_aggregate_position_pct` (25%) and `max_trades_per_day` (4)
+  unchanged - `max_aggregate_position_pct` remains the real ceiling on
+  total income-sleeve exposure; at 6% per trade, 10 concurrent positions
+  each sized at the max would exceed 25% aggregate, so that cap - not the
+  per-trade % or concurrent count - is what actually binds.
+
+Not backtested: this is a sizing/capacity change only, not a signal or
+exit-rule change; `income_backtest.py` always uses 100% of cash per
+entry in its single-symbol harness and has no portfolio-level concurrent-
+position or aggregate-cap model, so there is no backtest surface for
+this specific change (consistent with the "Not backtested here" note on
+the gate-removal/resize change below).
+
 ## 2026-10-16 (income sleeve: entry gates removed, support-zone signal added, caps resized)
 
 Owner request, real-money change, no recommend-only trial: "no gates for

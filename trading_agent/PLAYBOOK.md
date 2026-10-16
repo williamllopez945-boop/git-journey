@@ -1214,7 +1214,13 @@ reshaped again 2026-10-16 (owner request: smaller per-entry, higher
 aggregate ceiling — see "Entry gates removed" and "Entry signal" below)
 to `max_position_pct=2%`, `auto_execute_max_pct=2%`,
 `max_aggregate_position_pct=25%`, `max_concurrent_positions=6`,
-`max_trades_per_day=4` (current values — always read `config.py` directly,
+`max_trades_per_day=4`, then raised again the same day (second owner
+request, after the first live cycle under the 2% size floored CHPY and
+QDTY to 0 whole shares — this sleeve never places a fractional-share
+order) to `max_position_pct=6%`, `auto_execute_max_pct=6%`,
+`max_concurrent_positions=10` (`max_aggregate_position_pct` unchanged at
+25% — the real ceiling on total exposure regardless of per-trade % or
+concurrent count) (current values — always read `config.py` directly,
 this prose will drift). `INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY",
 "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]` as of 2026-10-07 (see
 `income_candidates_2026-10-07_expansion.md`): `GPTY` (originally excluded
@@ -1438,7 +1444,10 @@ same day: smaller per-entry (`max_position_pct`/`auto_execute_max_pct`
 5%→2%) against a much higher but still real aggregate ceiling
 (`max_aggregate_position_pct` 8%→25%) and one more concurrent slot
 (`max_concurrent_positions` 5→6) — see `config.py` for the authoritative
-current values. The entry signal itself was simultaneously strengthened
+current values. (The 2% per-trade size was raised again the same day,
+to 6%, after the first live cycle floored CHPY/QDTY to 0 whole shares —
+see the risk-limits paragraph above.) The entry signal itself was
+simultaneously strengthened
 (see "Entry signal" above: `classify_entry` requires both a dip
 percentile and a real 60-day support-zone check, where the old signal
 only required the former) - the owner's framing was "any entry is good
