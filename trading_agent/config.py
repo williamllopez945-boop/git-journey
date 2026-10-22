@@ -51,8 +51,19 @@ WATCHLIST = [
 # result - another isolated/portfolio ranking flip. MAIR had zero open
 # positions and zero trade history, so no liquidation was needed. See
 # watchlist_review_2026-09-29_stocks.md and CHANGELOG.md.
+# 10 -> 5 trim (2026-10-07 owner approval): VTRS/PYPL/AR/CRDO/IR removed -
+# bottom 5 of all 10 ranked worst-case-first on a real 90-day/384-bar
+# backtest (see watchlist_review_2026-10-06_stocks_top5.md). The kept-5
+# portfolio cleanly beat the full-10 baseline on full-period return,
+# worst-case half, AND max drawdown (6.90%/4.84% vs 5.07%/6.32%) - not
+# just a mean-level improvement. No stock here has ever actually traded
+# live (trade_log confirms), so this is backtest-only, same as every
+# prior stock-side review. Caveat: with exactly 5 names now,
+# RISK_LIMITS["max_concurrent_positions"]=5 stops being a real
+# constraint on this list specifically - not a reason to avoid the
+# trim, just noted; no RISK_LIMITS change proposed or made here.
 STOCK_WATCHLIST = [
-    "CRWD", "PANW", "TWLO", "ILMN", "IR", "PTC", "CRDO", "VTRS", "AR", "PYPL",
+    "TWLO", "ILMN", "PTC", "CRWD", "PANW",
 ]
 
 STRATEGY = {
@@ -154,14 +165,26 @@ VOLTRAP_WATCHLIST = [
    # max_voltrap_pct is confirmed and the account is funded.
 
 VOLTRAP_RISK_LIMITS = {
-    "max_voltrap_pct": 0.25,         # ceiling on total reserved options collateral
+    "max_voltrap_pct": 1.00,         # ceiling on total reserved options collateral
                                       # (CSP strikes + any assigned shares' cost
                                       # basis) as a fraction of total portfolio
-                                      # value - proposed default, owner to confirm
-                                      # before first real order. Conservative vs.
-                                      # RISK_LIMITS' 60% aggregate cap since this
-                                      # is a brand-new, unbacktested mechanism on
-                                      # real assignment risk. History: CHANGELOG.md.
+                                      # value. Raised from the proposed 0.25 default
+                                      # to 1.00 (owner request, 2026-10-09, confirmed
+                                      # via AskUserQuestion right after a real deposit
+                                      # brought the account to $1,028.21) - the owner
+                                      # explicitly chose to allocate the full account
+                                      # to VOLTRAP rather than the conservative
+                                      # default. Both real go-live conditions (owner
+                                      # confirms this number; get_portfolio shows real
+                                      # free cash) are now met - see CHANGELOG.md. At
+                                      # 1.00 this is nominal only: the real weekly-entry
+                                      # Routine caps actual spend via
+                                      # voltrap_candidates.voltrap_budget_after_income_reserve,
+                                      # which leaves INCOME_RISK_LIMITS'
+                                      # max_aggregate_position_pct worth of real cash
+                                      # untouched for the income sleeve's own buys
+                                      # (owner request, 2026-10-09 - see PLAYBOOK.md's
+                                      # "Budget coordination" note and CHANGELOG.md).
     "target_delta_min": 0.15,        # target strike band for both CSPs and
     "target_delta_max": 0.30,        # covered calls: roughly 70-85% chance of
                                       # expiring OTM (the point of the strategy -
@@ -178,8 +201,141 @@ VOLTRAP_RISK_LIMITS = {
                                       # premium" this strategy is chasing.
 }
 
-# Auto-execution: recommend-only to start (my recommendation, approved
-# 2026-09-26) - every cycle proposes a specific contract and waits for
+# Auto-execution: started recommend-only (my recommendation, approved
+# 2026-09-26) - every cycle proposed a specific contract and waited for
 # explicit approval, same bootstrap posture the crypto/stock bot itself
-# started at before its own bounded auto-execution was authorized.
-VOLTRAP_AUTO_EXECUTE = False
+# started at. Flipped to True 2026-10-09 (owner request, immediately
+# after funding + max_voltrap_pct=1.00 were confirmed) - contracts
+# within VOLTRAP_RISK_LIMITS now execute automatically via
+# place_option_order, no per-trade approval step. Still cash-secured
+# puts / covered calls only - no naked options, no margin leverage
+# beyond what's already reserved as collateral.
+VOLTRAP_AUTO_EXECUTE = True
+
+# Income sleeve (YieldMax-style weekly-distribution basket ETFs) - added
+# 2026-10-06, live the same day (owner request: auto-execute from the
+# start, no recommend-only trial period, unlike every other strategy
+# here). Deliberately NOT part of RISK_LIMITS/STOCK_WATCHLIST above - a
+# third, independent strategy, own budget, own state files
+# (income_state.py), own entry signal (income_signals.classify_entry, a
+# dip percentile AND a real support-zone read, not the SMA crossover -
+# replaced classify_dip alone 2026-10-16) and exit rule
+# (income_exit.check_income_exit). See PLAYBOOK.md's "Income sleeve"
+# section and income_candidates_2026-10-06.md for the full screen.
+INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW",
+                     "LFGY", "QDTY", "RDTY", "SDTY", "MINY", "SLTY", "TOPW"]
+# 2026-10-07 owner-approved expansion (see
+# income_candidates_2026-10-07_expansion.md for the full screen):
+# - GPTY (YieldMax AI & Tech basket, unleveraged) - previously excluded on an
+#   after-hours 3.19% spread (2026-10-06); re-checked during regular hours at
+#   1.78%, clears the 2% liquidity filter. Same risk shape as the original 4.
+# - AMDW/GOOW/NVDW (Roundhill "WeeklyPay" series) - owner-approved despite a
+#   MATERIALLY DIFFERENT risk profile from the rest of this list: each is a
+#   single-stock, 1.2x-LEVERAGED weekly payer (AMD/GOOGL/NVDA respectively),
+#   not a diversified basket. Real 1.75yr price-only backtest: AMDW +89.17%,
+#   GOOW +16.36%, NVDW -21.06% (max drawdowns 17.98-38.43%) - the two winners
+#   are explained entirely by that one stock's own run, not a repeatable
+#   edge; four other same-family single-stock funds screened the same day
+#   (TSLW, COIW, HOOW, PLTW) lost 32-66% over the identical window and were
+#   explicitly NOT added.
+# 2026-10-13 owner-approved expansion: LFGY, QDTY, RDTY, SDTY, MINY, SLTY,
+# TOPW - all 7 previously-screened basket funds that had been held back on
+# liquidity grounds. Caveats raised at screening time, still live risks:
+# RDTY/SDTY/MINY clear the 2% spread filter but trade thin, so real fills
+# may slip more than the filter implies; SLTY runs a short/inverse
+# strategy, structurally different from this sleeve's long-only
+# weekly-income names, not just a different ticker. Owner chose to add
+# all seven anyway - re-check liquidity live before trusting this list on
+# a later date, spreads move.
+
+INCOME_RISK_LIMITS = {
+    "max_position_pct": 0.06,          # raised from 2%, 2026-10-16 (same
+                                        # day, second owner request): at 2%
+                                        # on a ~$1024 account (~$20.49/trade)
+                                        # the live cycle floored CHPY
+                                        # (~$61/share) and QDTY (~$37/share)
+                                        # to 0 whole shares - this sleeve
+                                        # never places fractional-share
+                                        # orders (only a market order can be
+                                        # fractional, and the hard rule here
+                                        # is marketable-limit-only). 6%
+                                        # (~$61/trade) covers every current
+                                        # INCOME_WATCHLIST name except AMDW
+                                        # (~$85/share), which still floors
+                                        # to 0 - owner explicitly chose 6%
+                                        # over the 8.5% needed to cover AMDW
+                                        # too.
+    "max_aggregate_position_pct": 0.25, # unchanged this round - still the
+                                        # real brake on total exposure: 10
+                                        # concurrent positions (below) at 6%
+                                        # each would exceed this if all were
+                                        # sized at the max simultaneously,
+                                        # so this cap, not the concurrent
+                                        # count or per-trade %, is what
+                                        # actually limits aggregate income-
+                                        # sleeve exposure. Same key name as
+                                        # RISK_LIMITS' own
+                                        # max_aggregate_position_pct -
+                                        # RiskManager.position_size reads
+                                        # this key by default.
+    "max_concurrent_positions": 10,    # raised from 6, same 2026-10-16
+                                        # second request - more of the
+                                        # 15-name watchlist can be held at
+                                        # once; max_aggregate_position_pct
+                                        # above remains the binding ceiling
+                                        # on total exposure regardless.
+    "max_trades_per_day": 4,           # unchanged (already raised
+                                        # 2026-10-13).
+    "auto_execute_max_pct": 0.06,      # raised to match max_position_pct,
+                                        # same convention as before - every
+                                        # correctly-sized entry
+                                        # auto-executes, same convention
+                                        # RISK_LIMITS uses.
+    "daily_loss_limit_pct": 0.03,      # same value as RISK_LIMITS - shares
+                                        # RiskManager.check_circuit_breaker's
+                                        # mechanism, measured against total
+                                        # account equity like the main bot's
+                                        # own circuit breaker (not a
+                                        # sleeve-only sub-slice).
+}
+# 2026-10-16 owner request - real-money change, no recommend-only trial
+# (consistent with every prior income-sleeve change): the ex-dividend
+# timing gate (income_ex_dividend.py), the liquidity/spread filter
+# (income_candidates.filter_by_liquidity), and the post-exit cooldown
+# (PositionStateStore.in_cooldown) no longer block entries in
+# income_cycle.py - a classify_entry signal (income_signals.py: the
+# existing dip percentile AND a new real support-zone check) is trusted
+# on its own. Those modules/functions still exist and are still tested,
+# just no longer called from the live cycle script. Sized smaller per
+# entry (above) to compensate for the wider aggregate ceiling. See
+# backtest_2026-10-16_income_sleeve_support_zone_and_gate_removal.md for
+# the support-zone signal's backtest evidence (mild net positive,
+# worst-case-first, on a price-only basis) and PLAYBOOK.md's "Income
+# sleeve" section for the real risk this accepts.
+#
+# Same-day follow-up, 2026-10-16 (second owner request): the first live
+# cycle under the gate-removal/smaller-sizing change above found a real
+# consequence of the 2% per-trade size - CHPY and QDTY both signaled
+# dip_buy but floored to 0 whole shares (this sleeve never places a
+# fractional-share order; only a market order can be fractional, and the
+# hard rule here is marketable-limit-only). Owner raised max_position_pct
+# 2% -> 6% (and auto_execute_max_pct to match) and max_concurrent_positions
+# 6 -> 10 in response. max_aggregate_position_pct stays at 25% - it is
+# still the real ceiling on total exposure, independent of the per-trade %
+# or concurrent-position count.
+
+INCOME_AUTO_EXECUTE = True  # live from the start, owner request 2026-10-06.
+
+INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS = ["ULTY", "YMAG"]
+# 2026-10-13 owner-approved adoption (see
+# backtest_2026-10-13_institutional_flow_income_sleeve.md): a dip_buy
+# signal on one of these symbols must ALSO clear
+# income_institutional_flow.volume_surge_confirmed (today's volume >=
+# 1.5x the trailing 20-day average) before it counts as an entry
+# candidate - a proxy for "institutional money entering" since no real
+# order-flow data exists. Scoped to just these two names because the
+# backtest's result was mixed worst-case-first across the full roster:
+# a clear win on every axis for ULTY and YMAG (the two most actively
+# traded names), wash-to-negative for the other six. Every other
+# INCOME_WATCHLIST symbol stays on the plain classify_entry signal.
+

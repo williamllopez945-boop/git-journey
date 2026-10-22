@@ -6,6 +6,224 @@ the config file itself stays short and scannable - this file is the
 place to look for *why* a setting is what it is; `config.py` is the
 place to look for what it currently *is*.
 
+## 2026-10-16 (income sleeve: max_position_pct and max_concurrent_positions raised, same-day follow-up)
+
+Owner request, real-money change, no recommend-only trial, made in a
+normal conversation (not from inside the Income sleeve cycle Routine,
+which is explicitly barred from touching these). Prompted by the first
+live cycle run under the gate-removal/smaller-sizing change directly
+below: `classify_entry` correctly signaled `dip_buy` on CHPY (~$61/share)
+and QDTY (~$37/share), but both sized to 0 whole shares at the then-2%
+per-trade budget (~$20.49 on the ~$1024 account) - this sleeve never
+places a fractional-share order (only a `type=market` order supports
+fractions, and the sleeve's hard rule is marketable-limit-only, never
+market), so a signal on a higher-priced name silently produced no trade.
+
+**`INCOME_RISK_LIMITS` changes (see `config.py` for authoritative current
+values):**
+- `max_position_pct`: 2% → 6% (~$20.49 → ~$61 per trade on the ~$1024
+  account). 6% covers every current `INCOME_WATCHLIST` name except AMDW
+  (~$85/share, would need ~8.5%) - owner explicitly chose 6% over 8.5%.
+- `auto_execute_max_pct`: 2% → 6%, kept matched to `max_position_pct` per
+  the existing convention (every correctly-sized entry auto-executes).
+- `max_concurrent_positions`: 6 → 10.
+- `max_aggregate_position_pct` (25%) and `max_trades_per_day` (4)
+  unchanged - `max_aggregate_position_pct` remains the real ceiling on
+  total income-sleeve exposure; at 6% per trade, 10 concurrent positions
+  each sized at the max would exceed 25% aggregate, so that cap - not the
+  per-trade % or concurrent count - is what actually binds.
+
+Not backtested: this is a sizing/capacity change only, not a signal or
+exit-rule change; `income_backtest.py` always uses 100% of cash per
+entry in its single-symbol harness and has no portfolio-level concurrent-
+position or aggregate-cap model, so there is no backtest surface for
+this specific change (consistent with the "Not backtested here" note on
+the gate-removal/resize change below).
+
+## 2026-10-16 (income sleeve: entry gates removed, support-zone signal added, caps resized)
+
+Owner request, real-money change, no recommend-only trial: "no gates for
+entry on dividend stocks... any entry is good based on analysis and
+data," exit stays stop-loss-only at -15% (trim rule also kept, per
+follow-up), smaller per-entry size with a higher aggregate ceiling, and
+a new "good low with good support zones" signal rather than just the
+existing rolling-range percentile.
+
+**`income_cycle.py` no longer calls:** `income_ex_dividend.in_avoid_window`/
+`in_favorable_window` (the ex-dividend timing gate), `income_candidates.filter_by_liquidity`
+(the spread filter), or `PositionStateStore.in_cooldown` (post-exit
+re-entry block). All three modules/functions still exist and are still
+unit-tested - only their call sites inside the live cycle script were
+removed, so re-enabling any of them is a wiring change, not a rebuild.
+`income_cycle.py` no longer requires `--fundamentals-file` as a result
+(nothing reads `ex_dividend_date` anymore).
+
+**`income_signals.py` adds `near_support(closes, lookback_days=60,
+tolerance_pct=0.03)`** (today's close within 3% of the trailing 60-day
+low) and **`classify_entry(closes)`** (dip_buy only when `classify_dip`
+AND `near_support` both agree) - `classify_entry` replaces `classify_dip`
+as `income_cycle.py`'s live entry signal. `income_backtest.py` gained a
+matching `require_support` flag (default `False`, unchanged original
+behavior) to backtest the new combined signal with the same production
+code paths. See
+`backtest_2026-10-16_income_sleeve_support_zone_and_gate_removal.md`:
+mild net positive worst-case-first across all 15 `INCOME_WATCHLIST`
+names on a price-only basis (worst-case return -81.71% -> -80.75%, mean
+-20.09% -> -17.43%) - same stated price-only-backtest and thin-history
+limitations as every prior income-sleeve backtest; the gate removals
+themselves have no backtest surface (see that doc's "Not backtested
+here" section).
+
+**`INCOME_RISK_LIMITS`: `max_position_pct` 5% -> 2%, `auto_execute_max_pct`
+5% -> 2%, `max_aggregate_position_pct` 8% -> 25%, `max_concurrent_positions`
+5 -> 6.** `max_trades_per_day` (4) unchanged. Smaller, more frequent
+entries against a much higher but still real ceiling - not an
+unlimited-exposure change, a resized one. Real risk accepted by this
+whole change: an entry can now fill at a worse price on a thin/crossed
+market, land 1-2 days before an ex-dividend markdown, or re-enter a
+symbol immediately after being stopped out - all three were the exact
+scenarios the removed gates existed to prevent.
+
+## 2026-10-13 (income sleeve: raised position/trade caps, widened ex-dividend window)
+
+**`INCOME_RISK_LIMITS`: `max_concurrent_positions` 2 -> 5, `max_trades_per_day`
+2 -> 4** (now matches the main bot's `RISK_LIMITS` values). Owner request,
+prompted by a cycle where 4 real dip-buy candidates (LFGY, RDTY, MINY,
+SLTY) existed simultaneously and the old caps (sized for "at most one
+new entry alongside ULTY") would have blocked most of them on
+`blocked_concurrent_cap`/daily-cap grounds alone. `max_aggregate_position_pct`
+(8%) was deliberately left unchanged - it remains the real brake on
+total new exposure regardless of how many positions/trades are allowed.
+
+**`income_ex_dividend.FAVORABLE_DAYS_AFTER_EX_DIVIDEND`: 2 -> 6 days**,
+also owner request, same cycle. Root cause found while investigating
+that cycle's blocks: `get_equity_fundamentals`'s `ex_dividend_date`
+field was still showing the prior week's ex-date days after the next
+weekly cycle's ex-date should already apply (confirmed via the known
+weekly-Wednesday cadence - 2026-10-13, a Tuesday, was 1 day before the
+real next ex-date of 2026-10-14, squarely inside the pre-markdown
+`AVOID_DAYS_BEFORE_EX_DIVIDEND` window, even though the stale field made
+it read as "6 days past, outside favorable window"). Flagged this
+explicitly to the owner before acting - widening the constant does NOT
+fix the staleness, it was an accepted risk, not a resolved one: a buy
+allowed under the wider window can still land in the real pre-markdown
+window whenever this staleness recurs. Owner confirmed proceeding anyway.
+Not backtested (no existing harness models ex-dividend timing's effect
+on returns) - a live, real-money gate change on explicit owner approval,
+not a tuned parameter.
+
+## 2026-10-13 (institutional-flow gate)
+
+**New config constant: `INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS =
+["ULTY", "YMAG"]`.** Owner asked the income sleeve's dip-buy signal to
+also confirm "where institutional money will enter" (no RSI gate - a
+separate 2026-10-09 study already found RSI-alone close to a wash).
+Built `income_institutional_flow.volume_surge_confirmed` (today's volume
+>= 1.5x trailing 20-day average) as the proxy - no real order-flow data
+exists via this API. A real backtest
+(`backtest_2026-10-13_institutional_flow_income_sleeve.md`) found a
+mixed, worst-case-first result across all 8 original symbols: a clear
+win on every axis for ULTY and YMAG, wash-to-negative for the other six.
+Owner said "Adopt it" after seeing that split result, so the gate is
+wired into `income_cycle.py` scoped to just those two names - every
+other `INCOME_WATCHLIST` symbol is unaffected, still gated by
+`classify_dip` alone. `INCOME_WATCHLIST`/`INCOME_RISK_LIMITS`/
+`INCOME_AUTO_EXECUTE` untouched.
+
+## 2026-10-13
+
+**Income sleeve `INCOME_WATCHLIST` expanded from 8 to 15 names.** Owner
+asked to add more weekly-distribution ETFs; a liquidity screen of 7
+previously-excluded basket funds (LFGY, QDTY, RDTY, SDTY, MINY, SLTY,
+TOPW - all had been held back on liquidity grounds as of the 2026-10-07
+expansion note) was presented with two flagged caveats: RDTY/SDTY/MINY
+clear the 2% spread filter but trade thin, so real fills may slip more
+than the filter implies; SLTY runs a short/inverse strategy, structurally
+different from this sleeve's long-only weekly-income names. Owner said
+"Add all seven" - all 7 added as-is, caveats and all. No
+`RISK_LIMITS`/`WATCHLIST`/`STOCK_WATCHLIST`/`DRY_RUN`/
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` value touched.
+
+## 2026-10-09
+
+**VOLTRAP (options wheel strategy) goes live.** Owner deposited new
+funds into the account (`get_portfolio` confirmed $1,028.21 total value,
+all cash, no open positions). Owner then said "Budget increase to open
+options trades" - clarified via `AskUserQuestion` that this meant the
+real account deposit (not a code/config change) and that it was for
+VOLTRAP specifically, not the crypto/stock bot's `RISK_LIMITS`. Asked a
+second `AskUserQuestion` for the one open number VOLTRAP's plan always
+needed: `VOLTRAP_RISK_LIMITS["max_voltrap_pct"]`. Owner chose **100%**
+of the account (offered against the originally-proposed conservative
+25% default, 50%, and "a different %") - `max_voltrap_pct` raised from
+0.25 to 1.00.
+
+Both of VOLTRAP's real go-live conditions (max_voltrap_pct confirmed;
+`get_portfolio` shows real free cash) are now met for the first time.
+Created the two real Routines PLAYBOOK.md's "VOLTRAP" section already
+specified (weekly entry, Monday shortly after open; daily monitor, near
+close) - previously undeployed because neither condition held.
+`VOLTRAP_AUTO_EXECUTE` stayed `False` (recommend-only) at first - the
+owner's request was about budget, not about revisiting that separate,
+earlier-approved bootstrap decision.
+
+**Same day, separate explicit request ("Flip to auto execute"):**
+`VOLTRAP_AUTO_EXECUTE` raised from `False` to `True`. Contracts the
+weekly entry Routine identifies within `VOLTRAP_RISK_LIMITS` now
+execute automatically via `place_option_order` - no per-trade approval
+step, notified after the fact. No recommend-only trial period was held
+(unlike the crypto/stock bot's own graduation path) - a deliberate
+owner choice, not an oversight. No `RISK_LIMITS`/`WATCHLIST`/
+`STOCK_WATCHLIST`/`DRY_RUN` value touched by either change.
+
+**Same day, budget coordination ("Ensure dividend stocks buys are
+available too. Voltrap will trade with what's left"):** VOLTRAP's new
+`max_voltrap_pct=1.00` is nominal only now - `voltrap_candidates.py`
+gained `voltrap_budget_after_income_reserve(portfolio_value,
+buying_power, max_voltrap_pct, income_max_aggregate_pct,
+current_voltrap_collateral_used)`, a pure function that leaves the
+income sleeve's full `INCOME_RISK_LIMITS["max_aggregate_position_pct"]`
+reserved against real `buying_power` (whether or not the sleeve
+currently holds anything) before computing what VOLTRAP's weekly entry
+may actually spend on new collateral this cycle. Previously each
+strategy's pct-of-portfolio budget was computed independently with no
+awareness that all three (VOLTRAP, income sleeve, crypto/stock bot)
+draw on the same real cash - harmless while VOLTRAP had no real budget,
+a real risk once it did. Four new unit tests
+(`tests/test_voltrap_candidates.py`); PLAYBOOK.md's "VOLTRAP" section
+and the real "VOLTRAP weekly entry" Routine's prompt both updated to
+call this function before sizing `max_collateral_per_contract`. The
+crypto/stock bot's own budget is NOT included in this reservation -
+out of scope for this request, flagged in PLAYBOOK.md as worth
+revisiting if it also starts competing for cash in practice. No
+`RISK_LIMITS`/`WATCHLIST`/`STOCK_WATCHLIST`/`DRY_RUN`/
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE` value
+touched.
+
+## 2026-10-08
+
+Owner request: **"Cut all crypto trades. Only stocks now."** Supersedes
+the 2026-10-12 new-entry-only pause (set 2026-10-07), which never took
+effect. The crypto scanner-based cycle (scan, classify, every
+`fresh_buy_cross`/`fresh_sell_cross` handling, `excellent_watch`
+logging) is now skipped entirely every cycle for every `WATCHLIST`
+asset — not just new entries. Clarified with the owner via
+`AskUserQuestion` on two points: (1) the one open crypto position at
+the time (AERO, gate-blocked below breakeven) is left to resolve on
+its own under normal stop-loss/take-profit/gate-floor rules, not
+force-closed; (2) the crypto scan/classification itself is skipped
+entirely rather than kept running read-only, with a narrow exception
+(a direct quote-based protective-exit/gate-floor check scoped to AERO
+only, bypassing the full scan/classify path) carved out so that
+exception doesn't lapse into "no protection at all" for the one real
+position still open. The Routine's own stored prompt
+(`trig_01U7cif9R7pWiUf61ntWruHY`) was updated in place to match. No
+`WATCHLIST`/`RISK_LIMITS`/`DRY_RUN` values were edited — this is a
+scope/operational change to what the hourly cycle does, same category
+as the superseded pause note, not a parameter change. Stocks
+(`STOCK_WATCHLIST`) are now the sole source of new trading activity
+until the owner re-authorizes crypto.
+
 ## 2026-09-22
 
 Owner explicitly authorized a bounded auto-execution policy after a
@@ -1667,3 +1885,190 @@ per-trade holding-time/MFE-MAE/detection-to-fill-latency instrumentation
 (Codex's Priority 3) - the CRV and LINK/AVAX/DOT slippage findings in
 this pass are a manual first look at exactly that, not yet a general
 computation.
+
+## 2026-10-06 — Stock watchlist trim recommended; income sleeve built (mechanism only)
+
+Two owner requests (via `AskUserQuestion`): trim `STOCK_WATCHLIST` to
+its best 5, and build a separate "income sleeve" for YieldMax-style
+weekly-distribution basket ETFs, entered on a new dip/support signal
+rather than the SMA crossover.
+
+**Stock watchlist trim** (`watchlist_review_2026-10-06_stocks_top5.md`):
+applied the existing weekly-review methodology (`watchlist_review.py`,
+`backtest.py`, `portfolio_backtest.py`) across all 10 current names at
+once (extending the usual bottom-1-2 scope to a full trim), worst-case-
+first via H1/H2 split backtests over the real 90-day/384-bar window. No
+name is currently held, so none were exempt. Ranked worst to best:
+`VTRS (-5.04%), PYPL (-4.68%), AR (-1.08%), CRDO (0.96%), IR (2.05%)`
+(removal candidates) vs. `TWLO (3.05%), ILMN (3.30%), PTC (8.53%), CRWD
+(10.71%), PANW (10.84%)` (keep candidates). The binding portfolio-level
+gate (`portfolio_backtest.py`, full 10 vs. kept 5, same window/split)
+confirmed the trim clears cleanly at every level: worst-case 6.90% vs
+5.07%, full-period 22.17% vs 18.28%, max drawdown 4.84% vs 6.32% (lower
+is better). **Recommended, not applied** — `config.py` unedited pending
+explicit owner approval. Flagged for the owner: once the list holds
+exactly 5 names, `max_concurrent_positions=5` stops being a real
+constraint on this list specifically.
+
+**Income sleeve** (new files, all additive - no existing module
+edited): `income_signals.py` (`rolling_range_position`/`classify_dip` -
+a 20-day rolling-range-position dip signal, bottom-10% entry
+threshold), `income_exit.py` (`check_income_exit` - its own looser 15%
+stop-loss + 10%-trigger/50%-fraction trim, separate constants from
+`exit_criteria.py`), `income_candidates.py` (`spread_pct`/
+`filter_by_liquidity` - a liquidity screen that fails closed on any
+missing/crossed quote), `income_state.py` (wires `RiskManager`/
+`PositionStateStore` to their own `income_risk_state.json`/
+`income_position_state.json`, distinct from the main bot's state files),
+`income_backtest.py` (a dedicated backtest loop for the dip/stop/trim
+rule - not a retrofit of `backtest.py`, which is tightly coupled to the
+crossover pipeline; reuses `backtest.summarize` unchanged). 24 new tests
+across 5 new test files; full suite green, 293/293
+(`trading_agent/tests/`).
+
+First candidate screen (`income_candidates_2026-10-06.md`): 11 tradable
+YieldMax "Group 1" weekly-distribution basket ETFs identified via
+Robinhood `search` (`YMAX, YMAG, ULTY, GPTY, LFGY, QDTY, RDTY, SDTY,
+MINY, CHPY, SLTY`). Live (after-hours) `get_equity_quotes` run through
+`filter_by_liquidity` (2% spread bar): `YMAX, YMAG, ULTY, CHPY` cleared
+cleanly (0.08%-0.52% spreads); `GPTY` was borderline (3.19%, needs a
+regular-hours re-check); the other 6 were materially too thin (`RDTY`'s
+74.73% spread looks like a stale/crossed quote, not a real price).
+`income_backtest.py` run against each candidate's real daily history
+(378-682 bars, all well under 2 years) as a mechanism sanity-check only
+- explicitly **not** a verdict on the ETFs themselves, since it models
+price action only with no distribution cash flow, understating real
+total return for a strategy whose entire appeal is the distribution. No
+candidate shows a `dip_buy` signal today.
+
+**Not live.** No `config.py` edit (`INCOME_WATCHLIST`/
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` are proposed values in the
+screening doc, not written anywhere), no order placed, no Routine
+created - both outcomes pending explicit owner approval, same gating
+VOLTRAP used before it went live.
+
+## 2026-10-06 (later, same day) — Income sleeve goes live: ex-dividend timing gate, auto-execution, Routine
+
+Owner approved the candidate list and gave two further explicit
+decisions (via `AskUserQuestion`): go live immediately with no
+recommend-only trial (unlike every other strategy here), but with
+smaller initial sizing to be revisited after a couple of real weeks;
+and gate entries on ex-dividend timing - prefer buying on/just after
+the ex-date (the post-markdown price), avoid buying the 1-2 days before
+it (pre-paying for a distribution you immediately get back while eating
+the same markdown anyway).
+
+**New module `income_ex_dividend.py`**: `days_until_ex_dividend(today,
+ex_dividend_date)` plus `in_avoid_window`/`in_favorable_window`. Real
+`ex_dividend_date` data confirmed live via `get_equity_fundamentals`:
+all four candidates (`YMAX, YMAG, ULTY, CHPY`) show
+`distribution_frequency: "Weekly"`, next ex-date 2026-10-07.
+
+**New per-cycle script `income_cycle.py`**: mirrors `run_cycle.py`'s
+exact shape (`--record-only`/`--record-trade-*`/overridable state
+paths). Ties together `income_candidates.filter_by_liquidity` (live
+every cycle, never a stored snapshot), `income_signals.classify_dip`,
+the new ex-dividend gate, `income_exit.check_income_exit`, and
+`RiskManager`/`PositionStateStore`/`CycleLogStore` pointed at this
+sleeve's own state files (`income_risk_state.json`,
+`income_position_state.json`, `income_cycle_log.json` - added
+`income_cycle_log_store()` to `income_state.py`, its only change).
+Reports what should happen; the calling Routine still places the real
+order and re-invokes with `--record-only` to log the fill, same
+division of labor as `run_cycle.py`.
+
+**`config.py`** (first edit to anything income-sleeve-related):
+`INCOME_WATCHLIST = ["YMAX", "YMAG", "ULTY", "CHPY"]` (`GPTY` stays
+excluded, still-borderline 3.19% after-hours spread), `INCOME_RISK_LIMITS`
+smaller than the original recommendation per the owner's "smaller size
+for the first couple weeks" choice (`max_position_pct=5%`,
+`max_aggregate_position_pct=8%`, `max_concurrent_positions=2`,
+`max_trades_per_day=2`, `auto_execute_max_pct=5%`, plus a
+`daily_loss_limit_pct=3%` the original recommendation's draft was
+missing - caught when `RiskManager.check_circuit_breaker` raised a
+`KeyError` against real test runs), `INCOME_AUTO_EXECUTE = True`.
+
+`PLAYBOOK.md`'s "Income sleeve" section rewritten from "not live yet" to
+the real live procedure (ex-dividend gate rationale, the per-cycle
+tool-call sequence, auto-execution posture, hard rules).
+
+18 new tests (`test_income_ex_dividend.py`, `test_income_cycle.py`,
+plus `test_income_state.py`'s new factory coverage); full suite green,
+323/323 (`trading_agent/tests/` + `research_agent/tests/`). Dry-ran
+`income_cycle.py` against real `get_equity_quotes`/
+`get_equity_fundamentals`/`get_equity_historicals`/`get_equity_positions`
+data for all four candidates before creating any Routine: ran
+end-to-end with no crash; all four correctly read `hold` (no dip signal
+today, consistent with the earlier screening doc's finding at a
+different snapshot time) - nothing to act on yet, so the avoid-window
+gate wasn't exercised by real data this run (it's covered directly by
+`test_income_ex_dividend.py` and a synthetic case in
+`test_income_cycle.py` instead).
+
+New Routine **"Income sleeve cycle"** (daily, 15:00 UTC, Mon-Fri -
+matches this signal's daily-close/weekly-ex-date resolution, not the
+main bot's hourly cadence), prompt pointing at `PLAYBOOK.md`'s rewritten
+section, same hard-rule wording as every other Routine (never modify
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE` from
+within it).
+
+## 2026-10-07 — Stock watchlist trim approved and applied
+
+Owner approved `watchlist_review_2026-10-06_stocks_top5.md`'s
+recommendation as-is: `STOCK_WATCHLIST` goes from 10 names to the top 5
+ranked worst-case-first on a real 90-day/384-bar backtest at production
+settings. `CRWD, PANW, TWLO, ILMN, IR, PTC, CRDO, VTRS, AR, PYPL` ->
+`TWLO, ILMN, PTC, CRWD, PANW`, dropping `VTRS, PYPL, AR, CRDO, IR` (the
+bottom 5 by worst-of-H1/H2 isolated return). The binding portfolio-level
+gate cleared cleanly: the kept-5 beat the full-10 baseline on
+full-period return (22.17% vs 18.28%), worst-case half (6.90% vs 5.07%),
+and max drawdown (4.84% vs 6.32%) - not just a mean-level improvement.
+
+No stock in the list has ever actually traded live (`trade_log`
+confirms zero entries for any of the 10), so this is backtest-only, same
+as every prior stock-side review - not evidence about these companies'
+fundamentals, just this SMA(10,30) crossover strategy's performance on
+their price action over this one window.
+
+**Caveat carried into `config.py`'s own comment**: with exactly 5 names
+now, `RISK_LIMITS["max_concurrent_positions"]=5` stops being a real
+constraint on the stock side specifically (5 names, 5 slots) - its
+purpose was capping concentration out of a *larger* universe. Not a
+reason to avoid the trim; no `RISK_LIMITS` change proposed or made as
+part of this edit.
+
+## 2026-10-07 (later, same day) — Income sleeve expanded, 4 -> 8 names
+
+Owner request: "Add more yieldmax or another stocks with weekly dividend
+payout." Full screen in `income_candidates_2026-10-07_expansion.md`.
+
+Re-checked `GPTY` (excluded 2026-10-06 on a 3.19% after-hours spread) at
+regular-hours quotes: 1.78% spread, clears the 2% liquidity filter,
+confirmed weekly distribution. Same diversified, unleveraged basket
+shape as the existing four - added.
+
+New discovery: Robinhood search surfaced a Roundhill `WeeklyPay` family
+not previously screened - one basket fund (`TOPW`) and ten single-stock,
+1.2x-leveraged weekly payers. `TOPW` and six previously-excluded
+YieldMax basket funds (`LFGY`, `QDTY`, `RDTY`, `SDTY`, `MINY`, `SLTY`)
+remain too illiquid to trade (8-24% spreads; `QDTY` closest at 2.48%).
+Seven of the Roundhill single-stock funds cleared the liquidity filter
+easily (sub-1% spreads in most cases) but are a materially different
+risk shape: single-name concentration plus 1.2x leverage on the
+underlying's weekly price return, not a basket. A real 1.75-year
+price-only backtest showed 5 of 7 lost 21-66% of price value (max
+drawdowns 38-75%); flagged as not fitting this sleeve's basket-only,
+conservative mandate as scoped.
+
+Presented both findings to the owner via `AskUserQuestion`. Owner
+approved `GPTY` as recommended, and chose to add three of the seven
+Roundhill funds despite the flagged risk - `AMDW` (+89.17% backtest
+return, the standout, but explained entirely by AMD's own rally over
+the window, not a repeatable edge), `GOOW` (+16.36%), `NVDW` (-21.06%,
+mildest loser) - leaving out the other four (`TSLW`, `COIW`, `HOOW`,
+`PLTW`, each down 32-66% over the same window).
+
+`INCOME_WATCHLIST`: `["YMAX", "YMAG", "ULTY", "CHPY"]` ->
+`["YMAX", "YMAG", "ULTY", "CHPY", "GPTY", "AMDW", "GOOW", "NVDW"]`.
+`INCOME_RISK_LIMITS`/`INCOME_AUTO_EXECUTE` unchanged - not part of this
+request; `max_concurrent_positions=2` stays a real cap against 8 names.

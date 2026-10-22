@@ -34,6 +34,24 @@ Crypto-only through 2026-09-22; extended to equities 2026-09-23 (see
 > volume (2026-09-23) — see "Volume
 > confirmation" below.
 
+> **ALL crypto trading cut, effective 2026-10-08 (owner request: "Cut
+> all crypto trades. Only stocks now") — supersedes the 2026-10-12
+> new-entry-only pause below, which never took effect.** No crypto
+> scan, classification, or new entries/exits on a fresh cross run at
+> all anymore; the only crypto activity left is a scoped protective-exit/
+> gate-floor check on AERO (the sole open crypto position at the time of
+> the cut) until it closes, after which crypto is skipped entirely — see
+> `PLAYBOOK.md`'s note above "Steps, per cycle" for the exact mechanism.
+> Stocks are now the sole source of new trading activity. The owner is
+> shifting focus/capital to the income sleeve (YieldMax-style weekly
+> ETFs, see "Income sleeve" below) for weekly dividend-style income.
+>
+> (Superseded, kept for history) **Crypto new-entry pause,
+> 2026-10-12T00:00:00Z onward (owner request, 2026-10-07):** was going
+> to skip only new entries from that timestamp, leaving existing
+> positions scanned/protected. Overtaken by the full cut above before it
+> ever took effect.
+
 **Current crypto watchlist** (`config.py`'s `WATCHLIST`): BTC, ETH, SOL,
 DOGE (core) plus LIT, BCH, AERO, HBAR, DOT, CRV, ZORA, LINK, AVAX, ASTER
 (top 10 by SMA(10,30) crossover strength among blue-chip/established
@@ -80,18 +98,34 @@ watchlist change this session, not hand-picked. No sell orders were
 needed — the account held zero open crypto positions at the time. Full
 exclusion list and ranking in `watchlist_2026-09-23_meme_removal.md`.
 
-## Stock watchlist (2026-09-23)
+## Stock watchlist (last updated 2026-10-07)
 
-`config.py`'s `STOCK_WATCHLIST`: **CRWD, PANW, TWLO, ILMN, IR, PTC, CHKP,
-MAIR, AR, HUBS** — top 10 by SMA(10,30) 1h crossover strength among
-**large-cap** stocks (market cap > $10B, price > $10, 30d avg volume >
-1M shares), same screener methodology used for every watchlist this
-session. Scanned via the same saved scan, `Stock SMA(10,30) 1h Crossover
-— Strategy Screener`, scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be`
-(market-cap filter updated in place, so future re-screens inherit the
-$10B floor automatically).
+`config.py`'s `STOCK_WATCHLIST`: **TWLO, ILMN, PTC, CRWD, PANW** — see
+"History of this list" below for how it got here. Originally screened
+via the saved scan `Stock SMA(10,30) 1h Crossover — Strategy Screener`,
+scan_id `6e009dcf-d184-45a7-915f-ccfc50b4e6be` (large-cap methodology:
+market cap > $10B, price > $10, 30d avg volume > 1M shares) — that scan
+was retired 2026-09-25 for a pagination gap (see "Known gap: stock scan
+pagination" below) and is no longer how later swaps/trims were sourced.
 
 **History of this list, most recent first:**
+- **2026-10-07 (trim to top 5):** owner approved narrowing the list from
+  10 to the best 5, ranked worst-case-first on a real 90-day/384-bar
+  backtest at production settings. `CRWD, PANW, TWLO, ILMN, IR, PTC,
+  CRDO, VTRS, AR, PYPL` → `TWLO, ILMN, PTC, CRWD, PANW`, dropping `VTRS,
+  PYPL, AR, CRDO, IR` (the bottom 5). The kept-5 portfolio beat the
+  full-10 baseline on full-period return, worst-case half, and max
+  drawdown — not just a mean-level improvement. No stock here has ever
+  actually traded live. See `watchlist_review_2026-10-06_stocks_top5.md`
+  and `CHANGELOG.md`.
+- **2026-09-26 and 2026-09-29 swaps (not previously recorded in this
+  file — backfilled 2026-10-07):** `CHKP` → `CRDO` and `HUBS` → `PYPL`
+  (2026-09-26 review, `watchlist_review_2026-09-26_stocks.md`), then
+  `MAIR` → `VTRS` (2026-09-29 review, `watchlist_review_2026-09-29_stocks.md`)
+  — both evidence-based swaps of the worst isolated/portfolio performer
+  for a backtested-stronger candidate, same methodology as every other
+  swap here. Full detail in `CHANGELOG.md`'s 2026-09-26 and 2026-09-29
+  entries.
 - **2026-09-23 (large-cap upgrade):** owner asked to replace the mid-cap
   names with larger ones ("Let's look at replacing the small cap stocks
   with larger ones. With more confidence, I will add more capital").
@@ -235,10 +269,16 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `voltrap_state.py` | VOLTRAP (options wheel strategy, added 2026-09-26, renamed same day) — per-symbol state machine (idle → csp_open → holding_shares → covered_call_open → ...), persisted to `voltrap_state.json`. See "VOLTRAP" below |
 | `voltrap_candidates.py` | VOLTRAP — candidate ranking (`rank_by_voltrap_fit`) and strike selection (`pick_strike_by_delta`/`pick_strike_by_otm_pct`), pure functions mirroring `watchlist_review.py`'s pattern |
 | `order_pricing.py` | Resolves the marketable-limit-order price (`marketable_limit_price`) PLAYBOOK.md's order-type policy requires for every real order. Added 2026-10-04 after the policy lapsed back to `type=market` live twice (2026-09-27, 2026-10-04) despite being written down both times — no code in this repo places orders, so making the correct limit price a single tested function call is the only durable fix available |
+| `income_signals.py` | Income sleeve (added 2026-10-06) — `classify_entry` (live signal since 2026-10-16: `classify_dip`'s rolling-range-position read AND `near_support`'s 60-day support-zone check must both agree), deliberately not the SMA crossover. See "Income sleeve" below |
+| `income_exit.py` | Income sleeve — its own stop-loss/trim rule (`check_income_exit`), looser than `exit_criteria.py` on purpose (these ETFs' price structurally decays with every distribution paid) |
+| `income_candidates.py` | Income sleeve — liquidity screen (`filter_by_liquidity`), fails closed on any missing/crossed quote. **No longer called from `income_cycle.py` (2026-10-16, owner request) — kept for reference/tests only, unused in the live cycle.** |
+| `income_state.py` | Income sleeve — wires `RiskManager`/`PositionStateStore` to their own state files (`income_risk_state.json`/`income_position_state.json`), distinct from the main bot's `state.json`/`position_state.json` |
+| `income_backtest.py` | Income sleeve — dedicated backtest loop for the dip/stop/trim rule (not a retrofit of `backtest.py`); models price only, no distribution cash flow — see "Income sleeve" below |
+| `income_institutional_flow.py` | Income sleeve — volume-surge confirmation gate (`volume_surge_confirmed`), an "institutional money entry" proxy (2026-10-13). Backtest showed a mixed, worst-case-first result across the roster (clear win for ULTY/YMAG, wash-to-negative elsewhere), so it's live ONLY for those two names (`INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS` in `config.py`) — every other `INCOME_WATCHLIST` symbol stays on the plain dip signal; see `backtest_2026-10-13_institutional_flow_income_sleeve.md` |
 | `PLAYBOOK.md` | Step-by-step runbook an MCP-connected agent session follows each cycle |
 | `tests/` | Unit tests for the strategy and risk logic |
 
-## VOLTRAP (options wheel strategy, added 2026-09-26)
+## VOLTRAP (options wheel strategy, added 2026-09-26, live since 2026-10-09)
 
 A second, independent strategy on the same account: sell weekly
 cash-secured puts for premium; if assigned, sell weekly covered calls
@@ -251,16 +291,40 @@ deliberately kept separate from `RISK_LIMITS`/`WATCHLIST` above (own
 reserved collateral, not a mark-to-market position, and doesn't compose
 with the crypto/stock bot's aggregate cap.
 
-**Not live yet.** The account already has `option_level_3` (no upgrade
-needed), but the account's free cash (~$82) is nowhere near what even
-one real contract needs — confirmed live via `review_option_order`
-(a real MARA cash-secured put needed $1,150 collateral against $81.71
-available). The owner is depositing new funds specifically for this
-strategy, sized as a % of total portfolio value; no real order will be
-placed and no Routine created until that funding lands and the exact
-percentage is confirmed. See `CHANGELOG.md` for the full build history,
-including why the candidate screen's filters were tuned twice against
-real data before they stopped surfacing mostly distressed microcaps.
+**Live as of 2026-10-09.** The owner deposited new funds (account now
+$1,028.21) and confirmed `max_voltrap_pct = 1.00` (100% of the account).
+Both real go-live conditions are now met, and the weekly-entry and
+daily-monitor Routines have been created. `VOLTRAP_AUTO_EXECUTE` was
+flipped to `True` the same day (separate explicit owner request) —
+contracts within `VOLTRAP_RISK_LIMITS` now execute automatically, no
+per-trade approval step. See `CHANGELOG.md` for the full build
+history, including why the candidate screen's filters were tuned twice
+against real data before they stopped surfacing mostly distressed
+microcaps.
+
+## Income sleeve (YieldMax-style weekly-distribution ETFs, live since 2026-10-06)
+
+A third, independent strategy: a handful of weekly-distribution basket
+ETFs, bought on a new dip/support signal (`income_signals.classify_dip`)
+rather than the SMA crossover, to build a weekly-income base. Full
+mechanism documented in `PLAYBOOK.md`'s "Income sleeve" section —
+deliberately kept separate from `RISK_LIMITS`/`STOCK_WATCHLIST` (own
+`INCOME_RISK_LIMITS`/`INCOME_WATCHLIST`/`INCOME_AUTO_EXECUTE`, own state
+files via `income_state.py`), since these ETFs' price structurally
+erodes with every distribution paid — a different risk shape than either
+the crypto/stock bot's crossover-following or VOLTRAP's option
+collateral.
+
+**Live, `INCOME_AUTO_EXECUTE = True`.** `INCOME_WATCHLIST` currently
+holds 8 names: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
+`CHPY`), `GPTY` (another YieldMax basket, added 2026-10-07 once a
+regular-hours liquidity re-check cleared it — see
+`income_candidates_2026-10-07_expansion.md`), and three Roundhill
+`WeeklyPay` single-stock, 1.2x-leveraged funds the owner approved
+2026-10-07 despite their materially different (higher) concentration
+risk — `AMDW`, `GOOW`, `NVDW`. `INCOME_RISK_LIMITS` starts deliberately
+small (see `PLAYBOOK.md`); revisit upward only after a couple of real
+weeks, per the owner's own stated plan.
 
 ## Strategy
 

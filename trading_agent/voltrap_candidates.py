@@ -6,7 +6,7 @@ wrapping the actual chain/quote tool calls themselves (those stay live
 per cycle, since the tradeable universe and its budget both move week
 to week).
 
-Two independent pieces:
+Three independent pieces:
 - rank_by_voltrap_fit: given one cycle's options-focused scan results
   (scan_id built via create_scan, preset HIGH_OPTIONS_VOLUME_IV plus
   custom IV/liquidity/price filters - see PLAYBOOK.md), filters out
@@ -20,6 +20,16 @@ Two independent pieces:
   a quote, choose the strike inside a target band. Delta is preferred
   when the quote payload carries it; the OTM-percentage form is the
   documented fallback if it doesn't (verify at first live use).
+- voltrap_budget_after_income_reserve: VOLTRAP, the income sleeve, and
+  the crypto/stock bot are three independent strategies that each size
+  their own budget as a fraction of total portfolio value - but all
+  three draw on the SAME real cash. Nothing before 2026-10-09 enforced
+  that, because VOLTRAP had no real cash to reserve yet. Now that
+  VOLTRAP_RISK_LIMITS["max_voltrap_pct"] is 1.00 (owner request), a
+  pct-of-portfolio ceiling alone would let VOLTRAP's weekly entry
+  reserve cash the income sleeve needs for its own buys (owner request,
+  2026-10-09: "Ensure dividend stocks buys are available too. Voltrap
+  will trade with what's left"). See PLAYBOOK.md and CHANGELOG.md.
 """
 
 
@@ -128,3 +138,42 @@ def pick_strike_by_otm_pct(instruments, current_price, target_otm_pct_min, targe
     if not candidates:
         return None
     return min(candidates, key=lambda pair: abs(pair[0] - midpoint))[1]
+
+
+def voltrap_budget_after_income_reserve(
+    portfolio_value,
+    buying_power,
+    max_voltrap_pct,
+    income_max_aggregate_pct,
+    current_voltrap_collateral_used,
+):
+    """New cash VOLTRAP may still reserve as collateral this cycle,
+    after leaving room for the income sleeve's own budget.
+
+    portfolio_value: real total account value (get_portfolio).
+    buying_power: real spendable cash right now (get_portfolio) - the
+        actual constraint on reserving new collateral, unlike
+        portfolio_value which includes whatever is already deployed
+        elsewhere (crypto/stock positions, income-sleeve shares,
+        VOLTRAP's own existing collateral).
+    max_voltrap_pct: VOLTRAP_RISK_LIMITS["max_voltrap_pct"] - VOLTRAP's
+        own nominal ceiling as a fraction of portfolio_value.
+    income_max_aggregate_pct: INCOME_RISK_LIMITS["max_aggregate_position_pct"]
+        - the income sleeve's own ceiling. Reserved against buying_power
+        in full, whether or not the sleeve currently holds anything, so
+        a dividend-stock buy this week or next always has real cash
+        available rather than competing with VOLTRAP for it.
+    current_voltrap_collateral_used: cash VOLTRAP already has reserved
+        in open csp_open/covered_call_open contracts (sum from
+        VoltrapStateStore across VOLTRAP_WATCHLIST), so a nominal
+        ceiling isn't exceeded cycle over cycle as positions accumulate.
+
+    Returns the smaller of (VOLTRAP's remaining nominal headroom) and
+    (real cash left after reserving the income sleeve's full ceiling) -
+    never negative.
+    """
+    nominal_ceiling = portfolio_value * max_voltrap_pct
+    remaining_nominal = max(0.0, nominal_ceiling - current_voltrap_collateral_used)
+    income_reserved = portfolio_value * income_max_aggregate_pct
+    cash_after_income_reserve = max(0.0, buying_power - income_reserved)
+    return min(remaining_nominal, cash_after_income_reserve)
