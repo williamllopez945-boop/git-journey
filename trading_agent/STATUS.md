@@ -60,3 +60,4 @@ prompts that point at a PLAYBOOK section over prompts that restate it. See
 - The VOLTRAP daily monitor routine prompt says "recommend-only"; config says
   auto-execute.
 - `PLAYBOOK.md` steps 1-6 apply to zero assets and are kept as infrastructure.
+- Disabled income-sleeve modules live in `trading_agent/legacy/` (moved 2026-10-24, owner approval); `config.py` comments still cite them by bare filename.

@@ -1196,7 +1196,7 @@ same family, `TSLW`/`COIW`/`HOOW`/`PLTW`, lost 32-66% over the identical
 window and were left out). `max_concurrent_positions=2` is still a real
 cap against 8 names.
 
-### Ex-dividend timing gate (`income_ex_dividend.py`) — DISABLED 2026-10-16
+### Ex-dividend timing gate (`legacy/income_ex_dividend.py`) — DISABLED 2026-10-16
 
 The owner's original second requirement (2026-10-06): prefer buying just
 after the ex-dividend date, avoid buying just before it. The mechanics:
@@ -1275,7 +1275,7 @@ Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
 
 ### Liquidity re-check — DISABLED 2026-10-16
 
-Spreads on these thinly-traded ETFs move; `income_candidates.py`'s
+Spreads on these thinly-traded ETFs move; `legacy/income_candidates.py`'s
 `filter_by_liquidity` used to run live every cycle inside
 `income_cycle.py` against that cycle's real quotes, never against a
 stored snapshot. **2026-10-16 owner request: this filter no longer
@@ -1362,7 +1362,7 @@ fire on routine decay, not signal), `INCOME_TRIM_TRIGGER_PCT = 0.10` /
 fully exiting — same `(reason, fraction)` shape as
 `exit_criteria.check_exit` via `check_income_exit`).
 
-### Candidate universe (`income_candidates.py`)
+### Candidate universe (`legacy/income_candidates.py`)
 
 11 tradable candidates were screened (confirmed via Robinhood `search`):
 `YMAX, YMAG, ULTY, GPTY, LFGY, QDTY, RDTY, SDTY, MINY, CHPY, SLTY` —

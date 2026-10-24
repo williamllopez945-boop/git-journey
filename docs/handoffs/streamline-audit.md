@@ -36,7 +36,7 @@ Keep secrets, account details, raw live responses, and credentials out.
 - Decisions or deviations from the original plan:
   1. Evidence files were NOT moved into `evidence/`. `config.py` (protected) and hundreds of references in CHANGELOG/PLAYBOOK/README use bare filenames, so a move would force incidental edits to protected config and a large link rewrite. An index was added instead.
   2. Audit claim corrected: `income_cycle.py` does not import `income_ex_dividend` or `income_candidates`; only its docstring mentions them. There are no dead imports to remove.
-  3. Modules with no in-repo importer (`volatility_sizing`, `price_history`, `cost_basis_fallback`, `watchlist_review`, `order_pricing`, `reconcile_ledger`, `income_ex_dividend`, `income_candidates`) are not safe to call dead: the routines import several of them ad hoc by name (for example cost_basis_fallback, order_pricing, watchlist_review). The only modules tied to disabled paths are `income_ex_dividend` and `income_candidates.filter_by_liquidity`. No `legacy/` move was made; this needs an owner decision.
+  3. Modules with no in-repo importer (`volatility_sizing`, `price_history`, `cost_basis_fallback`, `watchlist_review`, `order_pricing`, `reconcile_ledger`, `income_ex_dividend`, `income_candidates`) are not safe to call dead: the routines import several of them ad hoc by name (for example cost_basis_fallback, order_pricing, watchlist_review). The only modules tied to disabled paths are `income_ex_dividend` and `income_candidates.filter_by_liquidity`. The owner then approved moving exactly those two: `income_ex_dividend.py` and `income_candidates.py` are now in `trading_agent/legacy/` (history-preserving `git mv`), their tests keep their location with updated import paths, and `legacy/README.md` explains. `config.py` comments still cite the old bare names (protected file, left unedited). Nothing else was moved.
   4. No `active_watchlist` helper or scanner-state pruning was added. There is no code-level "crypto cut" flag (adding one would mean a new config key), the fix is passing `STOCK_WATCHLIST` in the daily review prompt (already in the drafts), and stale scanner rows are harmless while pruning could drop crypto state that matters if crypto is re-enabled.
 
 ## Tests and results
@@ -50,9 +50,9 @@ Keep secrets, account details, raw live responses, and credentials out.
 
 ## Outstanding issues and risks
 
-- Unfinished work: Phase 3 (routine changes) and Phase 4 (behavior decisions); the optional `legacy/` move.
+- Unfinished work: Phase 3 (routine changes) and Phase 4 (behavior decisions); none from Phase 2; the `legacy/` move is done.
 - Known limitations: routine prompts live on the server, so the drafts are unapplied; the STATUS.md routine table was written from the stored crons on 2026-10-24 and can go stale.
-- Questions requiring an owner decision: approve Phase 3 changes one routine at a time; whether to move the two disabled income modules to `legacy/`; Phase 4 items from the audit.
+- Questions requiring an owner decision: approve Phase 3 changes one routine at a time; Phase 4 items from the audit.
 - Missing environment prerequisites: none.
 
 ## Next steps

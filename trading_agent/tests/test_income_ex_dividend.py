@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from trading_agent.income_ex_dividend import (
+from trading_agent.legacy.income_ex_dividend import (
     days_until_ex_dividend,
     in_avoid_window,
     in_favorable_window,

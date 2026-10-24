@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from trading_agent.income_candidates import spread_pct, filter_by_liquidity
+from trading_agent.legacy.income_candidates import spread_pct, filter_by_liquidity
 
 
 def test_spread_pct_normal_quote():
