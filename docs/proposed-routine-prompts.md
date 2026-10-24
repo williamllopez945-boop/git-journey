@@ -1,7 +1,9 @@
-# Proposed thin routine prompts (DRAFT, not applied)
+# Proposed thin routine prompts (DRAFTS; only the income prompt is applied)
 
-Status: **draft for owner review.** Nothing here has been applied to any
-routine. Applying a prompt is a Phase 3 action that needs explicit owner
+Status: **drafts for owner review.** Applied so far: the income sleeve prompt
+(2026-10-24) and a one-paragraph fix to the stored hourly prompt (record the fill
+in a separate `--record-only` call, 2026-10-24). The full hourly draft, the
+daily-review draft and the rest below are NOT applied. Applying a prompt is a Phase 3 action that needs explicit owner
 approval, one routine at a time, with the previous prompt saved first (for
 rollback, via `get_trigger`, into a scratch file kept out of Git because prompts
 contain account details).
@@ -106,14 +108,16 @@ it.*
 > happens only after explicit owner approval. Confirm the current branch before
 > committing and stop if it is not the expected one.
 
-## Known defect in the live hourly prompt (found in PR #8 review)
+## Known defect in the live hourly prompt (found in PR #8 review; FIXED 2026-10-24)
 
-The stored hourly prompt still says to pass `--record-trade-*` "on the SAME
+**Fixed 2026-10-24** with a narrow one-paragraph edit to the stored hourly prompt (owner approval). The original text read:
+
+The stored hourly prompt said to pass `--record-trade-*` "on the SAME
 run_cycle.py command" (a 2026-09-29 note). PLAYBOOK was corrected on 2026-10-05:
 recording must be a separate `--record-only` call. No stock trade has executed
 since, so nothing has gone wrong yet, but the first real fill could trigger the
-double-classification bug. The thin hourly prompt above fixes it; apply it before
-the first live stock fill.
+double-classification bug. The paragraph now requires the separate `--record-only` call, so the thin
+hourly prompt is no longer urgent.
 
 ## Not redrafted
 
