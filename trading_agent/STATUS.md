@@ -25,7 +25,7 @@ is turned on, off or re-scoped.
 | Routine | Schedule | Role |
 |---|---|---|
 | Hourly trading cycle | 10:08-15:08 ET weekdays (`CRON_TZ=America/New_York`, changed 2026-10-24; was hourly 24/7) | Stock cycle during market hours. Crypto is cut, so there is nothing to check off-hours. |
-| Ledger dashboard refresh | :28, 10-16 ET weekdays | Read-only dashboard republish. |
+| Ledger dashboard refresh | 10:28, 12:28, 14:28, 16:28 ET weekdays (every 2 hours; was hourly 10-16 ET, changed 2026-10-24) | Read-only dashboard republish. The 16:28 run picks up the daily review. |
 | Income sleeve cycle | 15:00 weekdays | Runs `income_cycle.py`. |
 | VOLTRAP daily monitor | 15:45 ET weekdays | Read-only; reconciles expirations. Exits right after one positions/orders check when nothing is open (changed 2026-10-24). |
 | VOLTRAP weekly entry | Mon 09:45 ET | Places contracts within budget. |
