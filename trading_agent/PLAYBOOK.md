@@ -865,7 +865,11 @@ posts the fuller executive-summary/observations content (Slack has no
 
 ## Weekly watchlist review
 
-Runs once a week (owner request, 2026-09-25: "remove stocks and crypto
+*Cadence: the routine now runs monthly (1st of the month, 15:00 UTC; changed
+2026-10-24, owner approval). The procedure below is unchanged, and the
+heading keeps its original name so existing references still resolve.*
+
+Originally ran once a week (owner request, 2026-09-25: "remove stocks and crypto
 that are not performing well and add those that have potential"). Every
 past watchlist change (`watchlist_2026-09-22.md`,
 `watchlist_2026-09-23_meme_removal.md`,

@@ -32,7 +32,7 @@ is turned on, off or re-scoped.
 | VOLTRAP dry-run (paper) | Mon 09:37 ET, **disabled** | Paper candidate walkthrough; cron kept so it can be re-enabled. |
 | Daily after-action review | 20:05 daily | Writes `daily_logs/DATE.md`, commits and pushes. |
 | Research daily scan | 12:00 weekdays | Writes the research log. |
-| Weekly watchlist review | Sun 15:00 | Recommendation only; never edits config. |
+| Monthly watchlist review (was weekly) | 1st of month 15:00 UTC (changed 2026-10-24) | Recommendation only; never edits config. First run Sun 2026-11-01. |
 
 Routine prompts are stored on the server, not in this repo. They are copies
 that drift (the income prompt once passed a removed flag; the VOLTRAP monitor

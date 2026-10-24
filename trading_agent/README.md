@@ -655,8 +655,10 @@ hands-off:
 `state.json`/`cycle_log.json`/etc. (live runtime data, never committed),
 the daily review is meant to be a durable, versioned record.
 
-- **Weekly watchlist review** (2026-09-25, owner request) — fires
-  **Sundays 15:00 UTC**, market closed. Scores current
+- **Watchlist review** (2026-09-25, owner request; moved from weekly to
+  monthly 2026-10-24) — fires on the **1st of each month at 15:00 UTC**
+  (the routine is named "Monthly watchlist review"; the section heading
+  in `PLAYBOOK.md` keeps the original name). Scores current
   `WATCHLIST`/`STOCK_WATCHLIST` members by trailing performance
   (`watchlist_review.trailing_trade_pnl` against real trade history, or
   a fresh `backtest.py` run for assets that never traded), sources
