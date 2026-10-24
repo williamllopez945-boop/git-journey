@@ -41,6 +41,10 @@ corrected 2026-10-24). Prefer prompts that point at a PLAYBOOK section over
 prompts that restate it. The income prompt is already thinned; the hourly and
 daily-review drafts are pending in `docs/proposed-routine-prompts.md`.
 
+Architecture and design rules for new builds: `docs/architecture/system-dataflow.md`
+(diagrams, state ownership, checklist). A prompt to render it as a visual:
+`docs/architecture/dataflow-visual-prompt.md`.
+
 ## Hard boundaries
 
 - Never change `RISK_LIMITS`, `DRY_RUN`, `WATCHLIST`, `STOCK_WATCHLIST`,
