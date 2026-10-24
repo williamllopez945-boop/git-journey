@@ -9,63 +9,25 @@ by an agent on their behalf.
 Run this cycle on a fixed schedule (e.g. hourly). Each run is one full pass
 over the watchlist.
 
-**Simplified 2026-09-24 (audit):** steps 1-6 below (the local-polling
-signal path) were narrowed to **`PYTH` only** — it was the one
-`WATCHLIST` asset the crypto scanner didn't cover, so it was the only
-asset that actually needed a locally-built price series. Every other
-asset gets real signals from the scanner-based cycle below from the
-first cycle it's on the watchlist, with no warm-up.
+**Current operating status (read this first):** see [STATUS.md](STATUS.md)
+for what is live today. Two standing notes govern this runbook, with the
+dated history in [CHANGELOG.md](CHANGELOG.md) (2026-09-24 and 2026-10-08):
 
-**`PYTH` itself was then removed from `WATCHLIST` the same day** (no
-documented reason for its inclusion survived, and it was structurally
-the worst-served asset - see `CHANGELOG.md`). **Steps 1-6 below currently
-apply to zero assets** as a result - every current `WATCHLIST` member is
-scanner-covered. Left in place rather than deleted: the mechanism
-(`price_history.py`, `entry_filter.confirmed_signal`, volatility-scaled
-sizing) is real, tested infrastructure that would matter again the
-moment a non-scanner-covered asset is added - ripping it out now would
-just mean rebuilding it later. Skip steps 1-6 entirely while `WATCHLIST`
-has no such asset; re-activate them (scoped to whichever asset needs it,
-not the whole watchlist) if one is ever added.
-
-**ALL crypto trading cut, effective 2026-10-08 (owner request:
-"Cut all crypto trades. Only stocks now") — supersedes the
-2026-10-12 new-entry-only pause note below, which never took effect
-and is now moot. Reversed/updated only on explicit owner instruction.**
-The crypto scanner-based cycle below (scan, classify, every
-`fresh_buy_cross`/`fresh_sell_cross` handling including new entries,
-`excellent_watch` logging) is **skipped entirely, every cycle, for
-every `WATCHLIST` asset** — no `run_scan`, no
-`scanner_signals.classify()`, no `preview_crypto_order`/
-`place_crypto_order` for any reason. The **only** crypto activity that
-still runs is a scoped protective-exit/gate-floor check for **AERO
-specifically** — the sole open crypto position at the time of this cut
-(CRV closed via stop-loss the same day) — following "Per-position exit
-rules" below exactly, but via a direct `get_crypto_quotes(["AERO-USD"])`
-call rather than the full scan/classify path (which would needlessly
-re-run `classify()` against the whole `WATCHLIST` and advance
-`scanner_state.json` for assets with nothing to act on). The moment
-AERO's `quantity_transferable` reaches 0, apply the usual
-`PositionStateStore().reset`/`.record_exit`/`.clear_gate_blocked` calls
-and from the next cycle onward crypto is skipped **completely** — not
-even an AERO check — until the owner explicitly re-authorizes crypto
-trading. Step 2's shared `open_position_count`/`total_open_position_value`
-counters still include AERO while it's open (real exposure against the
-shared budget), from a plain `get_crypto_positions` call — no scan
-needed for that. The stock side (steps 5-8 below) and VOLTRAP are
-unaffected and are now the **sole** source of new trading activity.
-Like the superseded pause note below, this is a pure risk/operational
-switch (not a backtested parameter change) — no `backtest.py` evidence
-attached, same category as `DRY_RUN`.
-
-**(Superseded by the note above, kept for history) Crypto new-entry
-pause, 2026-10-12T00:00:00Z onward (owner request, 2026-10-07):** was
-going to skip only the BUY side of step 3 below starting that
-timestamp, leaving scanning/protective-exits/excellent_watch running
-for existing positions. Overtaken by the full cut above before it ever
-took effect — this is a deliberate wind-down while the owner shifts
-focus/capital toward the income sleeve (`## Income sleeve` below,
-YieldMax-style weekly ETFs) for weekly, dividend-style income.
+- **Crypto is fully cut** (owner request, 2026-10-08; reversed only on
+  explicit owner instruction). Skip the crypto scan, classification,
+  fresh-cross handling and `excellent_watch` logging for every `WATCHLIST`
+  asset. The only crypto activity is a scoped protective-exit/gate-floor
+  check for an open AERO position, via a direct `get_crypto_quotes` call
+  rather than the full scan path. Once AERO's `quantity_transferable`
+  reaches 0 (apply `PositionStateStore().reset`/`.record_exit`/
+  `.clear_gate_blocked`), skip crypto completely. The stock side and
+  VOLTRAP are unaffected. `open_position_count` and
+  `total_open_position_value` still include AERO while it is open.
+- **Steps 1-6 below apply to zero assets.** The local-polling signal path
+  (`price_history.py`, `entry_filter.confirmed_signal`, volatility-scaled
+  sizing) was narrowed to PYTH only on 2026-09-24, and PYTH was removed the
+  same day. The mechanism stays as tested infrastructure; skip steps 1-6
+  unless a non-scanner-covered asset is added to `WATCHLIST`.
 
 ## Steps, per cycle
 
@@ -903,7 +865,11 @@ posts the fuller executive-summary/observations content (Slack has no
 
 ## Weekly watchlist review
 
-Runs once a week (owner request, 2026-09-25: "remove stocks and crypto
+*Cadence: the routine now runs monthly (1st of the month, 15:00 UTC; changed
+2026-10-24, owner approval). The procedure below is unchanged, and the
+heading keeps its original name so existing references still resolve.*
+
+Originally ran once a week (owner request, 2026-09-25: "remove stocks and crypto
 that are not performing well and add those that have potential"). Every
 past watchlist change (`watchlist_2026-09-22.md`,
 `watchlist_2026-09-23_meme_removal.md`,
@@ -1234,7 +1200,7 @@ same family, `TSLW`/`COIW`/`HOOW`/`PLTW`, lost 32-66% over the identical
 window and were left out). `max_concurrent_positions=2` is still a real
 cap against 8 names.
 
-### Ex-dividend timing gate (`income_ex_dividend.py`) — DISABLED 2026-10-16
+### Ex-dividend timing gate (`legacy/income_ex_dividend.py`) — DISABLED 2026-10-16
 
 The owner's original second requirement (2026-10-06): prefer buying just
 after the ex-dividend date, avoid buying just before it. The mechanics:
@@ -1313,7 +1279,7 @@ Mirrors `run_cycle.py`'s shape exactly (same `--record-only`/
 
 ### Liquidity re-check — DISABLED 2026-10-16
 
-Spreads on these thinly-traded ETFs move; `income_candidates.py`'s
+Spreads on these thinly-traded ETFs move; `legacy/income_candidates.py`'s
 `filter_by_liquidity` used to run live every cycle inside
 `income_cycle.py` against that cycle's real quotes, never against a
 stored snapshot. **2026-10-16 owner request: this filter no longer
@@ -1400,7 +1366,7 @@ fire on routine decay, not signal), `INCOME_TRIM_TRIGGER_PCT = 0.10` /
 fully exiting — same `(reason, fraction)` shape as
 `exit_criteria.check_exit` via `check_income_exit`).
 
-### Candidate universe (`income_candidates.py`)
+### Candidate universe (`legacy/income_candidates.py`)
 
 11 tradable candidates were screened (confirmed via Robinhood `search`):
 `YMAX, YMAG, ULTY, GPTY, LFGY, QDTY, RDTY, SDTY, MINY, CHPY, SLTY` —

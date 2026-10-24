@@ -271,7 +271,7 @@ genuinely needs to discover symbols outside the current watchlist, which
 | `order_pricing.py` | Resolves the marketable-limit-order price (`marketable_limit_price`) PLAYBOOK.md's order-type policy requires for every real order. Added 2026-10-04 after the policy lapsed back to `type=market` live twice (2026-09-27, 2026-10-04) despite being written down both times — no code in this repo places orders, so making the correct limit price a single tested function call is the only durable fix available |
 | `income_signals.py` | Income sleeve (added 2026-10-06) — `classify_entry` (live signal since 2026-10-16: `classify_dip`'s rolling-range-position read AND `near_support`'s 60-day support-zone check must both agree), deliberately not the SMA crossover. See "Income sleeve" below |
 | `income_exit.py` | Income sleeve — its own stop-loss/trim rule (`check_income_exit`), looser than `exit_criteria.py` on purpose (these ETFs' price structurally decays with every distribution paid) |
-| `income_candidates.py` | Income sleeve — liquidity screen (`filter_by_liquidity`), fails closed on any missing/crossed quote. **No longer called from `income_cycle.py` (2026-10-16, owner request) — kept for reference/tests only, unused in the live cycle.** |
+| `legacy/income_candidates.py` | Income sleeve — liquidity screen (`filter_by_liquidity`), fails closed on any missing/crossed quote. **No longer called from `income_cycle.py` (2026-10-16, owner request) — kept for reference/tests only, unused in the live cycle.** |
 | `income_state.py` | Income sleeve — wires `RiskManager`/`PositionStateStore` to their own state files (`income_risk_state.json`/`income_position_state.json`), distinct from the main bot's `state.json`/`position_state.json` |
 | `income_backtest.py` | Income sleeve — dedicated backtest loop for the dip/stop/trim rule (not a retrofit of `backtest.py`); models price only, no distribution cash flow — see "Income sleeve" below |
 | `income_institutional_flow.py` | Income sleeve — volume-surge confirmation gate (`volume_surge_confirmed`), an "institutional money entry" proxy (2026-10-13). Backtest showed a mixed, worst-case-first result across the roster (clear win for ULTY/YMAG, wash-to-negative elsewhere), so it's live ONLY for those two names (`INCOME_INSTITUTIONAL_FLOW_GATED_SYMBOLS` in `config.py`) — every other `INCOME_WATCHLIST` symbol stays on the plain dip signal; see `backtest_2026-10-13_institutional_flow_income_sleeve.md` |
@@ -316,7 +316,8 @@ the crypto/stock bot's crossover-following or VOLTRAP's option
 collateral.
 
 **Live, `INCOME_AUTO_EXECUTE = True`.** `INCOME_WATCHLIST` currently
-holds 8 names: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
+holds 15 names (see `config.py`, the live list; expanded 2026-10-13 with
+seven more basket funds, see `CHANGELOG.md`). The first 8 were: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
 `CHPY`), `GPTY` (another YieldMax basket, added 2026-10-07 once a
 regular-hours liquidity re-check cleared it — see
 `income_candidates_2026-10-07_expansion.md`), and three Roundhill
@@ -654,8 +655,10 @@ hands-off:
 `state.json`/`cycle_log.json`/etc. (live runtime data, never committed),
 the daily review is meant to be a durable, versioned record.
 
-- **Weekly watchlist review** (2026-09-25, owner request) — fires
-  **Sundays 15:00 UTC**, market closed. Scores current
+- **Watchlist review** (2026-09-25, owner request; moved from weekly to
+  monthly 2026-10-24) — fires on the **1st of each month at 15:00 UTC**
+  (the routine is named "Monthly watchlist review"; the section heading
+  in `PLAYBOOK.md` keeps the original name). Scores current
   `WATCHLIST`/`STOCK_WATCHLIST` members by trailing performance
   (`watchlist_review.trailing_trade_pnl` against real trade history, or
   a fresh `backtest.py` run for assets that never traded), sources
