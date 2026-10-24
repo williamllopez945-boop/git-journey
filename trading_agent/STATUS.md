@@ -36,9 +36,10 @@ is turned on, off or re-scoped.
 
 Routine prompts are stored on the server, not in this repo. They are copies
 that drift (the income prompt once passed a removed flag; the VOLTRAP monitor
-still says "recommend-only" while `config.py` says auto-execute). Prefer
-prompts that point at a PLAYBOOK section over prompts that restate it. See
-`docs/proposed-routine-prompts.md`.
+once said "recommend-only" while `config.py` said auto-execute; both were
+corrected 2026-10-24). Prefer prompts that point at a PLAYBOOK section over
+prompts that restate it. The income prompt is already thinned; the hourly and
+daily-review drafts are pending in `docs/proposed-routine-prompts.md`.
 
 ## Hard boundaries
 
