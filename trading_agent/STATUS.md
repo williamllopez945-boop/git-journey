@@ -27,7 +27,7 @@ is turned on, off or re-scoped.
 | Hourly trading cycle | 10:08-15:08 ET weekdays (`CRON_TZ=America/New_York`, changed 2026-10-24; was hourly 24/7) | Stock cycle during market hours. Crypto is cut, so there is nothing to check off-hours. |
 | Ledger dashboard refresh | :28, 10-16 ET weekdays | Read-only dashboard republish. |
 | Income sleeve cycle | 15:00 weekdays | Runs `income_cycle.py`. |
-| VOLTRAP daily monitor | 15:45 ET weekdays | Read-only; reconciles expirations. |
+| VOLTRAP daily monitor | 15:45 ET weekdays | Read-only; reconciles expirations. Exits right after one positions/orders check when nothing is open (changed 2026-10-24). |
 | VOLTRAP weekly entry | Mon 09:45 ET | Places contracts within budget. |
 | VOLTRAP dry-run (paper) | Mon 09:37 ET, **disabled** | Paper candidate walkthrough; cron kept so it can be re-enabled. |
 | Daily after-action review | 20:05 daily | Writes `daily_logs/DATE.md`, commits and pushes. |
@@ -57,7 +57,6 @@ prompts that point at a PLAYBOOK section over prompts that restate it. See
 ## Known stale prose
 
 - `README.md`'s income-sleeve paragraph previously said 8 names (corrected to 15; some adjacent prose still describes the early 8-name state).
-- The VOLTRAP daily monitor routine prompt says "recommend-only"; config says
-  auto-execute.
+- The VOLTRAP daily monitor prompt's "recommend-only" text was corrected 2026-10-24.
 - `PLAYBOOK.md` steps 1-6 apply to zero assets and are kept as infrastructure.
 - Disabled income-sleeve modules live in `trading_agent/legacy/` (moved 2026-10-24, owner approval); `config.py` comments still cite them by bare filename.

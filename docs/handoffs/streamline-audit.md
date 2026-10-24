@@ -52,7 +52,8 @@ Keep secrets, account details, raw live responses, and credentials out.
 
 - 2026-10-24: hourly trading cycle (trig_01U7cif9R7pWiUf61ntWruHY). Cron changed from `8 * * * *` to `CRON_TZ=America/New_York 8 10-15 * * 1-5`; prompt unchanged. The first attempt was denied by the auto-mode permission check and applied after the owner's explicit "Retry the edit". Verified in the response: enabled, next run 2026-10-26T14:08:00Z. Rollback: set the cron back to `8 * * * *`. First scheduled run to observe: Mon 2026-10-26 10:08 ET.
 - 2026-10-24: VOLTRAP dry-run (paper) weekly (trig_01LAUAH3ox5sSPtadSpKf29d) paused with `enabled=false`; cron (`CRON_TZ=America/New_York 37 9 * * 1`) and prompt kept intact. Verified in the response: enabled false. Rollback: `update_trigger enabled=true`. It would otherwise have fired Mon 2026-10-26 09:37 ET; confirm no `voltrap_dryrun_2026-10-26.md` appears.
-- Pending Phase 3 items (not started): thin prompts, conditional VOLTRAP monitor, weekly review to monthly, Ledger cadence.
+- 2026-10-24: VOLTRAP daily monitor (trig_01BTsNKpj8a5tZqQxDVL661q) prompt edited, schedule unchanged (`CRON_TZ=America/New_York 45 15 * * 1-5`). Added step 0 (exit with no notification when there are no open option positions or orders and the state file shows no open contract) and replaced the stale "recommend-only" sentence with a pointer to `config.py`. A cron cannot be conditional, so it still fires, but exits after one read. Verified in the response: enabled, new prompt stored. The previous prompt is saved outside Git (it contains account details) in the session scratchpad at `phase3_rollback/voltrap_monitor_prompt_before_2026-10-24.txt`; rollback means pasting it back with `update_trigger prompt=...`. First scheduled run to observe: Mon 2026-10-26 15:45 ET, expected silent.
+- Pending Phase 3 items (not started): thin prompts, weekly review to monthly, Ledger cadence.
 
 ## Outstanding issues and risks
 
