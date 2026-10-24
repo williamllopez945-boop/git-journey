@@ -48,6 +48,11 @@ Keep secrets, account details, raw live responses, and credentials out.
 - Any baseline failure: none
 - Historical backtest evidence, if strategy behavior changed: not applicable, no behavior changed
 
+## Phase 3 log (live routine changes, owner-approved one at a time)
+
+- 2026-10-24: hourly trading cycle (trig_01U7cif9R7pWiUf61ntWruHY). Cron changed from `8 * * * *` to `CRON_TZ=America/New_York 8 10-15 * * 1-5`; prompt unchanged. The first attempt was denied by the auto-mode permission check and applied after the owner's explicit "Retry the edit". Verified in the response: enabled, next run 2026-10-26T14:08:00Z. Rollback: set the cron back to `8 * * * *`. First scheduled run to observe: Mon 2026-10-26 10:08 ET.
+- Pending Phase 3 items (not started): thin prompts, pause the VOLTRAP dry-run, conditional VOLTRAP monitor, weekly review to monthly, Ledger cadence.
+
 ## Outstanding issues and risks
 
 - Unfinished work: Phase 3 (routine changes) and Phase 4 (behavior decisions); none from Phase 2; the `legacy/` move is done.
