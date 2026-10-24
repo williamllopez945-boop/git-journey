@@ -51,7 +51,8 @@ Keep secrets, account details, raw live responses, and credentials out.
 ## Phase 3 log (live routine changes, owner-approved one at a time)
 
 - 2026-10-24: hourly trading cycle (trig_01U7cif9R7pWiUf61ntWruHY). Cron changed from `8 * * * *` to `CRON_TZ=America/New_York 8 10-15 * * 1-5`; prompt unchanged. The first attempt was denied by the auto-mode permission check and applied after the owner's explicit "Retry the edit". Verified in the response: enabled, next run 2026-10-26T14:08:00Z. Rollback: set the cron back to `8 * * * *`. First scheduled run to observe: Mon 2026-10-26 10:08 ET.
-- Pending Phase 3 items (not started): thin prompts, pause the VOLTRAP dry-run, conditional VOLTRAP monitor, weekly review to monthly, Ledger cadence.
+- 2026-10-24: VOLTRAP dry-run (paper) weekly (trig_01LAUAH3ox5sSPtadSpKf29d) paused with `enabled=false`; cron (`CRON_TZ=America/New_York 37 9 * * 1`) and prompt kept intact. Verified in the response: enabled false. Rollback: `update_trigger enabled=true`. It would otherwise have fired Mon 2026-10-26 09:37 ET; confirm no `voltrap_dryrun_2026-10-26.md` appears.
+- Pending Phase 3 items (not started): thin prompts, conditional VOLTRAP monitor, weekly review to monthly, Ledger cadence.
 
 ## Outstanding issues and risks
 

@@ -15,7 +15,7 @@ is turned on, off or re-scoped.
 | Main bot, stocks (`STOCK_WATCHLIST`: TWLO, ILMN, PTC, CRWD, PANW) | Live, auto-execute | SMA(10,30) hourly cross, stop-loss 4%, take-profit 8% (sells 70%). No live stock trade yet; CRWD/PANW sit on `excellent_watch`, which is alert-only. |
 | Income sleeve (`INCOME_WATCHLIST`, 15 ETFs) | Live, `INCOME_AUTO_EXECUTE = True` | Dip percentile + support zone entry, stop-loss 15%, trim +10% (sells 50%). Own limits and state files. Entries need whole shares; the 25% aggregate cap currently leaves less than one share of room. |
 | VOLTRAP (options wheel) | Live, `VOLTRAP_AUTO_EXECUTE = True` | No option positions or orders since go-live (2026-10-09). |
-| VOLTRAP dry-run (paper) | Running, hypothetical $5,000 | Paper only; places no orders. |
+| VOLTRAP dry-run (paper) | **Paused** 2026-10-24 (owner approval) | Was a hypothetical $5,000 walkthrough that places no orders. Re-enable with `update_trigger enabled=true` (trig_01LAUAH3ox5sSPtadSpKf29d). |
 | Research agent | Running, advisory only | Stocks + VOLTRAP watchlists. Never trades or gates a trade. |
 
 `DRY_RUN = False`. The three strategies share one real account and its cash.
@@ -29,7 +29,7 @@ is turned on, off or re-scoped.
 | Income sleeve cycle | 15:00 weekdays | Runs `income_cycle.py`. |
 | VOLTRAP daily monitor | 15:45 ET weekdays | Read-only; reconciles expirations. |
 | VOLTRAP weekly entry | Mon 09:45 ET | Places contracts within budget. |
-| VOLTRAP dry-run (paper) | Mon 09:37 ET | Paper candidate walkthrough. |
+| VOLTRAP dry-run (paper) | Mon 09:37 ET, **disabled** | Paper candidate walkthrough; cron kept so it can be re-enabled. |
 | Daily after-action review | 20:05 daily | Writes `daily_logs/DATE.md`, commits and pushes. |
 | Research daily scan | 12:00 weekdays | Writes the research log. |
 | Weekly watchlist review | Sun 15:00 | Recommendation only; never edits config. |
