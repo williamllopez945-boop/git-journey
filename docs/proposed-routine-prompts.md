@@ -45,6 +45,8 @@ it.*
 
 ## Income sleeve cycle
 
+**APPLIED 2026-10-24** (owner approval). The stored version is slightly fuller than the draft below: it also names the account, restates that exits run even during a circuit-breaker halt, keeps the exact record-only command and drops the draft's shorthand. The draft text is kept for reference.
+
 > Income sleeve cycle in /home/user/git-journey/trading_agent. Follow `PLAYBOOK.md`
 > "Income sleeve" (especially "Per-cycle script"). Read `INCOME_WATCHLIST`,
 > `INCOME_RISK_LIMITS` and the exit constants live; do not restate them.
