@@ -6,7 +6,8 @@ Keep secrets, account details, raw live responses, and credentials out.
 
 ## Objective and scope
 
-- Objective: implement Phases 0-2 of the streamlining plan from the trading strategy audit (docs/prompt single source of truth, code hygiene). Phase 3 (routine changes) and Phase 4 (behavior changes) are NOT started and need explicit owner approval.
+- Objective: implement the streamlining plan from the trading strategy audit (docs/prompt single source of truth, code hygiene, routine cleanup). Original scope was Phases 0-2; the owner then approved Phase 3 items one at a time.
+- Current status (updated after the PR #8 review): Phases 0-2 done. Phase 3 partly done: hourly schedule, VOLTRAP dry-run pause, VOLTRAP monitor early exit, watchlist review to monthly, Ledger cadence and the income thin prompt are applied (see the Phase 3 log). Pending: thin prompts for the hourly and daily-review routines (held until after the first scheduled income run on 2026-10-26). Phase 4 (behavior changes) is not started. Published as draft PR #8 on branch claude/streamline-audit.
 - Allowed files/subsystems: `trading_agent/*.md` docs, `docs/`, no strategy or config code.
 - Out of scope: `config.py`, runtime state files, routine schedules/prompts (drafts only), any parameter or limit change, any pushes or merges.
 - Dependencies on other tasks / agreed interfaces: none.
@@ -56,12 +57,12 @@ Keep secrets, account details, raw live responses, and credentials out.
 - 2026-10-24: Weekly watchlist review (trig_01HMP6iKVzgmPjwxuA1DdqvE) renamed "Monthly watchlist review" and cron changed from `0 15 * * 0` (Sundays 15:00 UTC) to `0 15 1 * *` (1st of month 15:00 UTC). Prompt unchanged (it still says "weekly" and "this week" in places, and covers STOCK_WATCHLIST only; VOLTRAP_WATCHLIST scoping was not applied). Verified in the response: enabled, next run 2026-11-01T15:04:43Z. Rollback: cron `0 15 * * 0`, name "Weekly watchlist review". Note: the 1st falls on any weekday, so a run may see live market data rather than Friday's close.
 - 2026-10-24: Ledger dashboard refresh (trig_01BP3Z1q8jUfu2j1qYuYSfbc) cron changed from `CRON_TZ=America/New_York 28 10-16 * * 1-5` (7 runs a weekday) to `CRON_TZ=America/New_York 28 10-16/2 * * 1-5` (10:28, 12:28, 14:28, 16:28 ET, 4 runs). Prompt unchanged; it still says it runs "20 minutes after each hourly trading cycle", which is now only true for 10:28, 12:28 and 14:28 (the 16:28 run follows the 20:05 UTC daily review). Verified in the response: enabled, next run 2026-10-26T14:28:00Z. Rollback: cron `CRON_TZ=America/New_York 28 10-16 * * 1-5`. Dashboard staleness is now up to about 2 hours in market hours.
 - 2026-10-24: Income sleeve cycle (trig_01UkYeBgNGs8H8rhz9UUyCaU) prompt replaced with a thin version that points at PLAYBOOK "Income sleeve" / "Per-cycle script" and keeps the operational rules (account, four-flag command, exits always run, marketable limit only, whole shares, no market-order fallback, separate record-only call, state-file verification, notification rules, permission-denial rule, hard rules). Schedule unchanged (`0 15 * * 1-5`). Verified in the response: enabled, new prompt stored, next run 2026-10-26T15:08:40Z. The previous prompt is saved outside Git (it contains account details) at the session scratchpad `phase3_rollback/income_prompt_before_2026-10-24.txt`; rollback is `update_trigger prompt=...` with that text. First scheduled run to observe: Mon 2026-10-26 about 15:08 UTC. This will also show whether a scheduled run is allowed to execute `income_cycle.py` (the earlier permission denials were for forks and direct runs before owner approval).
-- Pending Phase 3 items (not started): thin prompts for the hourly and daily-review routines.
+- Pending Phase 3 items (not started): thin prompts for the hourly and daily-review routines. Before applying the hourly one, note the live hourly prompt still carries the stale "record on the SAME run_cycle.py command" instruction (see docs/proposed-routine-prompts.md); the draft now requires a separate `--record-only` call, matching PLAYBOOK.
 
 ## Outstanding issues and risks
 
 - Unfinished work: Phase 3 (routine changes) and Phase 4 (behavior decisions); none from Phase 2; the `legacy/` move is done.
-- Known limitations: routine prompts live on the server, so the drafts are unapplied; the STATUS.md routine table was written from the stored crons on 2026-10-24 and can go stale.
+- Known limitations: routine prompts live on the server; only the income thin prompt has been applied and the hourly and daily-review drafts are not; the STATUS.md routine table was written from the stored crons on 2026-10-24 and can go stale.
 - Questions requiring an owner decision: approve Phase 3 changes one routine at a time; Phase 4 items from the audit.
 - Missing environment prerequisites: none.
 
@@ -71,7 +72,11 @@ Keep secrets, account details, raw live responses, and credentials out.
 2. Inspect changed docs, re-run the full suite.
 3. Report any drift between this note and the repository before continuing.
 4. Reviewer: report findings first; do not silently fix them.
-5. Owner: decide on Phase 3 and publication. Nothing has been pushed or merged.
+5. Owner: decide on the remaining Phase 3 prompts and merging. The branch is pushed as draft PR #8 (targeting claude/robinhood-trading-mcp-sdp3cp); nothing is merged.
+
+## Review log
+
+- 2026-10-24, Codex review of 6d466f3 (Slack thread in #voltrap-agents-work): P2, draft hourly prompt omitted the separate `--record-only` recording call; P3, handoff scope/status out of date. Both verified and fixed in the follow-up commit. Codex could not run pytest (no checkout/proxy), so the 350-pass claim was not independently reproduced; re-review requested.
 
 ## Receiver acknowledgment
 

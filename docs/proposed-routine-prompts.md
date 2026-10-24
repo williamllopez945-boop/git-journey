@@ -32,8 +32,12 @@ it.*
 >   take-profit) always run, even during a halt; gate-floor exits and all new
 >   entries do not.
 > - Stock steps only run 9:30-16:00 ET Monday to Friday; outside that, exit quietly.
-> - Use `run_cycle.py --asset-class stock`; record any executed trade on that same
->   command with `--record-trade-*` flags (never an inline `record_trade` call).
+> - Use `run_cycle.py --asset-class stock` for the analysis. Record an executed trade
+>   in a SEPARATE call: `run_cycle.py --asset-class stock --record-only --portfolio-file
+>   <portfolio.json> --record-trade-*` flags, with no scan, historicals, quotes or
+>   positions files. Never re-run the analysis command with the fill flags (it
+>   reclassifies identical inputs and advances `scanner_state.json` twice), and never
+>   call `record_trade` inline. See PLAYBOOK "Per-cycle helper".
 > - Orders are marketable limit orders only, never market orders.
 > - Never edit `config.py` (`RISK_LIMITS`, `DRY_RUN`, `WATCHLIST`,
 >   `STOCK_WATCHLIST`, `VOLTRAP_*`, `INCOME_*`).
@@ -101,6 +105,15 @@ it.*
 > commit and push it, and send one notification. Never edit `config.py`; a swap
 > happens only after explicit owner approval. Confirm the current branch before
 > committing and stop if it is not the expected one.
+
+## Known defect in the live hourly prompt (found in PR #8 review)
+
+The stored hourly prompt still says to pass `--record-trade-*` "on the SAME
+run_cycle.py command" (a 2026-09-29 note). PLAYBOOK was corrected on 2026-10-05:
+recording must be a separate `--record-only` call. No stock trade has executed
+since, so nothing has gone wrong yet, but the first real fill could trigger the
+double-classification bug. The thin hourly prompt above fixes it; apply it before
+the first live stock fill.
 
 ## Not redrafted
 
