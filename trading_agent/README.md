@@ -316,7 +316,8 @@ the crypto/stock bot's crossover-following or VOLTRAP's option
 collateral.
 
 **Live, `INCOME_AUTO_EXECUTE = True`.** `INCOME_WATCHLIST` currently
-holds 8 names: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
+holds 15 names (see `config.py`, the live list; expanded 2026-10-13 with
+seven more basket funds, see `CHANGELOG.md`). The first 8 were: the original YieldMax basket four (`YMAX`/`YMAG`/`ULTY`/
 `CHPY`), `GPTY` (another YieldMax basket, added 2026-10-07 once a
 regular-hours liquidity re-check cleared it — see
 `income_candidates_2026-10-07_expansion.md`), and three Roundhill
