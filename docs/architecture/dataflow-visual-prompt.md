@@ -13,7 +13,7 @@ You are a technical diagrammer. Create a clear, accurate DATA-FLOW visual of an 
 ## Deliverables
 1. A SYSTEM CONTEXT DIAGRAM (one page): all components, external services and the data that moves between them.
 2. A HOURLY STOCK CYCLE DIAGRAM (sequence/flow): what happens in one run, step by step, including where orders can and cannot be placed.
-3. A DAILY TIMELINE (a horizontal 24-hour strip, weekdays, US Eastern): when each scheduled job fires.
+3. A DAILY TIMELINE (a horizontal 24-hour strip, weekdays): when each scheduled job fires. Use UTC as the authoritative axis and label the equivalent US Eastern times for BOTH daylight time (EDT, until 2026-10-31) and standard time (EST, from 2026-11-01). See the schedule rules below: some jobs are fixed in UTC and shift an hour in Eastern at the clock change; others are fixed in Eastern.
 Give me each as (a) Mermaid code I can paste into a renderer, and (b) if you can, a rendered image. Use a consistent style across all three. Keep text legible: short labels on arrows, details in the legend, not in the boxes.
 
 ## System summary
@@ -45,14 +45,19 @@ state.json (risk state + trade log), scanner_state.json, position_state.json, cy
 - Web search (news only) used by the research agent.
 - SEC filing and earnings-date tools (via the brokerage MCP) used by the research agent.
 
-### Strategies and routines (all times US Eastern, weekdays unless stated)
-1. MAIN BOT, STOCKS ONLY (crypto trading is fully cut): hourly routine 10:08-15:08. Flow: arm daily circuit breaker from portfolio equity -> fetch positions + hourly historicals + quotes for 5 stocks -> run_cycle.py computes SMA/relative volume and classifies -> protective exit checks on any held stock (always run, even if the breaker is tripped) -> for fresh crosses: risk gates (cooldown, caps, profit gate, sizing) -> if auto-execute allowed, preview then place a marketable limit order -> record the real fill in a SEPARATE run_cycle.py --record-only call -> append to cycle_log/state -> notify only if something notable (trade, protective exit, recommendation, blocked signal). excellent_watch is alert-only and never auto-executes.
-2. INCOME SLEEVE (15 weekly-distribution ETFs): daily routine around 11:00 (15:00 UTC). Flow: portfolio + quotes + daily historicals + positions -> income_cycle.py (own circuit breaker check, entry signal, own exits) -> exits always execute; entries execute as whole-share marketable limit orders, otherwise reported as "could not execute" (no market-order fallback) -> separate --record-only fill recording -> income_* state files -> notify only if notable.
-3. VOLTRAP (options wheel: cash-secured puts then covered calls): weekly entry Monday 09:45 (screen candidates, pick strike by delta, size within budget that reserves cash for the income sleeve, place option order, record in voltrap_state.json) and a daily monitor 15:45 (read-only: exits immediately if nothing is open; otherwise checks deep-ITM/early-assignment risk and resolves expirations in the state file). A paper dry-run version exists but is paused (show greyed).
-4. RESEARCH AGENT (advisory only, never trades or gates a trade): weekday 08:00 (12:00 UTC) scan -> web news + SEC filings + upcoming earnings for the stock and VOLTRAP watchlists -> research_log.json -> daily digest note; the trading agent may read it as context.
-5. DAILY AFTER-ACTION REVIEW: 16:05 (20:05 UTC), every day. Reads cycle_log + trade log + brokerage orders/realized P/L -> writes daily_logs/DATE.md -> commits and pushes to GitHub -> push notification + Slack post.
-6. LEDGER DASHBOARD REFRESH: 10:28, 12:28, 14:28, 16:28 weekdays. Read-only: reads brokerage state + local logs + daily logs -> republishes the Ledger artifact. Never places orders.
-7. MONTHLY WATCHLIST REVIEW (1st of month, 15:00 UTC): recommendation only; backtests candidates; writes a dated review file; never edits config.
+### Schedule rules (read before drawing the timeline)
+- Jobs marked [ET] are scheduled in US Eastern time and stay at the same Eastern clock time all year.
+- Jobs marked [UTC] are scheduled in UTC. Their Eastern time shifts by one hour at the clock change on 2026-11-01 (EDT = UTC-4 until then, EST = UTC-5 after). Show both.
+- Weekdays unless stated.
+
+### Strategies and routines
+1. MAIN BOT, STOCKS ONLY (crypto trading is fully cut): hourly routine [ET] 10:08, 11:08, 12:08, 13:08, 14:08, 15:08. Flow: arm daily circuit breaker from portfolio equity -> fetch positions + hourly historicals + quotes for 5 stocks -> run_cycle.py computes SMA/relative volume and classifies -> protective exit checks on any held stock (always run, even if the breaker is tripped) -> for fresh crosses: risk gates (cooldown, caps, profit gate, sizing) -> if auto-execute allowed, preview then place a marketable limit order -> record the real fill in a SEPARATE run_cycle.py --record-only call -> append to cycle_log/state -> notify only if something notable (trade, protective exit, recommendation, blocked signal). excellent_watch is alert-only and never auto-executes.
+2. INCOME SLEEVE (15 weekly-distribution ETFs): daily routine [UTC] 15:00 (= 11:00 EDT / 10:00 EST). Flow: portfolio + quotes + daily historicals + positions -> income_cycle.py (own circuit breaker check, entry signal, own exits) -> exits always execute; entries execute as whole-share marketable limit orders, otherwise reported as "could not execute" (no market-order fallback) -> separate --record-only fill recording -> income_* state files -> notify only if notable.
+3. VOLTRAP (options wheel: cash-secured puts then covered calls): weekly entry [ET] Monday 09:45 (screen candidates, pick strike by delta, size within budget that reserves cash for the income sleeve, place option order, record in voltrap_state.json) and a daily monitor [ET] 15:45 (read-only: exits immediately if nothing is open; otherwise checks deep-ITM/early-assignment risk and resolves expirations in the state file). A paper dry-run version exists but is paused (show greyed).
+4. RESEARCH AGENT (advisory only, never trades or gates a trade): weekday [UTC] 12:00 (= 08:00 EDT / 07:00 EST) scan -> web news + SEC filings + upcoming earnings for the stock and VOLTRAP watchlists -> research_log.json -> daily digest note; the trading agent may read it as context.
+5. DAILY AFTER-ACTION REVIEW: [UTC] 20:05 (= 16:05 EDT / 15:05 EST), every day including weekends. Reads cycle_log + trade log + brokerage orders/realized P/L -> writes daily_logs/DATE.md -> commits and pushes to GitHub -> push notification + Slack post.
+6. LEDGER DASHBOARD REFRESH: [ET] 10:28, 12:28, 14:28, 16:28 weekdays. Read-only: reads brokerage state + local logs + daily logs -> republishes the Ledger artifact. Never places orders.
+7. MONTHLY WATCHLIST REVIEW: [UTC] 1st of the month, 15:00 (= 11:00 EDT / 10:00 EST): recommendation only; backtests candidates; writes a dated review file; never edits config.
 
 ### Safety boundaries to make visible in the diagrams
 - Only three places can place orders: the main-bot hourly routine, the income-sleeve routine, and the VOLTRAP weekly entry. Everything else is read-only. Mark these three "can place orders" in one color and all read-only flows in another.

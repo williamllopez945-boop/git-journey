@@ -129,11 +129,20 @@ sequenceDiagram
   Note over A,C: protective exits always run, even if halted
   A->>B: preview, then marketable limit order
   A->>C: separate --record-only call with real fill
-  C->>S: trade log, position state
+  C->>S: risk/trade log, cycle_log
+  A->>S: PositionStateStore calls (take-profit flag, exit reset, cooldown)
   A-->>O: push and Slack only if notable
 ```
 
 Notes that matter when building on this:
+- `run_cycle.py --record-only` writes only the risk/trade log (`state.json`) and the
+  cycle log. It does **not** touch `position_state.json`: for the main bot the agent
+  makes separate `PositionStateStore` calls (mark a take-profit as taken, record and
+  reset a full exit, gate-block bookkeeping) per PLAYBOOK "Per-position exit rules".
+  A new build that omits them can repeat a partial take-profit or miss cooldown
+  bookkeeping. The income CLI differs: `income_cycle.py --record-only` also updates
+  its own position state (for example `record_exit`), so do not copy one pattern to
+  the other without checking the script.
 - The analysis run and the fill recording are two separate invocations. Re-running
   analysis with fill flags classifies identical inputs twice and advances
   `scanner_state.json` a second time (a real bug on 2026-10-05).
