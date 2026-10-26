@@ -162,13 +162,27 @@ Reproduce from raw, split-adjusted daily bars, with every definition written dow
 | M5 | Paper-loop design, limits, kill switch | Owner review before any paper loop is enabled |
 | M6 | Live enablement specification (not built) | Separate, explicit owner decision |
 
-## 9. Open questions for the owner
+## 9. Open questions and proposed answers
 
-1. **Data depth:** is 6 to 9 months of real intraday history acceptable for a feasibility
-   check, or should a deeper intraday source be supplied for a meaningful test?
-2. **Target definition:** keep both close-to-close and intraday-high definitions in the
-   audit, or pick one?
-3. **Day-trade rules:** can the owner confirm the account's day-trade limits with the
-   broker?
-4. **Paper loop:** when the time comes, is a read-only routine writing paper state
-   acceptable, or should paper trading stay manual?
+Status: **proposed by the implementing agent, not yet confirmed by the owner.**
+Nothing below changes live behavior; the plan remains backtest and paper only.
+
+1. **Data depth: proposed answer, accept 6 to 9 months of real intraday history
+   for a feasibility check only.** The brokerage's intraday bars are real from
+   about 2026-04; earlier bars are flat, zero-volume filler and must be excluded.
+   A short window cannot support a go-live decision, so any result is labelled
+   "feasibility, not evidence" and a deeper intraday source would be needed
+   before M5.
+2. **Target definition: proposed answer, keep both** the close-to-close and the
+   intraday-high definitions in the audit. The audit is cheap, and the gap
+   between them shows how much of the cited result depends on assuming a fill
+   at the high.
+3. **Day-trade rules: not answerable from here; owner must confirm with the
+   broker.** The account is about $1,018, below the usual $25,000
+   pattern-day-trader threshold, so same-day round trips may be limited or
+   restricted. Until confirmed, the plan stays backtest and paper only and
+   M5 (any live step) is blocked.
+4. **Paper loop: proposed answer, a read-only routine writing paper state** in
+   its own files, separate from the live runner and from every protected state
+   file, with no order tools. Manual paper trading stays the fallback if the
+   owner prefers.
